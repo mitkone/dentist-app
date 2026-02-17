@@ -1,4 +1,5 @@
-import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, Pencil, ChevronDown } from 'lucide-react';
 import { specialtyLabel } from '../data/mockData';
 
 export default function Sidebar({ dentists,
@@ -43,6 +44,8 @@ export default function Sidebar({ dentists,
       });
     }
   };
+  const [dentistsOpen, setDentistsOpen] = useState(false);
+  const selectedCount = selectedDentistIds.length;
   return (
     <aside className="w-full md:w-72 shrink-0 flex flex-col bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 shadow-sm max-h-[45vh] md:max-h-none z-10 md:z-auto">
       <div className="p-4 border-b border-slate-800 hidden md:block">
@@ -52,86 +55,110 @@ export default function Sidebar({ dentists,
         </h2>
       </div>
 
-      <div className="p-4 border-b border-slate-800">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-200">Стоматолози</label>
-          <button
-            type="button"
-            onClick={onAddDentist}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-slate-800 rounded-lg"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Добави
-          </button>
-        </div>
-        <div className="flex items-center gap-2 mb-2 text-xs text-slate-300">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={handleToggleAll}
-              className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
-            />
-            <span>{noneSelected ? 'Избери всички' : allSelected ? 'Отмаркирай всички' : 'Маркирай / отмаркирай всички'}</span>
-          </label>
-        </div>
-        <div className="space-y-2 max-h-40 sm:max-h-48 overflow-y-auto scroll-thin">
-        {dentists.map((d) => (
-  <div
-    key={d.id}
-    className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800 group"
-  >
-    <label className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={selectedDentistIds.includes(d.id)}
-        onChange={() => onDentistToggle(d.id)}
-        className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 shrink-0"
-      />
-      <span
-        className="w-3 h-3 rounded-full shrink-0"
-        style={{ backgroundColor: d.color }}
-      />
-      <div className="min-w-0">
-        <span className="text-sm font-medium text-slate-100 block leading-snug">{d.name}</span>
-        <span className="text-xs text-slate-400 block truncate">{specialtyLabelResolved(d.specialty)}</span>
-      </div>
-    </label>
-    <div className="flex gap-1 shrink-0 relative z-10">
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onEditDentist?.(d.id); }}
-        className="p-1.5 rounded text-slate-400 hover:bg-slate-600 hover:text-white shrink-0 opacity-70 group-hover:opacity-100"
-        title="Профил / Специалност"
-        aria-label="Редактирай"
-      >
-        <Pencil className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (typeof onOpenVacation === 'function') onOpenVacation(d.id);
-        }}
-        className="p-1.5 rounded text-slate-400 hover:bg-red-900/60 hover:text-red-400 shrink-0 opacity-70 group-hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-        title="Отпуск"
-        aria-label="Отпуск"
-      >
-        <CalendarOff className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onDeleteDentist?.(d.id); }}
-        className="p-1.5 rounded text-slate-500 hover:bg-slate-700 hover:text-red-400 shrink-0 opacity-70 group-hover:opacity-100"
-        title="Премахни стоматолог"
-        aria-label="Премахни стоматолог"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
-    </div>
-  </div>
-))}
+      <div className="p-4 border-b border-slate-800 md:block">
+        <button
+          type="button"
+          onClick={() => setDentistsOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-2 py-1.5 text-left md:cursor-default"
+        >
+          <span className="text-sm font-medium text-slate-200">
+            Стоматолози
+            <span className="ml-1.5 text-slate-400 font-normal">
+              ({selectedCount} избрани)
+            </span>
+          </span>
+          <span className="flex items-center gap-1 shrink-0 md:hidden">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAddDentist?.(); }}
+              className="p-1.5 rounded text-emerald-400 hover:bg-slate-800"
+              aria-label="Добави"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${dentistsOpen ? 'rotate-180' : ''}`} />
+          </span>
+          <span className="hidden md:inline-flex">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAddDentist?.(); }}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-slate-800 rounded-lg"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Добави
+            </button>
+          </span>
+        </button>
+        <div className={`overflow-hidden transition-all md:!block ${dentistsOpen ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0 md:max-h-none md:opacity-100'}`}>
+          <div className="flex items-center gap-2 mt-2 mb-2 text-xs text-slate-300 pt-1 md:pt-0">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleToggleAll}
+                className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+              />
+              <span>{noneSelected ? 'Избери всички' : allSelected ? 'Отмаркирай всички' : 'Маркирай / отмаркирай всички'}</span>
+            </label>
+          </div>
+          <div className="space-y-2 max-h-40 sm:max-h-48 overflow-y-auto scroll-thin">
+            {dentists.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-800 group"
+              >
+                <label className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedDentistIds.includes(d.id)}
+                    onChange={() => onDentistToggle(d.id)}
+                    className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 shrink-0"
+                  />
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: d.color }}
+                  />
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-slate-100 block leading-snug">{d.name}</span>
+                    <span className="text-xs text-slate-400 block truncate">{specialtyLabelResolved(d.specialty)}</span>
+                  </div>
+                </label>
+                <div className="flex gap-1 shrink-0 relative z-10">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEditDentist?.(d.id); }}
+                    className="p-1.5 rounded text-slate-400 hover:bg-slate-600 hover:text-white shrink-0 opacity-70 group-hover:opacity-100"
+                    title="Профил / Специалност"
+                    aria-label="Редактирай"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (typeof onOpenVacation === 'function') onOpenVacation(d.id);
+                    }}
+                    className="p-1.5 rounded text-slate-400 hover:bg-red-900/60 hover:text-red-400 shrink-0 opacity-70 group-hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    title="Отпуск"
+                    aria-label="Отпуск"
+                  >
+                    <CalendarOff className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDeleteDentist?.(d.id); }}
+                    className="p-1.5 rounded text-slate-500 hover:bg-slate-700 hover:text-red-400 shrink-0 opacity-70 group-hover:opacity-100"
+                    title="Премахни стоматолог"
+                    aria-label="Премахни стоматолог"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
