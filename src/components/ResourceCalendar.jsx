@@ -5,6 +5,19 @@ import { getSlots, appointmentTypeLabel, specialtyLabel, HOURS as DEFAULT_HOURS 
 
 const SLOT_HEIGHT = 52;
 const DRAG_THRESHOLD = 5;
+const MOBILE_BREAKPOINT = 768;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+  return isMobile;
+}
 
 function getDurationMinutes(start, end) {
   const [sh, sm] = start.split(':').map(Number);
@@ -31,6 +44,19 @@ export default function ResourceCalendar({
   const ignoreNextSlotClickRef = useRef(false);
   const dragStateRef = useRef(null);
   dragStateRef.current = dragState;
+
+  const isMobile = useIsMobile();
+  const [focusedDentistId, setFocusedDentistId] = useState(null);
+  const dentistsToShow = useMemo(() => {
+    if (!isMobile || dentists.length === 0) return dentists;
+    const focused = dentists.find((d) => d.id === focusedDentistId) || dentists[0];
+    return focused ? [focused] : dentists;
+  }, [isMobile, dentists, focusedDentistId]);
+  useEffect(() => {
+    if (!isMobile || !dentists.length) return;
+    const inList = dentists.some((d) => d.id === focusedDentistId);
+    if (!inList || focusedDentistId === null) setFocusedDentistId(dentists[0].id);
+  }, [isMobile, dentists, focusedDentistId]);
 
   const isOnVacation = (dentistId) => {
     const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
@@ -237,11 +263,27 @@ export default function ResourceCalendar({
   return (
     <>
       <div className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+        {isMobile && dentists.length > 1 && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-800/50">
+            <label className="text-sm text-slate-300 shrink-0">Лекар:</label>
+            <select
+              value={focusedDentistId ?? dentists[0]?.id ?? ''}
+              onChange={(e) => setFocusedDentistId(e.target.value)}
+              className="flex-1 min-w-0 py-2 pl-3 pr-8 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat"
+            >
+              {dentists.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex border-b border-slate-800 bg-slate-900">
           <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3">
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
-          {dentists.map((d) => (
+          {dentistsToShow.map((d) => (
             <div
               key={d.id}
               className="flex-1 min-w-[140px] sm:min-w-[160px] border-r border-slate-800 last:border-r-0 py-2 sm:py-3 px-2 sm:px-3 text-center"
@@ -254,8 +296,8 @@ export default function ResourceCalendar({
           ))}
         </div>
 
-        <div className="flex-1 overflow-auto scroll-thin">
-          <div className="flex relative" style={{ minHeight: slots.length * SLOT_HEIGHT }}>
+        <div className="flex-1 overflow-auto scroll-thin overflow-x-auto">
+          <div className="flex relative min-w-0" style={{ minHeight: slots.length * SLOT_HEIGHT }}>
             {showNowLine && (
               <div
                 className="absolute left-0 right-0 h-0.5 bg-emerald-400 z-10 pointer-events-none"
@@ -275,7 +317,7 @@ export default function ResourceCalendar({
               ))}
             </div>
 
-            {dentists.map((d) => {
+            {dentistsToShow.map((d) => {
               const vacation = isOnVacation(d.id);
               return (
                 <div

@@ -18,8 +18,8 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
   };
 
   return (
-    <div className="mt-3 mb-2 overflow-x-auto scroll-thin">
-      <div className="flex items-center gap-2 min-w-max">
+    <div className="mt-3 mb-2 overflow-x-auto scroll-thin touch-pan-x overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex items-center gap-2 min-w-max pb-1">
         <button
           type="button"
           onClick={handleToggleAll}

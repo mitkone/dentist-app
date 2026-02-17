@@ -44,7 +44,7 @@ export default function Sidebar({ dentists,
     }
   };
   return (
-    <aside className="w-full md:w-72 shrink-0 flex flex-col bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 shadow-sm max-h-[50vh] md:max-h-none">
+    <aside className="w-full md:w-72 shrink-0 flex flex-col bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 shadow-sm max-h-[45vh] md:max-h-none z-10 md:z-auto">
       <div className="p-4 border-b border-slate-800 hidden md:block">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
           <Filter className="w-4 h-4 text-emerald-400" />
@@ -158,7 +158,7 @@ export default function Sidebar({ dentists,
           />
         </div>
         {q && (
-          <div className="mt-2 max-h-56 overflow-y-auto scroll-thin space-y-1">
+          <div className="mt-2 max-h-48 overflow-y-auto scroll-thin space-y-1 rounded-lg border border-slate-700 bg-slate-800/90 shadow-lg">
             {filteredPatients.length === 0 ? (
               <p className="text-xs text-slate-500 py-2">Няма намерени пациенти</p>
             ) : (
