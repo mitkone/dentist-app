@@ -32,20 +32,22 @@ export default function CalendarHeader({
           <h1 className="text-xl font-bold text-white">График</h1>
           <span className="text-slate-500">·</span>
           <span className="text-slate-300 font-medium">{formatHeaderDate(currentDate)}</span>
-          {onDentistToggle && dentists.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowDentists((v) => !v)}
-              className={`ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                showDentists
-                  ? 'text-emerald-300 bg-emerald-500/20 border-emerald-500/50'
-                  : 'text-slate-300 bg-slate-800 border-slate-700 hover:border-emerald-500/50 hover:text-emerald-300'
-              }`}
-            >
-              <Filter className="w-3.5 h-3.5" />
-              Лекари
-            </button>
-          )}
+          <div className="hidden md:block">
+            {onDentistToggle && dentists.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowDentists((v) => !v)}
+                className={`ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  showDentists
+                    ? 'text-emerald-300 bg-emerald-500/20 border-emerald-500/50'
+                    : 'text-slate-300 bg-slate-800 border-slate-700 hover:border-emerald-500/50 hover:text-emerald-300'
+                }`}
+              >
+                <Filter className="w-3.5 h-3.5" />
+                Лекари
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center justify-center gap-2 flex-wrap sm:justify-end">
           {nextFree && nextFree.dentistName && (
@@ -99,7 +101,7 @@ export default function CalendarHeader({
         </div>
       </div>
       {showDentists && onDentistToggle && dentists.length > 0 && (
-        <div className="mt-1">
+        <div className="mt-1 hidden md:block">
           <DentistBar
             dentists={dentists}
             selectedDentistIds={selectedDentistIds}

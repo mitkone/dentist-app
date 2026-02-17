@@ -747,6 +747,9 @@ export default function App() {
   onAppointmentClick={onAppointmentClick}
   doctorVacations={doctorVacations}
   workingHours={workingHours}
+  allDentists={dentists}
+  selectedDentistIds={selectedDentistIds}
+  onDentistToggle={onDentistToggle}
 />
             )}
           </div>
