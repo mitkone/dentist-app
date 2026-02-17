@@ -717,8 +717,6 @@ export default function App() {
             onToday={goToday}
             onDatePick={goToDate}
             nextFree={nextFreeSummary}
-          />
-          <DentistBar
             dentists={dentists}
             selectedDentistIds={selectedDentistIds}
             onDentistToggle={onDentistToggle}

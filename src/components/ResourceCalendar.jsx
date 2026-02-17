@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Clock } from 'lucide-react';
 import { getSlots, appointmentTypeLabel, specialtyLabel, HOURS as DEFAULT_HOURS } from '../data/mockData';
 
-const SLOT_HEIGHT = 52;
+const SLOT_HEIGHT = 42;
 const DRAG_THRESHOLD = 5;
 const MOBILE_BREAKPOINT = 768;
 
