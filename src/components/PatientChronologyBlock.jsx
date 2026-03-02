@@ -31,8 +31,8 @@ export default function PatientChronologyBlock({
       });
   }, [patientId, patientName, appointments]);
 
-  const getTypeLabel = (key) =>
-    appointmentTypes.find((t) => t.key === key)?.label_bg ?? appointmentTypeLabel(key);
+  const getTypeLabel = (type) =>
+    appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
   const attendanceLabel = (a) =>
     a === 'showed' ? 'Дойде' : a === 'no_show' ? 'Не се яви' : null;
 

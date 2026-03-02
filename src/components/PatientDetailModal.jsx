@@ -39,7 +39,7 @@ export default function PatientDetailModal({
   const fileInputRef = useRef(null);
 
   const attendanceLabel = (a) => (a === 'showed' ? 'Дойде' : a === 'no_show' ? 'Не се яви' : '—');
-  const getTypeLabel = (key) => appointmentTypes.find((t) => t.key === key)?.label_bg ?? appointmentTypeLabel(key);
+  const getTypeLabel = (type) => appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
   const insuranceLabel = (i) => (i === 'nhif' ? 'По здравна каса' : 'Частно');
 
   useEffect(() => {
