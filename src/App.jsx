@@ -324,15 +324,28 @@ export default function App() {
     })();
   }, []);
 
-  useEffect(() => {
+  const fetchAppointmentTypesAndSpecialties = useCallback(async () => {
     if (!supabase) return;
-    (async () => {
-      const { data: spec } = await supabase.from('specialties').select('*').order('label_bg');
-      const { data: types } = await supabase.from('appointment_types').select('*').order('sort_order', { ascending: true }).order('label_bg', { ascending: true });
-      if (spec) setSpecialties(spec);
-      if (types) setAppointmentTypes(types);
-    })();
-  }, []);
+    const { data: spec } = await supabase.from('specialties').select('*').order('label_bg');
+    if (spec) setSpecialties(spec);
+    let types = null;
+    const { data: typesWithSort, error } = await supabase.from('appointment_types').select('*').order('sort_order', { ascending: true }).order('label_bg', { ascending: true });
+    if (!error && typesWithSort) {
+      types = typesWithSort;
+    } else {
+      const { data: typesFallback } = await supabase.from('appointment_types').select('*').order('label_bg', { ascending: true });
+      if (typesFallback) types = typesFallback;
+    }
+    if (types) setAppointmentTypes(types);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchAppointmentTypesAndSpecialties();
+  }, [fetchAppointmentTypesAndSpecialties]);
+
+  useEffect(() => {
+    if (adminOpen) fetchAppointmentTypesAndSpecialties();
+  }, [adminOpen, fetchAppointmentTypesAndSpecialties]);
 
   useEffect(() => {
     if (!supabase) return;

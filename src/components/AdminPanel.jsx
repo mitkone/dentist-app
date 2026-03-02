@@ -270,7 +270,12 @@ export default function AdminPanel({
             <div className="p-4 border-b border-slate-800">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
               <p className="text-xs text-slate-500 mb-2">↑↓ за подреждане · въведете име и натиснете +</p>
-              <ul className="space-y-1.5 mb-3 max-h-48 overflow-y-auto scroll-thin">
+              <ul className="space-y-1.5 mb-3 max-h-48 overflow-y-auto scroll-thin min-h-[2.5rem]">
+                {appointmentTypes.length === 0 && (
+                  <li className="py-3 px-3 rounded-lg bg-slate-800/50 text-slate-500 text-sm italic">
+                    Няма добавени видове. Добавете първия по-долу.
+                  </li>
+                )}
                 {appointmentTypes.map((t, idx) => (
                   <li key={t.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
                     {onReorderAppointmentType && (
