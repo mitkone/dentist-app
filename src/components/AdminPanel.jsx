@@ -56,6 +56,7 @@ export default function AdminPanel({
   appointmentTypes = [],
   onAddAppointmentType,
   onDeleteAppointmentType,
+  onReorderAppointmentType,
   dentists = [],
   patients = [],
 }) {
@@ -268,11 +269,34 @@ export default function AdminPanel({
           {onAddAppointmentType && (
             <div className="p-4 border-b border-slate-800">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
-              <ul className="space-y-1 mb-2 max-h-24 overflow-y-auto">
-                {appointmentTypes.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between gap-2 py-1 px-2 rounded bg-slate-800 text-sm">
-                    <span className="text-slate-200">{t.label_bg}</span>
-                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1 rounded text-slate-400 hover:text-red-400">
+              <p className="text-xs text-slate-500 mb-2">Подредете реда при записване на час с ↑↓</p>
+              <ul className="space-y-1 mb-2 max-h-40 overflow-y-auto">
+                {appointmentTypes.map((t, idx) => (
+                  <li key={t.id} className="flex items-center gap-1 py-1 px-2 rounded bg-slate-800 text-sm">
+                    {onReorderAppointmentType && (
+                      <div className="flex flex-col shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => onReorderAppointmentType(t.id, 'up')}
+                          disabled={idx === 0}
+                          className="p-0.5 rounded text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Нагоре"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onReorderAppointmentType(t.id, 'down')}
+                          disabled={idx === appointmentTypes.length - 1}
+                          className="p-0.5 rounded text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Надолу"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <span className="flex-1 text-slate-200 truncate">{t.label_bg}</span>
+                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1 rounded text-slate-400 hover:text-red-400 shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </li>

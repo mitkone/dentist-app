@@ -42,8 +42,12 @@ function addMinutesToTime(time, mins) {
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
   const [patientInput, setPatientInput] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
+  const [notes, setNotes] = useState('');
   useEffect(() => {
-    if (open) setPatientInput(patients[0]?.name ?? '');
+    if (open) {
+      setPatientInput(patients[0]?.name ?? '');
+      setNotes('');
+    }
   }, [open, patients]);
   if (!open) return null;
 
@@ -61,7 +65,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
     const name = patientInput.trim();
     const patientId = matchedPatient?.id ?? null;
     const patientName = name || (matchedPatient?.name ?? '');
-    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, type, durationMinutes, insurance });
+    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, type, durationMinutes, insurance, notes: notes.trim() });
     onClose();
   };
 
@@ -160,6 +164,20 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="appointment-notes" className="block text-sm font-medium text-slate-200 mb-1">
+              Бележка за часа <span className="text-slate-500 font-normal">(по избор)</span>
+            </label>
+            <textarea
+              id="appointment-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Напр. алергии, препоръки..."
+              rows={2}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
+            />
           </div>
 
           <div>

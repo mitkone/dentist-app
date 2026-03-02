@@ -10,6 +10,13 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (saved) setEmail(saved);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
     if (open) {
       try {
         const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);

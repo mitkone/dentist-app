@@ -319,7 +319,7 @@ export default function App() {
     if (!supabase) return;
     (async () => {
       const { data: spec } = await supabase.from('specialties').select('*').order('label_bg');
-      const { data: types } = await supabase.from('appointment_types').select('*').order('label_bg');
+      const { data: types } = await supabase.from('appointment_types').select('*').order('sort_order', { ascending: true }).order('label_bg', { ascending: true });
       if (spec) setSpecialties(spec);
       if (types) setAppointmentTypes(types);
     })();
@@ -388,10 +388,11 @@ export default function App() {
   const addAppointmentType = useCallback(
     async (key, label_bg) => {
       if (!supabase) return;
-      const { data } = await supabase.from('appointment_types').insert({ key, label_bg }).select().single();
-      if (data) setAppointmentTypes((prev) => [...prev, data]);
+      const maxOrder = Math.max(0, ...appointmentTypes.map((t) => (t.sort_order ?? 0)));
+      const { data } = await supabase.from('appointment_types').insert({ key, label_bg, sort_order: maxOrder + 1 }).select().single();
+      if (data) setAppointmentTypes((prev) => [...prev, data].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
     },
-    []
+    [appointmentTypes]
   );
   const deleteAppointmentType = useCallback(
     async (id) => {
@@ -400,6 +401,22 @@ export default function App() {
       setAppointmentTypes((prev) => prev.filter((t) => t.id !== id));
     },
     []
+  );
+  const reorderAppointmentType = useCallback(
+    async (id, direction) => {
+      if (!supabase) return;
+      const idx = appointmentTypes.findIndex((t) => t.id === id);
+      if (idx < 0) return;
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= appointmentTypes.length) return;
+      const next = [...appointmentTypes];
+      [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      for (let i = 0; i < next.length; i++) {
+        await supabase.from('appointment_types').update({ sort_order: i }).eq('id', next[i].id);
+      }
+      setAppointmentTypes(next);
+    },
+    [appointmentTypes]
   );
 
   useEffect(() => {
@@ -612,7 +629,7 @@ export default function App() {
   }, []);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, start, type, durationMinutes = 30, insurance = 'private' }) => {
+    async ({ dentistId, patientId, patientName: providedName, start, type, durationMinutes = 30, insurance = 'private', notes = '' }) => {
       const date = dateKey(currentDate);
       const end = addMinutes(start, durationMinutes);
       const patient = patientId ? patients.find((p) => p.id === patientId) : null;
@@ -630,22 +647,25 @@ export default function App() {
             end,
             type,
             insurance,
+            notes: notes || '',
           },
         ]);
         return;
       }
 
       try {
+        const payload = {
+          patient_name: patientName,
+          dentist_id: dentistId,
+          start_time: toSupabaseTime(date, start),
+          end_time: toSupabaseTime(date, end),
+          status: type,
+          insurance,
+        };
+        payload.notes = notes?.trim() || null;
         const { data, error } = await supabase
           .from('appointments')
-          .insert({
-            patient_name: patientName,
-            dentist_id: dentistId,
-            start_time: toSupabaseTime(date, start),
-            end_time: toSupabaseTime(date, end),
-            status: type,
-            insurance,
-          })
+          .insert(payload)
           .select()
           .single();
 
@@ -655,6 +675,7 @@ export default function App() {
         }
         const mapped = rowToAppointment(data);
         if (mapped) {
+          if (notes?.trim()) mapped.notes = notes.trim();
           setAppointments((prev) => [...prev, mapped]);
           logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type } });
         }
@@ -1072,6 +1093,7 @@ export default function App() {
         appointmentTypes={appointmentTypes}
         onAddAppointmentType={addAppointmentType}
         onDeleteAppointmentType={deleteAppointmentType}
+        onReorderAppointmentType={reorderAppointmentType}
         dentists={dentists}
         patients={patients}
       />
