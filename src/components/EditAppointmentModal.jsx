@@ -53,7 +53,7 @@ function isAppointmentInPast(appointment) {
   return endDate.getTime() < Date.now();
 }
 
-export default function EditAppointmentModal({ open, onClose, appointment, dentists, patients, onSave, onDelete, workingHours = HOURS, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
+export default function EditAppointmentModal({ open, onClose, appointment, dentists, patients, onSave, onDelete, workingHours = HOURS, appointmentTypes = [], appointments = [], onOpenPatientProfile, canChangeDentist = true }) {
   const [dentistId, setDentistId] = useState('');
   const [start, setStart] = useState('');
   const [patientInput, setPatientInput] = useState('');
@@ -128,17 +128,23 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Стоматолог</label>
-            <select
-              value={dentistId}
-              onChange={(e) => setDentistId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
-              {dentists.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} — {specialtyLabel(d.specialty)}
-                </option>
-              ))}
-            </select>
+            {canChangeDentist ? (
+              <select
+                value={dentistId}
+                onChange={(e) => setDentistId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              >
+                {dentists.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} — {specialtyLabel(d.specialty)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-sm">
+                {dentists.find((d) => d.id === dentistId)?.name ?? dentistId}
+              </div>
+            )}
           </div>
 
           <div>
