@@ -42,6 +42,8 @@ export const dentists = [
   { id: 'd10', name: 'Д-р Г. Хаджиев', specialty: 'General Dentistry', color: '#f97316' },
   { id: 'd11', name: 'Д-р Веселинова', specialty: 'General Dentistry', color: '#14b8a6' },
   { id: 'd12', name: 'Д-р Андреева', specialty: 'General Dentistry', color: '#3b82f6' },
+  { id: 'd13', name: 'Д-р Панайотова', specialty: 'General Dentistry', color: '#06b6d4' },
+  { id: 'd14', name: 'Д-р Ивайлова', specialty: 'General Dentistry', color: '#84cc16' },
 ];
 
 export const DEFAULT_DENTIST_COLORS = ['#14b8a6', '#3b82f6', '#a855f7', '#f97316', '#ec4899', '#eab308'];

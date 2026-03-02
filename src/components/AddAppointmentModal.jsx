@@ -32,26 +32,27 @@ const DURATION_OPTIONS = [
 ];
 
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
-  const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id ?? '');
+  const [patientInput, setPatientInput] = useState('');
   useEffect(() => {
-    if (open && patients.length) setSelectedPatientId(patients[0]?.id ?? '');
+    if (open) setPatientInput(patients[0]?.name ?? '');
   }, [open, patients]);
   if (!open) return null;
 
   const selectedDentist = dentists.find((d) => d.id === dentist);
-  const defaultPatient = patients[0]?.id;
   const typeOptions = appointmentTypes.length > 0 ? appointmentTypes : DEFAULT_APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }));
   const defaultType = (typeOptions[0]?.key) || 'Checkup';
-  const selectedPatient = patients.find((p) => p.id === selectedPatientId);
+  const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.target;
-    const patientId = form.patientId?.value || selectedPatientId || defaultPatient;
     const type = form.type?.value || defaultType;
     const durationMinutes = Number(form.duration?.value) || 30;
     const insurance = form.insurance?.value || 'private';
-    onSubmit({ dentistId: dentist, patientId, start: slot, type, durationMinutes, insurance });
+    const name = patientInput.trim();
+    const patientId = matchedPatient?.id ?? null;
+    const patientName = name || (matchedPatient?.name ?? '');
+    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, type, durationMinutes, insurance });
     onClose();
   };
 
@@ -83,27 +84,31 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div>
-            <label htmlFor="patientId" className="block text-sm font-medium text-slate-200 mb-1">
-              Пациент
+            <label htmlFor="patientName" className="block text-sm font-medium text-slate-200 mb-1">
+              Пациент <span className="text-slate-500 font-normal">(изберете от списъка или въведете име)</span>
             </label>
-            <select
-              id="patientId"
-              name="patientId"
-              value={selectedPatientId}
-              onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
+            <input
+              id="patientName"
+              name="patientName"
+              type="text"
+              list="patient-suggestions"
+              value={patientInput}
+              onChange={(e) => setPatientInput(e.target.value)}
+              placeholder="Въведете име на пациента..."
+              required
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              autoComplete="off"
+            />
+            <datalist id="patient-suggestions">
               {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}{p.phone ? ` — ${p.phone}` : ''}
-                </option>
+                <option key={p.id} value={p.name} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           <PatientChronologyBlock
-            patientId={selectedPatientId}
-            patientName={selectedPatient?.name}
+            patientId={matchedPatient?.id}
+            patientName={patientInput.trim() || matchedPatient?.name}
             appointments={appointments}
             dentists={dentists}
             appointmentTypes={typeOptions}

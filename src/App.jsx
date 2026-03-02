@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, LogIn, LogOut, CalendarClock } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { rowToAppointment, toSupabaseTime } from './lib/appointments';
@@ -17,6 +18,8 @@ import AddVacationModal from './components/AddVacationModal';
 import AdminPanel from './components/AdminPanel';
 import AdminPasswordModal from './components/AdminPasswordModal';
 import DentistEditModal from './components/DentistEditModal';
+import AuthModal from './components/AuthModal';
+import FreeSlotsModal from './components/FreeSlotsModal';
 
 function dateKey(d) {
   const y = d.getFullYear();
@@ -65,6 +68,14 @@ export default function App() {
   const [specialties, setSpecialties] = useState([]);
   const [appointmentTypes, setAppointmentTypes] = useState([]);
   const [editDentistId, setEditDentistId] = useState(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
+  const [doctorAvailableSlots, setDoctorAvailableSlots] = useState({});
+  const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
+
+  const { user, profile, signIn, signUp, signOut } = useAuth() ?? {};
+
+  const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
 
   const timeStrToMinutes = (t) => {
     if (!t) return 0;
@@ -234,6 +245,22 @@ export default function App() {
       if (types) setAppointmentTypes(types);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const dateStr = dateKey(currentDate);
+    (async () => {
+      const { data } = await supabase
+        .from('doctor_available_slots')
+        .select('dentist_id, slots')
+        .eq('date', dateStr);
+      if (data) {
+        const map = {};
+        data.forEach((r) => { map[`${r.dentist_id}_${dateStr}`] = new Set(r.slots || []); });
+        setDoctorAvailableSlots(map);
+      }
+    })().catch(() => {});
+  }, [currentDate, supabase, slotsRefreshKey]);
 
   const addDentist = useCallback(({ name, specialty, color }) => {
     const id = `d-${Date.now()}`;
@@ -506,11 +533,11 @@ export default function App() {
   }, []);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, start, type, durationMinutes = 30, insurance = 'private' }) => {
+    async ({ dentistId, patientId, patientName: providedName, start, type, durationMinutes = 30, insurance = 'private' }) => {
       const date = dateKey(currentDate);
       const end = addMinutes(start, durationMinutes);
-      const patient = patients.find((p) => p.id === patientId);
-      const patientName = patient?.name ?? '';
+      const patient = patientId ? patients.find((p) => p.id === patientId) : null;
+      const patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
 
       if (!supabase) {
         setAppointments((prev) => [
@@ -679,16 +706,49 @@ export default function App() {
               <p className="text-xs text-slate-400">Запазване на часове</p>
             </div>
           </div>
-          {supabase && (
-            <button
-              type="button"
-              onClick={() => setShowAdminPassword(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
-            >
-              <Activity className="w-4 h-4" />
-              Админ
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {supabase && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setFreeSlotsOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                  <span className="hidden sm:inline">Свободни часове</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                >
+                  <Activity className="w-4 h-4" />
+                  Админ
+                </button>
+              </>
+            )}
+            {supabase && (
+              user ? (
+                <button
+                  type="button"
+                  onClick={() => signOut?.()}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">{profile?.full_name || user.email}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAuthModalOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Вход
+                </button>
+              )
+            )}
+          </div>
         </div>
       </div>
 
@@ -750,6 +810,7 @@ export default function App() {
   allDentists={dentists}
   selectedDentistIds={selectedDentistIds}
   onDentistToggle={onDentistToggle}
+  doctorAvailableSlots={doctorAvailableSlots}
 />
             )}
           </div>
@@ -833,6 +894,24 @@ export default function App() {
         onClose={() => setShowAdminPassword(false)}
         onSuccess={() => setAdminOpen(true)}
       />
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        signIn={signIn}
+        signUp={signUp}
+        dentists={dentists}
+      />
+
+      <FreeSlotsModal
+        open={freeSlotsOpen}
+        onClose={() => setFreeSlotsOpen(false)}
+        dentists={filteredDentists}
+        date={currentDate}
+        workingHours={workingHours}
+        onSave={refreshDoctorSlots}
+        supabase={supabase}
+      />
+
       <AdminPanel
         open={adminOpen}
         onClose={() => setAdminOpen(false)}

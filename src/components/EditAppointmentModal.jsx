@@ -56,7 +56,7 @@ function isAppointmentInPast(appointment) {
 export default function EditAppointmentModal({ open, onClose, appointment, dentists, patients, onSave, onDelete, workingHours = HOURS, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
   const [dentistId, setDentistId] = useState('');
   const [start, setStart] = useState('');
-  const [patientId, setPatientId] = useState('');
+  const [patientInput, setPatientInput] = useState('');
   const [type, setType] = useState('Checkup');
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [notes, setNotes] = useState('');
@@ -66,12 +66,14 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   const slots = getSlots(workingHours);
   const typeOptions = appointmentTypes.length > 0 ? appointmentTypes : APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }));
   const isPast = appointment ? isAppointmentInPast(appointment) : false;
+  const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
 
   useEffect(() => {
     if (appointment) {
       setDentistId(appointment.dentistId);
       setStart(appointment.start);
-      setPatientId(appointment.patientId || (patients.find((p) => p.name === appointment.patientName)?.id ?? patients[0]?.id));
+      const p = appointment.patientId ? patients.find((x) => x.id === appointment.patientId) : null;
+      setPatientInput(p?.name ?? appointment.patientName ?? '');
       setType(appointment.type || 'Checkup');
       setDurationMinutes(getDurationMinutes(appointment.start, appointment.end));
       setNotes(appointment.notes ?? '');
@@ -85,13 +87,13 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   const handleSubmit = (e) => {
     e.preventDefault();
     const end = addMinutes(start, durationMinutes);
-    const patient = patients.find((p) => p.id === patientId);
+    const name = patientInput.trim();
     onSave(appointment.id, {
       dentistId,
       start,
       end,
-      patientName: patient?.name ?? appointment.patientName,
-      patientId: patientId || undefined,
+      patientName: name || matchedPatient?.name ?? appointment.patientName,
+      patientId: matchedPatient?.id || undefined,
       type,
       notes: notes.trim() || '',
       attendance: isPast ? attendance : undefined,
@@ -155,23 +157,30 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Пациент</label>
-            <select
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
+            <label htmlFor="edit-patientName" className="block text-sm font-medium text-slate-200 mb-1">
+              Пациент <span className="text-slate-500 font-normal">(изберете или въведете име)</span>
+            </label>
+            <input
+              id="edit-patientName"
+              type="text"
+              list="edit-patient-suggestions"
+              value={patientInput}
+              onChange={(e) => setPatientInput(e.target.value)}
+              placeholder="Въведете име на пациента..."
+              required
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              autoComplete="off"
+            />
+            <datalist id="edit-patient-suggestions">
               {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}{p.phone ? ` — ${p.phone}` : ''}
-                </option>
+                <option key={p.id} value={p.name} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           <PatientChronologyBlock
-            patientId={patientId}
-            patientName={patients.find((p) => p.id === patientId)?.name ?? appointment?.patientName}
+            patientId={matchedPatient?.id}
+            patientName={patientInput.trim() || matchedPatient?.name ?? appointment?.patientName}
             appointments={appointments}
             dentists={dentists}
             appointmentTypes={typeOptions}

@@ -40,6 +40,7 @@ export default function ResourceCalendar({
   allDentists = [],
   selectedDentistIds = [],
   onDentistToggle,
+  doctorAvailableSlots = {},
 }) {
   const slots = useMemo(() => getSlots(workingHours), [workingHours]);
   const [dragState, setDragState] = useState(null);
@@ -74,8 +75,17 @@ export default function ResourceCalendar({
     return () => document.removeEventListener('click', onDocClick, true);
   }, [mobileDentistsOpen]);
 
+  const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
+
+  const isSlotAvailable = (dentistId, slot) => {
+    const key = `${dentistId}_${dateStr}`;
+    const availableSet = doctorAvailableSlots[key];
+    if (!availableSet) return true; // няма запис – всички слотове са свободни
+    if (availableSet.size === 0) return false; // празен списък – няма свободни
+    return availableSet.has(slot);
+  };
+
   const isOnVacation = (dentistId) => {
-    const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
     return doctorVacations.some(
       (v) =>
         v.dentist_id === dentistId &&
@@ -96,7 +106,6 @@ export default function ResourceCalendar({
   };
 
   const getAppointmentsForColumn = (dentistId) => {
-    const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
     return appointments.filter(
       (a) =>
         a.dentistId === dentistId &&
@@ -415,19 +424,22 @@ export default function ResourceCalendar({
                     vacation ? 'bg-red-900/40' : 'bg-slate-900'
                   }`}
                 >
-                  {slots.map((slot) => (
+                  {slots.map((slot) => {
+                    const available = isSlotAvailable(d.id, slot);
+                    const disabled = vacation || !available;
+                    return (
                     <button
                       key={slot}
                       type="button"
                       data-slot={slot}
                       data-dentist-id={d.id}
                       onClick={(e) => {
-                        if (vacation) return;
+                        if (disabled) return;
                         handleSlotClick(d.id, slot, e);
                       }}
                       className={`absolute left-0.5 right-0.5 rounded border border-transparent transition-colors ${
-                        vacation
-                          ? 'cursor-not-allowed opacity-60'
+                        disabled
+                          ? 'cursor-not-allowed opacity-50'
                           : 'hover:bg-emerald-500/20 hover:ring-1 hover:ring-emerald-400/50 hover:border-emerald-400/30'
                       }`}
                       style={{
@@ -435,7 +447,7 @@ export default function ResourceCalendar({
                         height: Math.max(SLOT_HEIGHT - 2, 44),
                       }}
                     />
-                  ))}
+                  );})}
 
                   {getAppointmentsForColumn(d.id).map((a) => {
                     const top = timeToOffset(a.start);
