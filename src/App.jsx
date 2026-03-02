@@ -21,6 +21,8 @@ import DentistEditModal from './components/DentistEditModal';
 import AuthModal from './components/AuthModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
 import DentistProfileModal from './components/DentistProfileModal';
+import LandingAuth, { getAdminSession, setAdminSession } from './components/LandingAuth';
+import QuickBookBar from './components/QuickBookBar';
 import { getPermissions } from './lib/permissions';
 
 function dateKey(d) {
@@ -78,13 +80,30 @@ export default function App() {
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
 
   const { user, profile, signIn, signUp, signOut } = useAuth() ?? {};
-  const permissions = getPermissions(profile);
+  const [adminSession, setAdminSessionState] = useState(() => getAdminSession());
+  const isAuthenticated = Boolean(user) || adminSession;
+  const permissions = adminSession ? { canViewAllDentists: true, canBookAnyDentist: true, canEditDentists: true, canManageProfiles: true, canManageSettings: true, canViewAdmin: true, myDentistId: null } : getPermissions(profile);
 
   const effectiveSelectedDentistIds = permissions.myDentistId && dentists.some((d) => d.id === permissions.myDentistId)
     ? [permissions.myDentistId]
     : selectedDentistIds;
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
+
+  const handleAdminPasswordSuccess = useCallback(() => {
+    setAdminSession(true);
+    setAdminSessionState(true);
+    setShowAdminPassword(false);
+    setAdminOpen(true);
+  }, []);
+
+  const handleStaffLogout = useCallback(() => {
+    if (adminSession) {
+      setAdminSession(false);
+      setAdminSessionState(false);
+    }
+    signOut?.();
+  }, [adminSession, signOut]);
 
   const timeStrToMinutes = (t) => {
     if (!t) return 0;
@@ -109,7 +128,11 @@ export default function App() {
         );
         if (isOnVacationDay) continue;
 
+        const key = `${dentistId}_${dateStr}`;
+        const availableSet = doctorAvailableSlots[key];
+
         for (const slot of slots) {
+          if (availableSet && availableSet.size > 0 && !availableSet.has(slot)) continue;
           const [h, m] = slot.split(':').map(Number);
           const slotDateTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
           if (slotDateTime < new Date()) continue;
@@ -132,7 +155,7 @@ export default function App() {
 
       return null;
     },
-    [appointments, doctorVacations, workingHours]
+    [appointments, doctorVacations, workingHours, doctorAvailableSlots]
   );
 
   const nextFreeSummary = (() => {
@@ -175,6 +198,7 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     async function fetchAppointments() {
       setAppointmentsLoading(true);
       setAppointmentsError(null);
@@ -207,9 +231,10 @@ export default function App() {
       setAppointmentsLoading(false);
     }
     fetchAppointments();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     async function fetchPatients() {
       if (!supabase) return;
       setPatientsLoading(true);
@@ -230,7 +255,7 @@ export default function App() {
       setPatientsLoading(false);
     }
     fetchPatients();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -690,6 +715,29 @@ export default function App() {
     setEditAppointment(null);
   }, []);
 
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LandingAuth
+          onAdminClick={() => setShowAdminPassword(true)}
+          onStaffClick={() => setAuthModalOpen(true)}
+        />
+        <AdminPasswordModal
+          open={showAdminPassword}
+          onClose={() => setShowAdminPassword(false)}
+          onSuccess={handleAdminPasswordSuccess}
+        />
+        <AuthModal
+          open={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          signIn={signIn}
+          signUp={signUp}
+          dentists={dentists}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-black">
       <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
@@ -744,11 +792,20 @@ export default function App() {
               user ? (
                 <button
                   type="button"
-                  onClick={() => signOut?.()}
+                  onClick={handleStaffLogout}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">{profile?.full_name || user.email}</span>
+                </button>
+              ) : adminSession ? (
+                <button
+                  type="button"
+                  onClick={handleStaffLogout}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Изход (Админ)</span>
                 </button>
               ) : (
                 <button
@@ -780,7 +837,7 @@ export default function App() {
   onOpenVacation={openVacationForDentist}
   onEditDentist={permissions.canEditDentists ? setEditDentistId : undefined}
   specialties={specialties}
-  showDentistsFilter={!permissions.myDentistId}
+  showDentistsFilter={false}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black">
@@ -796,6 +853,17 @@ export default function App() {
             onDentistToggle={onDentistToggle}
             showDentistBar={!permissions.myDentistId}
           />
+          {permissions.canBookAnyDentist && (
+            <QuickBookBar
+              dentists={filteredDentists}
+              findNextFreeForDentist={findNextFreeForDentist}
+              onBook={(dentistId, { date, time }) => {
+                setModal({ open: true, dentistId, slot: time });
+                goToDate(date);
+              }}
+              canUse={!!findNextFreeForDentist}
+            />
+          )}
           <div className="mt-4 flex-1 min-h-[480px]">
             {!isSupabaseConfigured() && (
               <p className="text-sm text-amber-400/90 mb-2">
@@ -894,6 +962,7 @@ export default function App() {
         appointmentTypes={appointmentTypes}
         appointments={appointments}
         onOpenPatientProfile={(id) => setPatientDetailId(id)}
+        canChangeDentist={permissions.canBookAnyDentist}
       />
 
       <AddVacationModal
@@ -909,7 +978,7 @@ export default function App() {
       <AdminPasswordModal
         open={showAdminPassword}
         onClose={() => setShowAdminPassword(false)}
-        onSuccess={() => setAdminOpen(true)}
+        onSuccess={handleAdminPasswordSuccess}
       />
       <AuthModal
         open={authModalOpen}

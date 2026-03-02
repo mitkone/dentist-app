@@ -1,0 +1,59 @@
+import { Lock, UserCheck } from 'lucide-react';
+
+const ADMIN_SESSION_KEY = 'hdent_admin_session';
+
+export function getAdminSession() {
+  try {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setAdminSession(value) {
+  try {
+    if (value) sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  } catch {}
+}
+
+export default function LandingAuth({ onAdminClick, onStaffClick }) {
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-white">Хаджиев Дент</h1>
+          <p className="text-slate-400 mt-1">Запазване на часове</p>
+        </div>
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={onAdminClick}
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-colors"
+          >
+            <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <div className="font-semibold text-white">Админ</div>
+              <div className="text-sm text-slate-400">Вход с парола</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={onStaffClick}
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-colors"
+          >
+            <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <div className="font-semibold text-white">Регистратори и лекари</div>
+              <div className="text-sm text-slate-400">Вход с имейл и парола</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

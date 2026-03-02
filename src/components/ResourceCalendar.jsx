@@ -55,6 +55,19 @@ export default function ResourceCalendar({
   const [focusedDentistId, setFocusedDentistId] = useState(null);
   const [mobileDentistsOpen, setMobileDentistsOpen] = useState(false);
   const mobileDentistsRef = useRef(null);
+  const headerScrollRef = useRef(null);
+  const gridScrollRef = useRef(null);
+
+  useEffect(() => {
+    const grid = gridScrollRef.current;
+    const header = headerScrollRef.current;
+    if (!grid || !header) return;
+    const sync = () => { header.scrollLeft = grid.scrollLeft; };
+    grid.addEventListener('scroll', sync);
+    const ro = new ResizeObserver(sync);
+    ro.observe(grid);
+    return () => { grid.removeEventListener('scroll', sync); ro.disconnect(); };
+  }, []);
 
   const listForMobile = (allDentists.length ? allDentists : dentists);
   const dentistsToShow = useMemo(() => {
@@ -379,10 +392,11 @@ export default function ResourceCalendar({
             )}
           </div>
         )}
-        <div className="flex border-b border-slate-800 bg-slate-900">
+        <div className="flex border-b border-slate-800 bg-slate-900 sticky top-0 z-20 bg-slate-900 shrink-0 overflow-hidden">
           <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3">
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
+          <div ref={headerScrollRef} className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain" style={{ scrollbarGutter: 'stable' }}>
           {dentistsToShow.map((d) => (
             <div
               key={d.id}
@@ -405,9 +419,10 @@ export default function ResourceCalendar({
               <div className="text-xs text-slate-400 truncate">{specialtyLabel(d.specialty)}</div>
             </div>
           ))}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto scroll-thin overflow-x-auto">
+        <div ref={gridScrollRef} className="flex-1 overflow-auto scroll-thin min-h-0">
           <div className="flex relative min-w-0" style={{ minHeight: slots.length * SLOT_HEIGHT }}>
             {showNowLine && (
               <div
@@ -440,6 +455,7 @@ export default function ResourceCalendar({
                   {slots.map((slot) => {
                     const available = isSlotAvailable(d.id, slot);
                     const disabled = vacation || !available;
+                    const isUnavailable = !vacation && !available;
                     return (
                     <button
                       key={slot}
@@ -451,9 +467,11 @@ export default function ResourceCalendar({
                         handleSlotClick(d.id, slot, e);
                       }}
                       className={`absolute left-0.5 right-0.5 rounded border border-transparent transition-colors ${
-                        disabled
+                        vacation
                           ? 'cursor-not-allowed opacity-50'
-                          : 'hover:bg-emerald-500/20 hover:ring-1 hover:ring-emerald-400/50 hover:border-emerald-400/30'
+                          : isUnavailable
+                            ? 'bg-rose-900/40 border-rose-800/50 cursor-not-allowed'
+                            : 'hover:bg-emerald-500/20 hover:ring-1 hover:ring-emerald-400/50 hover:border-emerald-400/30'
                       }`}
                       style={{
                         top: timeToOffset(slot),
