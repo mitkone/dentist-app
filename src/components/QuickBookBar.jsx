@@ -1,13 +1,38 @@
-import { useState } from 'react';
-import { Zap, Clock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Zap, Clock, CalendarDays, ChevronDown } from 'lucide-react';
 
-export default function QuickBookBar({ dentists, findNextFreeForDentist, onBook, canUse }) {
+function toDateStr(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFreeSlotsForDate, onBook, canUse, currentDate }) {
   const [selectedDentistId, setSelectedDentistId] = useState(dentists[0]?.id ?? '');
+  const [selectedDate, setSelectedDate] = useState(() => toDateStr(currentDate));
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const pickerRef = useRef(null);
 
-  if (!canUse || !dentists.length || !findNextFreeForDentist || !onBook) return null;
+  useEffect(() => {
+    if (currentDate) setSelectedDate(toDateStr(currentDate));
+  }, [currentDate]);
 
-  const next = findNextFreeForDentist(selectedDentistId);
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowTimePicker(false);
+    };
+    if (showTimePicker) document.addEventListener('click', onDocClick, true);
+    return () => document.removeEventListener('click', onDocClick, true);
+  }, [showTimePicker]);
+
+  if (!canUse || !dentists.length || !onBook) return null;
+
   const dentist = dentists.find((d) => d.id === selectedDentistId);
+  const firstSlot = findFirstFreeForDate?.(selectedDentistId, selectedDate);
+  const allSlots = findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? [];
+  const displaySlot = firstSlot;
 
   return (
     <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-slate-800/60 border border-slate-700">
@@ -24,22 +49,59 @@ export default function QuickBookBar({ dentists, findNextFreeForDentist, onBook,
           <option key={d.id} value={d.id}>{d.name}</option>
         ))}
       </select>
-      {next && (
+      <div className="flex items-center gap-1">
+        <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="px-2 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none [color-scheme:dark]"
+        />
+      </div>
+      {displaySlot && (
         <>
-          <span className="flex items-center gap-1 text-sm text-slate-400">
-            <Clock className="w-3.5 h-3.5" />
-            {next.date} {next.time}
-          </span>
+          <div ref={pickerRef} className="relative">
+            <button
+              type="button"
+              onClick={() => allSlots.length > 1 && setShowTimePicker((v) => !v)}
+              className={`flex items-center gap-1 text-sm font-medium rounded-lg px-2 py-1.5 transition-colors ${
+                allSlots.length > 1
+                  ? 'text-emerald-300 hover:bg-slate-700/80 cursor-pointer'
+                  : 'text-slate-300 cursor-default'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              {displaySlot.date} {displaySlot.time}
+              {allSlots.length > 1 && <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+            </button>
+            {showTimePicker && allSlots.length > 1 && (
+              <div className="absolute top-full left-0 mt-1 py-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-40 overflow-y-auto min-w-[120px]">
+                {allSlots.map((s) => (
+                  <button
+                    key={s.time}
+                    type="button"
+                    onClick={() => {
+                      onBook(dentist?.id, s);
+                      setShowTimePicker(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 focus:bg-slate-700"
+                  >
+                    {s.time}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             type="button"
-            onClick={() => onBook(dentist?.id, next)}
+            onClick={() => onBook(dentist?.id, displaySlot)}
             className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
           >
             Запиши
           </button>
         </>
       )}
-      {!next && <span className="text-sm text-slate-500">Няма свободен час</span>}
+      {!displaySlot && <span className="text-sm text-slate-500">Няма свободен час</span>}
     </div>
   );
 }

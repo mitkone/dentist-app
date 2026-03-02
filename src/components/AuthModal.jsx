@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, LogIn, UserPlus } from 'lucide-react';
+
+const REMEMBER_EMAIL_KEY = 'dentist_app_remember_email';
 
 export default function AuthModal({ open, onClose, signIn, signUp, dentists = [] }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    if (open) {
+      try {
+        const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (saved) setEmail(saved);
+      } catch (_) {}
+    }
+  }, [open]);
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('receptionist');
   const [dentistId, setDentistId] = useState('');
@@ -20,6 +32,10 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
     setLoading(true);
     try {
       await signIn?.(email, password);
+      try {
+        if (rememberMe) localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      } catch (_) {}
       onClose();
     } catch (err) {
       setError(err.message || 'Грешка при влизане');
@@ -100,6 +116,15 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/40"
+                />
+                Запомни ме (имейл)
+              </label>
               <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-500 disabled:opacity-60">
                 {loading ? 'Влизане...' : 'Вход'}
               </button>

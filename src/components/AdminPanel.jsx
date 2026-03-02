@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog } from 'lucide-react';
+import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ACTION_LABELS = {
   appointment_created: 'Създаден час',
@@ -56,6 +56,8 @@ export default function AdminPanel({
   appointmentTypes = [],
   onAddAppointmentType,
   onDeleteAppointmentType,
+  dentists = [],
+  patients = [],
 }) {
   const [systemCheck, setSystemCheck] = useState(null);
   const [hoursStart, setHoursStart] = useState(workingHours.start);
@@ -65,6 +67,8 @@ export default function AdminPanel({
   const [newTypeKey, setNewTypeKey] = useState('');
   const [newTypeLabel, setNewTypeLabel] = useState('');
   const [profiles, setProfiles] = useState([]);
+  const [systemCheckOpen, setSystemCheckOpen] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState(null);
 
   useEffect(() => {
     setHoursStart(workingHours.start);
@@ -130,30 +134,34 @@ export default function AdminPanel({
           </button>
         </div>
 
-        <div className="p-4 border-b border-slate-800 shrink-0 space-y-3">
-          <h3 className="text-sm font-medium text-slate-300">Проверка на системата</h3>
-          {systemCheck === null ? (
-            <p className="text-xs text-slate-500">Проверяваме таблиците...</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {CHECKS.map(({ key, label }) => {
-                const r = systemCheck[key];
-                const ok = r?.ok;
-                return (
-                  <li key={key} className="flex items-center gap-2 text-sm">
-                    {ok ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    )}
-                    <span className={ok ? 'text-slate-200' : 'text-red-300'}>{label}</span>
-                    {r && !ok && r.message && (
-                      <span className="text-xs text-slate-500 truncate" title={r.message}>{r.message}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="border-b border-slate-800 shrink-0">
+          <button
+            type="button"
+            onClick={() => setSystemCheckOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-slate-800/50"
+          >
+            <h3 className="text-sm font-medium text-slate-300">Проверка на системата</h3>
+            {systemCheckOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {systemCheckOpen && (
+            <div className="px-4 pb-4 pt-0">
+              {systemCheck === null ? (
+                <p className="text-xs text-slate-500">Проверяваме таблиците...</p>
+              ) : (
+                <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-xs">
+                  {CHECKS.map(({ key, label }) => {
+                    const r = systemCheck[key];
+                    const ok = r?.ok;
+                    return (
+                      <li key={key} className="flex items-center gap-1.5">
+                        {ok ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                        <span className={ok ? 'text-slate-200' : 'text-red-300'}>{label}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           )}
         </div>
 
@@ -347,18 +355,47 @@ export default function AdminPanel({
             <p className="px-4 py-6 text-slate-500 text-sm">Няма записани действия</p>
           ) : (
             <ul className="p-4 space-y-2">
-              {activityLog.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex gap-2 py-2 px-3 rounded-lg bg-slate-800/80 border border-slate-700 text-sm"
-                >
-                  <span className="text-slate-500 shrink-0 text-xs mt-0.5">{formatWhen(entry.created_at)}</span>
-                  <span className="text-slate-200">
-                    {ACTION_LABELS[entry.action] ?? entry.action}
-                    {entry.details?.name && <span className="text-slate-400"> · {entry.details.name}</span>}
-                  </span>
-                </li>
-              ))}
+              {activityLog.map((entry) => {
+                const expanded = expandedLogId === entry.id;
+                const details = entry.details || {};
+                const dentistName = details.dentistId ? dentists.find((d) => d.id === details.dentistId)?.name : details.dentist_id ? dentists.find((d) => d.id === details.dentist_id)?.name : null;
+                const detailLines = [];
+                if (details.patientName) detailLines.push({ label: 'Пациент', val: details.patientName });
+                if (dentistName || details.dentistId) detailLines.push({ label: 'Лекар', val: dentistName || details.dentistId });
+                if (details.date) detailLines.push({ label: 'Дата', val: details.date });
+                if (details.start) detailLines.push({ label: 'Час', val: details.start });
+                if (details.type) detailLines.push({ label: 'Вид', val: details.type });
+                if (details.start_date && details.end_date) detailLines.push({ label: 'Период', val: `${details.start_date} – ${details.end_date}` });
+                if (details.file_name) detailLines.push({ label: 'Файл', val: details.file_name });
+                if (details.name && !details.patientName) detailLines.push({ label: 'Име', val: details.name });
+
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedLogId(expanded ? null : entry.id)}
+                      className="w-full flex gap-2 py-2 px-3 rounded-lg bg-slate-800/80 border border-slate-700 text-sm text-left hover:bg-slate-800 transition-colors"
+                    >
+                      <span className="text-slate-500 shrink-0 text-xs mt-0.5">{formatWhen(entry.created_at)}</span>
+                      <span className="flex-1 text-slate-200">
+                        {ACTION_LABELS[entry.action] ?? entry.action}
+                        {details.name && !expanded && <span className="text-slate-400"> · {details.name}</span>}
+                      </span>
+                      {expanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                    </button>
+                    {expanded && detailLines.length > 0 && (
+                      <div className="mt-1 ml-2 pl-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/80 text-xs space-y-1">
+                        {detailLines.map(({ label, val }) => (
+                          <div key={label} className="flex gap-2">
+                            <span className="text-slate-500 w-16 shrink-0">{label}:</span>
+                            <span className="text-slate-200">{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -111,6 +111,51 @@ export default function App() {
     return h * 60 + m;
   };
 
+  const findAllFreeSlotsForDate = useCallback(
+    (dentistId, dateStr) => {
+      if (!dateStr) return [];
+      const slots = getSlots(workingHours);
+      const isOnVacationDay = doctorVacations.some(
+        (v) => v.dentist_id === dentistId && v.start_date <= dateStr && v.end_date >= dateStr
+      );
+      if (isOnVacationDay) return [];
+
+      const key = `${dentistId}_${dateStr}`;
+      const availableSet = doctorAvailableSlots[key];
+      const today = new Date();
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const isToday = today.getFullYear() === y && today.getMonth() + 1 === m && today.getDate() === d;
+      const result = [];
+
+      for (const slot of slots) {
+        if (availableSet && availableSet.size > 0 && !availableSet.has(slot)) continue;
+        const [h, min] = slot.split(':').map(Number);
+        const slotDateTime = new Date(y, m - 1, d, h, min);
+        if (isToday && slotDateTime < new Date()) continue;
+
+        const slotStartMin = timeStrToMinutes(slot);
+        const slotEndMin = slotStartMin + 30;
+        const hasOverlap = appointments.some((a) => {
+          if (a.dentistId !== dentistId || a.date !== dateStr) return false;
+          const aStart = timeStrToMinutes(a.start);
+          const aEnd = timeStrToMinutes(a.end);
+          return !(aEnd <= slotStartMin || aStart >= slotEndMin);
+        });
+        if (!hasOverlap) result.push({ date: dateStr, time: slot });
+      }
+      return result;
+    },
+    [appointments, doctorVacations, workingHours, doctorAvailableSlots]
+  );
+
+  const findFirstFreeForDate = useCallback(
+    (dentistId, dateStr) => {
+      const all = findAllFreeSlotsForDate(dentistId, dateStr);
+      return all[0] ?? null;
+    },
+    [findAllFreeSlotsForDate]
+  );
+
   const findNextFreeForDentist = useCallback(
     (dentistId) => {
       const maxDays = 30;
@@ -847,7 +892,7 @@ export default function App() {
             onNextDay={goNextDay}
             onToday={goToday}
             onDatePick={goToDate}
-            nextFree={nextFreeSummary}
+            nextFree={permissions.canBookAnyDentist ? null : nextFreeSummary}
             dentists={dentists}
             selectedDentistIds={effectiveSelectedDentistIds}
             onDentistToggle={onDentistToggle}
@@ -856,12 +901,14 @@ export default function App() {
           {permissions.canBookAnyDentist && (
             <QuickBookBar
               dentists={filteredDentists}
-              findNextFreeForDentist={findNextFreeForDentist}
+              findFirstFreeForDate={findFirstFreeForDate}
+              findAllFreeSlotsForDate={findAllFreeSlotsForDate}
               onBook={(dentistId, { date, time }) => {
                 setModal({ open: true, dentistId, slot: time });
                 goToDate(date);
               }}
-              canUse={!!findNextFreeForDentist}
+              canUse
+              currentDate={currentDate}
             />
           )}
           <div className="mt-4 flex-1 min-h-[480px]">
@@ -1025,6 +1072,8 @@ export default function App() {
         appointmentTypes={appointmentTypes}
         onAddAppointmentType={addAppointmentType}
         onDeleteAppointmentType={deleteAppointmentType}
+        dentists={dentists}
+        patients={patients}
       />
     </div>
   );

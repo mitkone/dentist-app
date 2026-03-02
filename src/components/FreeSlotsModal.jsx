@@ -2,14 +2,29 @@ import { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { getSlots } from '../data/mockData';
 
-export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date, workingHours, onSave, supabase }) {
+function toDateStr(d) {
+  return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+}
+
+function parseDateStr(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date: initialDate, workingHours, onSave, supabase }) {
   const [dentist, setDentist] = useState(initialDentist ?? dentists[0]);
+  const [date, setDate] = useState(initialDate ?? new Date());
   const [slots, setSlots] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const dateStr = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
+  useEffect(() => {
+    if (initialDate) setDate(initialDate);
+  }, [initialDate, open]);
+
+  const dateStr = toDateStr(date);
 
   useEffect(() => {
     if (!initialDentist && dentists.length) setDentist(dentists[0]);
@@ -93,11 +108,17 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
                 ))}
               </select>
             ) : (
-              <p className="text-sm text-slate-400 mt-0.5">
-                {dentist?.name} · {formatDate(date)}
-              </p>
+              <p className="text-sm text-slate-400 mt-0.5">{dentist?.name}</p>
             )}
-            <p className="text-sm text-slate-400 mt-1">{formatDate(date)}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-slate-400">Дата:</label>
+              <input
+                type="date"
+                value={dateStr}
+                onChange={(e) => setDate(parseDateStr(e.target.value) ?? date)}
+                className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm [color-scheme:dark]"
+              />
+            </div>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
             <X className="w-5 h-5" />
