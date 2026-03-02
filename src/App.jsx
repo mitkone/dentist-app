@@ -936,7 +936,7 @@ export default function App() {
   onOpenVacation={openVacationForDentist}
   onEditDentist={permissions.canEditDentists ? setEditDentistId : undefined}
   specialties={specialties}
-  showDentistsFilter={dentists.length > 1}
+  showDentistsFilter={false}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>

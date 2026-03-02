@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { appointmentTypeLabel, specialtyLabel, getSlots, HOURS } from '../data/mockData';
 import PatientChronologyBlock from './PatientChronologyBlock';
+import TimePicker24 from './TimePicker24';
 
 const APPOINTMENT_TYPES = [
   { value: 'Checkup', labelKey: 'Checkup' },
@@ -161,13 +162,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Край на часа</label>
             <div className="flex flex-wrap gap-2 items-center">
-              <input
-                type="time"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                step={900}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 [color-scheme:dark]"
-              />
+              <TimePicker24 value={end} onChange={setEnd} />
               {DURATION_PRESETS.map(({ mins, label }) => (
                 <button
                   key={mins}

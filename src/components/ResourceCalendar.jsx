@@ -75,6 +75,24 @@ export default function ResourceCalendar({
     return () => { grid.removeEventListener('scroll', sync); ro.disconnect(); };
   }, []);
 
+  useEffect(() => {
+    const grid = gridScrollRef.current;
+    if (!grid || typeof window === 'undefined') return;
+    const onWheel = (e) => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) {
+        const { scrollTop, scrollHeight, clientHeight } = grid;
+        const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
+        const canScrollUp = scrollTop > 0;
+        if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+          e.preventDefault();
+          grid.scrollTop += e.deltaY;
+        }
+      }
+    };
+    grid.addEventListener('wheel', onWheel, { passive: false });
+    return () => grid.removeEventListener('wheel', onWheel);
+  }, []);
+
   const listForMobile = (allDentists.length ? allDentists : dentists);
   const dentistsToShow = useMemo(() => {
     if (!isMobile || dentists.length === 0) return dentists;
