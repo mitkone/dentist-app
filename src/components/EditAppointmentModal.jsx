@@ -92,7 +92,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       dentistId,
       start,
       end,
-      patientName: name || matchedPatient?.name ?? appointment.patientName,
+      patientName: (name || matchedPatient?.name) ?? appointment.patientName,
       patientId: matchedPatient?.id || undefined,
       type,
       notes: notes.trim() || '',
@@ -180,7 +180,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
 
           <PatientChronologyBlock
             patientId={matchedPatient?.id}
-            patientName={patientInput.trim() || matchedPatient?.name ?? appointment?.patientName}
+            patientName={(patientInput.trim() || matchedPatient?.name) ?? appointment?.patientName}
             appointments={appointments}
             dentists={dentists}
             appointmentTypes={typeOptions}
