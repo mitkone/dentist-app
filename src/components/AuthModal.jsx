@@ -8,6 +8,7 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('receptionist');
   const [dentistId, setDentistId] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +33,7 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
     setError('');
     setLoading(true);
     try {
-      await signUp?.({ email, password, fullName, role, dentistId: role === 'dentist' ? dentistId : null });
+      await signUp?.({ email, password, fullName, role, dentistId: role === 'dentist' ? dentistId : null, phone });
       onClose();
     } catch (err) {
       setError(err.message || 'Грешка при регистрация');
@@ -123,6 +124,16 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Телефон <span className="text-slate-500 font-normal">(по избор)</span></label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+359..."
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
               <div>

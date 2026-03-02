@@ -20,6 +20,8 @@ import AdminPasswordModal from './components/AdminPasswordModal';
 import DentistEditModal from './components/DentistEditModal';
 import AuthModal from './components/AuthModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
+import DentistProfileModal from './components/DentistProfileModal';
+import { getPermissions } from './lib/permissions';
 
 function dateKey(d) {
   const y = d.getFullYear();
@@ -72,8 +74,15 @@ export default function App() {
   const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
   const [doctorAvailableSlots, setDoctorAvailableSlots] = useState({});
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
+  const [dentistProfileModal, setDentistProfileModal] = useState(null);
+  const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
 
   const { user, profile, signIn, signUp, signOut } = useAuth() ?? {};
+  const permissions = getPermissions(profile);
+
+  const effectiveSelectedDentistIds = permissions.myDentistId && dentists.some((d) => d.id === permissions.myDentistId)
+    ? [permissions.myDentistId]
+    : selectedDentistIds;
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
 
@@ -150,7 +159,7 @@ export default function App() {
     return best;
   })();
 
-  const filteredDentists = dentists.filter((d) => selectedDentistIds.includes(d.id));
+  const filteredDentists = dentists.filter((d) => effectiveSelectedDentistIds.includes(d.id));
   const todayKeyStr = dateKey(currentDate);
   const appointmentsToday = appointments.filter((a) => a.date === todayKeyStr).length;
   const adminStats = {
@@ -709,22 +718,26 @@ export default function App() {
           <div className="flex items-center gap-2">
             {supabase && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setFreeSlotsOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
-                >
-                  <CalendarClock className="w-4 h-4" />
-                  <span className="hidden sm:inline">Свободни часове</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAdminPassword(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
-                >
-                  <Activity className="w-4 h-4" />
-                  Админ
-                </button>
+                {!permissions.myDentistId && (
+                  <button
+                    type="button"
+                    onClick={() => { setFreeSlotsInitialDentist(null); setFreeSlotsOpen(true); }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                  >
+                    <CalendarClock className="w-4 h-4" />
+                    <span className="hidden sm:inline">Свободни часове</span>
+                  </button>
+                )}
+                {permissions.canViewAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                  >
+                    <Activity className="w-4 h-4" />
+                    Админ
+                  </button>
+                )}
               </>
             )}
             {supabase && (
@@ -755,18 +768,19 @@ export default function App() {
       <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-black">
       <Sidebar
   dentists={dentists}
-  selectedDentistIds={selectedDentistIds}
+  selectedDentistIds={effectiveSelectedDentistIds}
   onDentistToggle={onDentistToggle}
-  onDeleteDentist={deleteDentist}
+  onDeleteDentist={permissions.canEditDentists ? deleteDentist : undefined}
   patientSearch={patientSearch}
   onPatientSearch={setPatientSearch}
   patients={patients}
-  onAddDentist={() => setAddDentistOpen(true)}
+  onAddDentist={permissions.canEditDentists ? () => setAddDentistOpen(true) : undefined}
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
-  onEditDentist={setEditDentistId}
+  onEditDentist={permissions.canEditDentists ? setEditDentistId : undefined}
   specialties={specialties}
+  showDentistsFilter={!permissions.myDentistId}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black">
@@ -778,8 +792,9 @@ export default function App() {
             onDatePick={goToDate}
             nextFree={nextFreeSummary}
             dentists={dentists}
-            selectedDentistIds={selectedDentistIds}
+            selectedDentistIds={effectiveSelectedDentistIds}
             onDentistToggle={onDentistToggle}
+            showDentistBar={!permissions.myDentistId}
           />
           <div className="mt-4 flex-1 min-h-[480px]">
             {!isSupabaseConfigured() && (
@@ -808,9 +823,11 @@ export default function App() {
   doctorVacations={doctorVacations}
   workingHours={workingHours}
   allDentists={dentists}
-  selectedDentistIds={selectedDentistIds}
+  selectedDentistIds={effectiveSelectedDentistIds}
   onDentistToggle={onDentistToggle}
   doctorAvailableSlots={doctorAvailableSlots}
+  onDentistNameClick={(d) => setDentistProfileModal(d)}
+  canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
 />
             )}
           </div>
@@ -904,12 +921,23 @@ export default function App() {
 
       <FreeSlotsModal
         open={freeSlotsOpen}
-        onClose={() => setFreeSlotsOpen(false)}
+        onClose={() => { setFreeSlotsOpen(false); setFreeSlotsInitialDentist(null); }}
+        dentist={freeSlotsInitialDentist}
         dentists={filteredDentists}
         date={currentDate}
         workingHours={workingHours}
         onSave={refreshDoctorSlots}
         supabase={supabase}
+      />
+
+      <DentistProfileModal
+        open={Boolean(dentistProfileModal)}
+        onClose={() => setDentistProfileModal(null)}
+        dentist={typeof dentistProfileModal === 'object' ? dentistProfileModal : dentists.find((d) => d.id === dentistProfileModal)}
+        onOpenVacation={(id) => { setDentistProfileModal(null); openVacationForDentist(id); }}
+        onOpenFreeSlots={(d) => { setDentistProfileModal(null); setFreeSlotsInitialDentist(d); setFreeSlotsOpen(true); }}
+        canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
+        canManageFreeSlots
       />
 
       <AdminPanel

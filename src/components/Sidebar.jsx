@@ -15,6 +15,7 @@ export default function Sidebar({ dentists,
   onOpenVacation,
   onEditDentist,
   specialties = [],
+  showDentistsFilter = true,
 }) {
   const specialtyLabelResolved = (key) => specialties.find((s) => s.key === key)?.label_bg ?? specialtyLabel(key);
   const q = (patientSearch || '').trim().toLowerCase();
@@ -48,13 +49,16 @@ export default function Sidebar({ dentists,
   const selectedCount = selectedDentistIds.length;
   return (
     <aside className="w-full md:w-72 shrink-0 flex flex-col bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 shadow-sm max-h-[45vh] md:max-h-none z-10 md:z-auto">
-      <div className="p-4 border-b border-slate-800 hidden md:block">
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <Filter className="w-4 h-4 text-emerald-400" />
-          Филтри
-        </h2>
-      </div>
+      {showDentistsFilter && (
+        <div className="p-4 border-b border-slate-800 hidden md:block">
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <Filter className="w-4 h-4 text-emerald-400" />
+            Филтри
+          </h2>
+        </div>
+      )}
 
+      {showDentistsFilter && (
       <div className="p-4 border-b border-slate-800 md:block">
         <button
           type="button"
@@ -161,6 +165,7 @@ export default function Sidebar({ dentists,
           </div>
         </div>
       </div>
+      )}
 
       <div className="p-4 flex-1">
         <div className="flex items-center justify-between mb-2">

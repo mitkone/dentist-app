@@ -41,6 +41,8 @@ export default function ResourceCalendar({
   selectedDentistIds = [],
   onDentistToggle,
   doctorAvailableSlots = {},
+  onDentistNameClick,
+  canManageVacation = true,
 }) {
   const slots = useMemo(() => getSlots(workingHours), [workingHours]);
   const [dragState, setDragState] = useState(null);
@@ -386,9 +388,20 @@ export default function ResourceCalendar({
               key={d.id}
               className="flex-1 min-w-[140px] sm:min-w-[160px] border-r border-slate-800 last:border-r-0 py-2 sm:py-3 px-2 sm:px-3 text-center"
             >
-              <div className="font-semibold text-slate-100 truncate" title={d.name}>
-                {d.name}
-              </div>
+              {onDentistNameClick && canManageVacation ? (
+                <button
+                  type="button"
+                  onClick={() => onDentistNameClick(d)}
+                  className="w-full font-semibold text-slate-100 truncate hover:text-emerald-300 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded px-1"
+                  title="Профил на лекар"
+                >
+                  {d.name}
+                </button>
+              ) : (
+                <div className="font-semibold text-slate-100 truncate" title={d.name}>
+                  {d.name}
+                </div>
+              )}
               <div className="text-xs text-slate-400 truncate">{specialtyLabel(d.specialty)}</div>
             </div>
           ))}

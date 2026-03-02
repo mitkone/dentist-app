@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2 } from 'lucide-react';
+import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog } from 'lucide-react';
 
 const ACTION_LABELS = {
   appointment_created: 'Създаден час',
@@ -64,6 +64,7 @@ export default function AdminPanel({
   const [newSpecLabel, setNewSpecLabel] = useState('');
   const [newTypeKey, setNewTypeKey] = useState('');
   const [newTypeLabel, setNewTypeLabel] = useState('');
+  const [profiles, setProfiles] = useState([]);
 
   useEffect(() => {
     setHoursStart(workingHours.start);
@@ -92,6 +93,20 @@ export default function AdminPanel({
     })();
     return () => { cancelled = true; };
   }, [open, supabase]);
+
+  useEffect(() => {
+    if (!open || !supabase) return;
+    supabase.from('profiles').select('id, email, full_name, role, dentist_id, permissions').order('created_at', { ascending: false })
+      .then(({ data }) => setProfiles(data || []));
+  }, [open, supabase]);
+
+  const updateProfilePermissions = async (profileId, permissions) => {
+    if (!supabase) return;
+    await supabase.from('profiles').update({ permissions, updated_at: new Date().toISOString() }).eq('id', profileId);
+    setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, permissions } : p)));
+  };
+
+  const roleLabel = { admin: 'Админ', dentist: 'Стоматолог', receptionist: 'Регистратор' };
 
   if (!open) return null;
 
@@ -282,6 +297,46 @@ export default function AdminPanel({
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+          )}
+
+          {profiles.length > 0 && (
+            <div className="p-4 border-b border-slate-800">
+              <h3 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <UserCog className="w-4 h-4 text-emerald-400" />
+                Регистрирани профили
+              </h3>
+              <ul className="space-y-2 max-h-48 overflow-y-auto">
+                {profiles.map((p) => (
+                  <li key={p.id} className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-slate-800 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-100 font-medium truncate">{p.full_name || p.email}</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 shrink-0">{roleLabel[p.role] || p.role}</span>
+                    </div>
+                    <span className="text-xs text-slate-500 truncate">{p.email}</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <label className="inline-flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={!!(p.permissions?.can_book_all ?? (p.role === 'receptionist' || p.role === 'admin'))}
+                          onChange={(e) => updateProfilePermissions(p.id, { ...p.permissions, can_book_all: e.target.checked })}
+                          className="rounded border-slate-600"
+                        />
+                        <span>Запис на всички</span>
+                      </label>
+                      <label className="inline-flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={!!(p.permissions?.can_view_admin ?? (p.role === 'admin'))}
+                          onChange={(e) => updateProfilePermissions(p.id, { ...p.permissions, can_view_admin: e.target.checked })}
+                          className="rounded border-slate-600"
+                        />
+                        <span>Вижда админ</span>
+                      </label>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

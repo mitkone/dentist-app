@@ -18,8 +18,12 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
   };
 
   return (
-    <div className="mt-3 mb-2 overflow-x-auto scroll-thin touch-pan-x overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-      <div className="flex items-center gap-2 min-w-max pb-1">
+    <div className="mt-3 mb-2 relative group">
+      <div
+        className="overflow-x-auto scroll-thin touch-pan-x overscroll-x-contain pr-8 md:pr-4 pb-2 -mb-2"
+        style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable' }}
+      >
+        <div className="flex items-center gap-2 min-w-max pb-1">
         <button
           type="button"
           onClick={handleToggleAll}
@@ -53,7 +57,9 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
             </button>
           );
         })}
+        </div>
       </div>
+      <div className="absolute right-0 top-0 bottom-2 w-8 md:w-6 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none" aria-hidden />
     </div>
   );
 }

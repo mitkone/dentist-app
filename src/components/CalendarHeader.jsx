@@ -22,6 +22,7 @@ export default function CalendarHeader({
   dentists = [],
   selectedDentistIds = [],
   onDentistToggle,
+  showDentistBar = true,
 }) {
   const [showDentists, setShowDentists] = useState(false);
 
@@ -32,6 +33,7 @@ export default function CalendarHeader({
           <h1 className="text-xl font-bold text-white">График</h1>
           <span className="text-slate-500">·</span>
           <span className="text-slate-300 font-medium">{formatHeaderDate(currentDate)}</span>
+          {showDentistBar && (
           <div className="hidden md:block">
             {onDentistToggle && dentists.length > 0 && (
               <button
@@ -48,6 +50,7 @@ export default function CalendarHeader({
               </button>
             )}
           </div>
+          )}
         </div>
         <div className="flex items-center justify-center gap-2 flex-wrap sm:justify-end">
           {nextFree && nextFree.dentistName && (
@@ -100,7 +103,7 @@ export default function CalendarHeader({
           </button>
         </div>
       </div>
-      {showDentists && onDentistToggle && dentists.length > 0 && (
+      {showDentistBar && showDentists && onDentistToggle && dentists.length > 0 && (
         <div className="mt-1 hidden md:block">
           <DentistBar
             dentists={dentists}

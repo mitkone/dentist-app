@@ -43,12 +43,12 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }
 
-  async function signUp({ email, password, fullName, role, dentistId }) {
+  async function signUp({ email, password, fullName, role, dentistId, phone }) {
     if (!supabase) throw new Error('Supabase не е конфигуриран');
     const { data: { user: u }, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, role, dentist_id: dentistId || null } },
+      options: { data: { full_name: fullName, role, dentist_id: dentistId || null, phone: phone || null } },
     });
     if (error) throw error;
     if (u) {
@@ -58,6 +58,7 @@ export function AuthProvider({ children }) {
         full_name: fullName || null,
         role,
         dentist_id: dentistId || null,
+        phone: phone || null,
       });
     }
   }
