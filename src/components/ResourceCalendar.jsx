@@ -43,7 +43,10 @@ export default function ResourceCalendar({
   doctorAvailableSlots = {},
   onDentistNameClick,
   canManageVacation = true,
+  appointmentTypes = [],
 }) {
+  const getTypeDisplay = (type) =>
+    appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
   const slots = useMemo(() => getSlots(workingHours), [workingHours]);
   const [dragState, setDragState] = useState(null);
   const overlayRef = useRef(null);
@@ -297,7 +300,7 @@ export default function ResourceCalendar({
               {(dragState.appointment.patientId && patients.find((p) => p.id === dragState.appointment.patientId)?.name) || dragState.appointment.patientName || 'Пациент'}
             </span>
             <span className="text-[10px] opacity-95 truncate drop-shadow-sm">
-              {appointmentTypeLabel(dragState.appointment.type)}
+                          {getTypeDisplay(dragState.appointment.type)}
             </span>
           </div>,
           document.body
@@ -533,7 +536,7 @@ export default function ResourceCalendar({
                           {getPatientDisplayName(a)}
                         </span>
                         <span className="text-[10px] opacity-95 truncate drop-shadow-sm">
-                          {appointmentTypeLabel(a.type)}
+                          {getTypeDisplay(a.type)}
                         </span>
                         <div className="flex items-center gap-1 mt-0.5">
                           {isNhif && (

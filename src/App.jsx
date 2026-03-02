@@ -395,8 +395,9 @@ export default function App() {
     []
   );
   const addAppointmentType = useCallback(
-    async (key, label_bg) => {
+    async (label_bg) => {
       if (!supabase) return;
+      const key = label_bg;
       const payload = { key, label_bg };
       const hasSortOrder = appointmentTypes.length === 0 || appointmentTypes[0]?.sort_order !== undefined;
       if (hasSortOrder) {
@@ -649,9 +650,9 @@ export default function App() {
   }, []);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, start, type, durationMinutes = 30, insurance = 'private', notes = '' }) => {
+    async ({ dentistId, patientId, patientName: providedName, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
       const date = dateKey(currentDate);
-      const end = addMinutes(start, durationMinutes);
+      const end = endParam || addMinutes(start, durationMinutes ?? 30);
       const patient = patientId ? patients.find((p) => p.id === patientId) : null;
       const patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
 
@@ -984,6 +985,7 @@ export default function App() {
   doctorAvailableSlots={doctorAvailableSlots}
   onDentistNameClick={(d) => setDentistProfileModal(d)}
   canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
+  appointmentTypes={appointmentTypes}
 />
             )}
           </div>

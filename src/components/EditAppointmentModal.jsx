@@ -12,23 +12,15 @@ const APPOINTMENT_TYPES = [
   { value: 'Cleaning', labelKey: 'Cleaning' },
 ];
 
-const DURATION_OPTIONS = [
-  { value: 15, label: '15 мин' },
-  { value: 30, label: '30 мин' },
-  { value: 45, label: '45 мин' },
-  { value: 60, label: '1 ч' },
-  { value: 90, label: '1 ч 30 мин' },
-  { value: 120, label: '2 ч' },
-  { value: 180, label: '3 ч' },
-  { value: 240, label: '4 ч' },
-  { value: 300, label: '5 ч' },
-  { value: 360, label: '6 ч' },
-  { value: 420, label: '7 ч' },
-  { value: 480, label: '8 ч' },
-  { value: 540, label: '9 ч' },
-  { value: 600, label: '10 ч' },
-  { value: 660, label: '11 ч' },
-  { value: 720, label: '12 ч' },
+const DURATION_PRESETS = [
+  { mins: 15, label: '15 мин' },
+  { mins: 30, label: '30 мин' },
+  { mins: 45, label: '45 мин' },
+  { mins: 60, label: '1 ч' },
+  { mins: 75, label: '1 ч 15 мин' },
+  { mins: 90, label: '1 ч 30 мин' },
+  { mins: 105, label: '1 ч 45 мин' },
+  { mins: 120, label: '2 ч' },
 ];
 
 function getDurationMinutes(start, end) {
@@ -56,6 +48,7 @@ function isAppointmentInPast(appointment) {
 export default function EditAppointmentModal({ open, onClose, appointment, dentists, patients, onSave, onDelete, workingHours = HOURS, appointmentTypes = [], appointments = [], onOpenPatientProfile, canChangeDentist = true }) {
   const [dentistId, setDentistId] = useState('');
   const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
   const [patientInput, setPatientInput] = useState('');
   const [type, setType] = useState('Checkup');
   const [durationMinutes, setDurationMinutes] = useState(30);
@@ -72,26 +65,29 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
     if (appointment) {
       setDentistId(appointment.dentistId);
       setStart(appointment.start);
+      setEnd(appointment.end ?? addMinutes(appointment.start, 30));
       const p = appointment.patientId ? patients.find((x) => x.id === appointment.patientId) : null;
       setPatientInput(p?.name ?? appointment.patientName ?? '');
-      setType(appointment.type || 'Checkup');
+      const t = appointment.type;
+      const resolved = typeOptions.find((o) => o.key === t || o.label_bg === t)?.label_bg ?? t;
+      setType(resolved || typeOptions[0]?.label_bg || 'Преглед');
       setDurationMinutes(getDurationMinutes(appointment.start, appointment.end));
       setNotes(appointment.notes ?? '');
       setAttendance(appointment.attendance || 'pending');
       setInsurance(appointment.insurance || 'private');
     }
-  }, [appointment, patients]);
+  }, [appointment, patients, typeOptions]);
 
   if (!open || !appointment) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const end = addMinutes(start, durationMinutes);
+    const endTime = end || addMinutes(start, durationMinutes);
     const name = patientInput.trim();
     onSave(appointment.id, {
       dentistId,
       start,
-      end,
+      end: endTime,
       patientName: (name || matchedPatient?.name) ?? appointment.patientName,
       patientId: matchedPatient?.id || undefined,
       type,
@@ -163,6 +159,29 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Край на часа</label>
+            <div className="flex flex-wrap gap-2 items-center">
+              <input
+                type="time"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                step={900}
+                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 [color-scheme:dark]"
+              />
+              {DURATION_PRESETS.map(({ mins, label }) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => setEnd(addMinutes(start, mins))}
+                  className="px-2 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-slate-600"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <label htmlFor="edit-patientName" className="block text-sm font-medium text-slate-200 mb-1">
               Пациент <span className="text-slate-500 font-normal">(изберете или въведете име)</span>
             </label>
@@ -194,29 +213,14 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           />
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Продължителност</label>
-            <select
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
-              {DURATION_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Вид преглед</label>
             <select
-              value={type}
+              value={typeOptions.find((o) => o.key === type || o.label_bg === type)?.label_bg ?? type}
               onChange={(e) => setType(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {typeOptions.map((opt) => (
-                <option key={opt.key} value={opt.key}>
+                <option key={opt.key ?? opt.label_bg} value={opt.label_bg}>
                   {opt.label_bg}
                 </option>
               ))}

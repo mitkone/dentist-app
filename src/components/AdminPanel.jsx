@@ -65,7 +65,6 @@ export default function AdminPanel({
   const [hoursEnd, setHoursEnd] = useState(workingHours.end);
   const [newSpecKey, setNewSpecKey] = useState('');
   const [newSpecLabel, setNewSpecLabel] = useState('');
-  const [newTypeKey, setNewTypeKey] = useState('');
   const [newTypeLabel, setNewTypeLabel] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [systemCheckOpen, setSystemCheckOpen] = useState(false);
@@ -305,24 +304,16 @@ export default function AdminPanel({
               <div className="flex gap-2 flex-wrap items-center border-t border-slate-700 pt-3">
                 <input
                   type="text"
-                  placeholder="Ключ"
-                  value={newTypeKey}
-                  onChange={(e) => setNewTypeKey(e.target.value)}
-                  className="w-28 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Име на български"
+                  placeholder="Име (напр. Преглед)"
                   value={newTypeLabel}
                   onChange={(e) => setNewTypeLabel(e.target.value)}
-                  className="w-36 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
+                  className="flex-1 min-w-[140px] px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const k = newTypeKey.trim();
                     const l = newTypeLabel.trim();
-                    if (k && l) { onAddAppointmentType(k, l); setNewTypeKey(''); setNewTypeLabel(''); }
+                    if (l) { onAddAppointmentType(l); setNewTypeLabel(''); }
                   }}
                   className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-500"
                 >

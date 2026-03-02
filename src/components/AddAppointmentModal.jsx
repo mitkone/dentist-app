@@ -12,23 +12,15 @@ const DEFAULT_APPOINTMENT_TYPES = [
   { value: 'Cleaning', labelKey: 'Cleaning' },
 ];
 
-const DURATION_OPTIONS = [
-  { value: 15, label: '15 мин' },
-  { value: 30, label: '30 мин' },
-  { value: 45, label: '45 мин' },
-  { value: 60, label: '1 ч' },
-  { value: 90, label: '1 ч 30 мин' },
-  { value: 120, label: '2 ч' },
-  { value: 180, label: '3 ч' },
-  { value: 240, label: '4 ч' },
-  { value: 300, label: '5 ч' },
-  { value: 360, label: '6 ч' },
-  { value: 420, label: '7 ч' },
-  { value: 480, label: '8 ч' },
-  { value: 540, label: '9 ч' },
-  { value: 600, label: '10 ч' },
-  { value: 660, label: '11 ч' },
-  { value: 720, label: '12 ч' },
+const DURATION_PRESETS = [
+  { mins: 15, label: '15 мин' },
+  { mins: 30, label: '30 мин' },
+  { mins: 45, label: '45 мин' },
+  { mins: 60, label: '1 ч' },
+  { mins: 75, label: '1 ч 15 мин' },
+  { mins: 90, label: '1 ч 30 мин' },
+  { mins: 105, label: '1 ч 45 мин' },
+  { mins: 120, label: '2 ч' },
 ];
 
 function addMinutesToTime(time, mins) {
@@ -41,31 +33,40 @@ function addMinutesToTime(time, mins) {
 
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
   const [patientInput, setPatientInput] = useState('');
-  const [durationMinutes, setDurationMinutes] = useState(30);
+  const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
   useEffect(() => {
     if (open) {
       setPatientInput(patients[0]?.name ?? '');
       setNotes('');
+      setEndTime(addMinutesToTime(slot, 30));
     }
-  }, [open, patients]);
+  }, [open, patients, slot]);
   if (!open) return null;
 
   const selectedDentist = dentists.find((d) => d.id === dentist);
   const typeOptions = appointmentTypes.length > 0 ? appointmentTypes : DEFAULT_APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }));
-  const defaultType = (typeOptions[0]?.key) || 'Checkup';
+  const defaultType = (typeOptions[0]?.label_bg) ?? (typeOptions[0]?.key) ?? 'Преглед';
   const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
+
+  const getDurationFromEnd = () => {
+    const [sh, sm] = (slot || '09:00').split(':').map(Number);
+    const [eh, em] = (endTime || '09:30').split(':').map(Number);
+    return (eh - sh) * 60 + (em - sm);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.target;
     const type = form.type?.value || defaultType;
-    const durationMinutes = Number(form.duration?.value) || 30;
     const insurance = form.insurance?.value || 'private';
     const name = patientInput.trim();
     const patientId = matchedPatient?.id ?? null;
     const patientName = name || (matchedPatient?.name ?? '');
-    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, type, durationMinutes, insurance, notes: notes.trim() });
+    const durationMinutes = getDurationFromEnd();
+    if (durationMinutes < 1) return;
+    const end = endTime || addMinutesToTime(slot, 30);
+    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, end, type, durationMinutes, insurance, notes: notes.trim() });
     onClose();
   };
 
@@ -92,9 +93,30 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Час (начало – край)</label>
-            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">
-              {slot} – {addMinutesToTime(slot, durationMinutes)}
+            <label className="block text-sm font-medium text-slate-200 mb-1">Начало</label>
+            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">{slot}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Край на часа</label>
+            <div className="flex flex-wrap gap-2 items-center">
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                step={900}
+                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 [color-scheme:dark]"
+              />
+              <span className="text-xs text-slate-500">или бързи:</span>
+              {DURATION_PRESETS.map(({ mins, label }) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => setEndTime(addMinutesToTime(slot, mins))}
+                  className="px-2 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-slate-600"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -129,25 +151,6 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             appointmentTypes={typeOptions}
             onOpenProfile={onOpenPatientProfile ? (id) => { onClose(); onOpenPatientProfile(id); } : undefined}
           />
-
-          <div>
-            <label htmlFor="duration" className="block text-sm font-medium text-slate-200 mb-1">
-              Продължителност (от началото на часа)
-            </label>
-            <select
-              id="duration"
-              name="duration"
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
-              {DURATION_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-slate-200 mb-1">
