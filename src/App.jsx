@@ -396,9 +396,13 @@ export default function App() {
   );
   const addAppointmentType = useCallback(
     async (label_bg) => {
-      if (!supabase) return;
-      const key = label_bg;
-      const payload = { key, label_bg };
+      if (!supabase) return { ok: false, error: 'Supabase не е конфигуриран' };
+      const trimmed = (label_bg || '').trim();
+      if (!trimmed) return { ok: false, error: 'Въведете име' };
+      const exists = appointmentTypes.some((t) => (t.label_bg || '').trim().toLowerCase() === trimmed.toLowerCase());
+      if (exists) return { ok: false, error: 'Този вид вече съществува' };
+      const key = trimmed;
+      const payload = { key, label_bg: trimmed };
       const hasSortOrder = appointmentTypes.length === 0 || appointmentTypes[0]?.sort_order !== undefined;
       if (hasSortOrder) {
         const maxOrder = Math.max(0, ...appointmentTypes.map((t) => t.sort_order ?? 0));
@@ -406,12 +410,20 @@ export default function App() {
       }
       const { data, error } = await supabase.from('appointment_types').insert(payload).select().single();
       if (error) {
-        const withoutSort = { key, label_bg };
+        const withoutSort = { key, label_bg: trimmed };
         const fallback = await supabase.from('appointment_types').insert(withoutSort).select().single();
-        if (fallback.data) setAppointmentTypes((prev) => [...prev, fallback.data]);
-        return;
+        if (fallback.data) {
+          setAppointmentTypes((prev) => [...prev, fallback.data].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+          return { ok: true };
+        }
+        const msg = error.code === '23505' ? 'Този вид вече съществува' : (error.message || 'Грешка при добавяне');
+        return { ok: false, error: msg };
       }
-      if (data) setAppointmentTypes((prev) => [...prev, data].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+      if (data) {
+        setAppointmentTypes((prev) => [...prev, data].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+        return { ok: true };
+      }
+      return { ok: false, error: 'Неизвестна грешка' };
     },
     [appointmentTypes]
   );

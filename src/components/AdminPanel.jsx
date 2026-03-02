@@ -66,6 +66,7 @@ export default function AdminPanel({
   const [newSpecKey, setNewSpecKey] = useState('');
   const [newSpecLabel, setNewSpecLabel] = useState('');
   const [newTypeLabel, setNewTypeLabel] = useState('');
+  const [addTypeError, setAddTypeError] = useState('');
   const [profiles, setProfiles] = useState([]);
   const [systemCheckOpen, setSystemCheckOpen] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
@@ -268,7 +269,7 @@ export default function AdminPanel({
           {onAddAppointmentType && (
             <div className="p-4 border-b border-slate-800">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
-              <p className="text-xs text-slate-500 mb-2">↑↓ за подреждане · нов вид: ключ + име</p>
+              <p className="text-xs text-slate-500 mb-2">↑↓ за подреждане · въведете име и натиснете +</p>
               <ul className="space-y-1.5 mb-3 max-h-48 overflow-y-auto scroll-thin">
                 {appointmentTypes.map((t, idx) => (
                   <li key={t.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
@@ -304,22 +305,34 @@ export default function AdminPanel({
               <div className="flex gap-2 flex-wrap items-center border-t border-slate-700 pt-3">
                 <input
                   type="text"
-                  placeholder="Име (напр. Преглед)"
+                  placeholder="Име (напр. Имплант)"
                   value={newTypeLabel}
-                  onChange={(e) => setNewTypeLabel(e.target.value)}
+                  onChange={(e) => { setNewTypeLabel(e.target.value); setAddTypeError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), document.getElementById('add-type-btn')?.click())}
                   className="flex-1 min-w-[140px] px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
                 />
                 <button
+                  id="add-type-btn"
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const l = newTypeLabel.trim();
-                    if (l) { onAddAppointmentType(l); setNewTypeLabel(''); }
+                    setAddTypeError('');
+                    if (!l) return;
+                    const result = await onAddAppointmentType(l);
+                    if (result?.ok) {
+                      setNewTypeLabel('');
+                    } else if (result?.error) {
+                      setAddTypeError(result.error);
+                    }
                   }}
                   className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-500"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+              {addTypeError && (
+                <p className="text-xs text-red-400 mt-2">{addTypeError}</p>
+              )}
             </div>
           )}
 
