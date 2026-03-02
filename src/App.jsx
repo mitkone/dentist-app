@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Activity, LogIn, LogOut, CalendarClock } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
@@ -85,8 +85,17 @@ export default function App() {
   const permissions = adminSession ? { canViewAllDentists: true, canBookAnyDentist: true, canEditDentists: true, canManageProfiles: true, canManageSettings: true, canViewAdmin: true, myDentistId: null } : getPermissions(profile);
 
   const effectiveSelectedDentistIds = permissions.myDentistId && dentists.some((d) => d.id === permissions.myDentistId)
-    ? [permissions.myDentistId]
+    ? (selectedDentistIds.includes(permissions.myDentistId) ? selectedDentistIds : [permissions.myDentistId])
     : selectedDentistIds;
+
+  const dentistViewInitialized = useRef(false);
+  useEffect(() => {
+    if (permissions.myDentistId && !adminSession && dentists.some((d) => d.id === permissions.myDentistId) && !dentistViewInitialized.current) {
+      setSelectedDentistIds([permissions.myDentistId]);
+      dentistViewInitialized.current = true;
+    }
+    if (!permissions.myDentistId) dentistViewInitialized.current = false;
+  }, [permissions.myDentistId, adminSession, dentists]);
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
 
@@ -388,8 +397,19 @@ export default function App() {
   const addAppointmentType = useCallback(
     async (key, label_bg) => {
       if (!supabase) return;
-      const maxOrder = Math.max(0, ...appointmentTypes.map((t) => (t.sort_order ?? 0)));
-      const { data } = await supabase.from('appointment_types').insert({ key, label_bg, sort_order: maxOrder + 1 }).select().single();
+      const payload = { key, label_bg };
+      const hasSortOrder = appointmentTypes.length === 0 || appointmentTypes[0]?.sort_order !== undefined;
+      if (hasSortOrder) {
+        const maxOrder = Math.max(0, ...appointmentTypes.map((t) => t.sort_order ?? 0));
+        payload.sort_order = maxOrder + 1;
+      }
+      const { data, error } = await supabase.from('appointment_types').insert(payload).select().single();
+      if (error) {
+        const withoutSort = { key, label_bg };
+        const fallback = await supabase.from('appointment_types').insert(withoutSort).select().single();
+        if (fallback.data) setAppointmentTypes((prev) => [...prev, fallback.data]);
+        return;
+      }
       if (data) setAppointmentTypes((prev) => [...prev, data].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
     },
     [appointmentTypes]
@@ -903,7 +923,7 @@ export default function App() {
   onOpenVacation={openVacationForDentist}
   onEditDentist={permissions.canEditDentists ? setEditDentistId : undefined}
   specialties={specialties}
-  showDentistsFilter={false}
+  showDentistsFilter={dentists.length > 1}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
@@ -917,7 +937,7 @@ export default function App() {
             dentists={dentists}
             selectedDentistIds={effectiveSelectedDentistIds}
             onDentistToggle={onDentistToggle}
-            showDentistBar={!permissions.myDentistId}
+            showDentistBar={dentists.length > 1}
           />
           {permissions.canBookAnyDentist && (
             <QuickBookBar

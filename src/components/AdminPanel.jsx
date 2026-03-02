@@ -269,40 +269,40 @@ export default function AdminPanel({
           {onAddAppointmentType && (
             <div className="p-4 border-b border-slate-800">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
-              <p className="text-xs text-slate-500 mb-2">Подредете реда при записване на час с ↑↓</p>
-              <ul className="space-y-1 mb-2 max-h-40 overflow-y-auto">
+              <p className="text-xs text-slate-500 mb-2">↑↓ за подреждане · нов вид: ключ + име</p>
+              <ul className="space-y-1.5 mb-3 max-h-48 overflow-y-auto scroll-thin">
                 {appointmentTypes.map((t, idx) => (
-                  <li key={t.id} className="flex items-center gap-1 py-1 px-2 rounded bg-slate-800 text-sm">
+                  <li key={t.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
                     {onReorderAppointmentType && (
-                      <div className="flex flex-col shrink-0">
+                      <div className="flex flex-col gap-0 shrink-0" title="Подреди">
                         <button
                           type="button"
                           onClick={() => onReorderAppointmentType(t.id, 'up')}
                           disabled={idx === 0}
-                          className="p-0.5 rounded text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Нагоре"
+                          className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Нагоре"
                         >
-                          <ChevronUp className="w-3.5 h-3.5" />
+                          <ChevronUp className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => onReorderAppointmentType(t.id, 'down')}
                           disabled={idx === appointmentTypes.length - 1}
-                          className="p-0.5 rounded text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Надолу"
+                          className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Надолу"
                         >
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronDown className="w-4 h-4" />
                         </button>
                       </div>
                     )}
-                    <span className="flex-1 text-slate-200 truncate">{t.label_bg}</span>
-                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1 rounded text-slate-400 hover:text-red-400 shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <span className="flex-1 text-slate-200 truncate min-w-0">{t.label_bg}</span>
+                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-700 shrink-0" title="Изтрий">
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex gap-2 flex-wrap items-center border-t border-slate-700 pt-3">
                 <input
                   type="text"
                   placeholder="Ключ"
