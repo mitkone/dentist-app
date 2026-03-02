@@ -31,8 +31,17 @@ const DURATION_OPTIONS = [
   { value: 720, label: '12 ч' },
 ];
 
+function addMinutesToTime(time, mins) {
+  const [h, m] = (time || '09:00').split(':').map(Number);
+  const total = h * 60 + m + mins;
+  const eh = Math.floor(total / 60);
+  const em = total % 60;
+  return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+}
+
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
   const [patientInput, setPatientInput] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState(30);
   useEffect(() => {
     if (open) setPatientInput(patients[0]?.name ?? '');
   }, [open, patients]);
@@ -79,8 +88,10 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Час</label>
-            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">{slot}</div>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Час (начало – край)</label>
+            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">
+              {slot} – {addMinutesToTime(slot, durationMinutes)}
+            </div>
           </div>
 
           <div>
@@ -122,6 +133,8 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             <select
               id="duration"
               name="duration"
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {DURATION_OPTIONS.map((opt) => (

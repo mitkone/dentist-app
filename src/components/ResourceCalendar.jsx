@@ -1,9 +1,9 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, ChevronDown, Stethoscope } from 'lucide-react';
-import { getSlots, appointmentTypeLabel, specialtyLabel, HOURS as DEFAULT_HOURS } from '../data/mockData';
+import { getSlots, appointmentTypeLabel, specialtyLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
 
-const SLOT_HEIGHT = 42;
+const SLOT_HEIGHT = 40;
 const DRAG_THRESHOLD = 5;
 const MOBILE_BREAKPOINT = 768;
 
@@ -57,6 +57,9 @@ export default function ResourceCalendar({
   const mobileDentistsRef = useRef(null);
   const headerScrollRef = useRef(null);
   const gridScrollRef = useRef(null);
+  const [zoom, setZoom] = useState(1);
+  const lastPinchDist = useRef(null);
+  const effectiveSlotHeight = SLOT_HEIGHT * zoom;
 
   useEffect(() => {
     const grid = gridScrollRef.current;
@@ -129,10 +132,11 @@ export default function ResourceCalendar({
     );
   };
 
+  const slotMinutes = SLOT_MINUTES ?? 15;
   const timeToOffset = (time) => {
     const [h, m] = time.split(':').map(Number);
     const totalM = (h - workingHours.start) * 60 + m;
-    return (totalM / 30) * SLOT_HEIGHT;
+    return (totalM / slotMinutes) * effectiveSlotHeight;
   };
 
   const [timeTick, setTimeTick] = useState(0);
@@ -149,14 +153,14 @@ export default function ResourceCalendar({
   const rangeEnd = workingHours.end * 60;
   const showNowLine = isToday && nowMinutes >= rangeStart && nowMinutes < rangeEnd;
   const nowLineTop = showNowLine
-    ? ((nowMinutes - rangeStart) / 30) * SLOT_HEIGHT
+    ? ((nowMinutes - rangeStart) / slotMinutes) * effectiveSlotHeight
     : 0;
 
   const durationHeight = (start, end) => {
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     const minutes = (eh - sh) * 60 + (em - sm);
-    return (minutes / 30) * SLOT_HEIGHT;
+    return (minutes / slotMinutes) * effectiveSlotHeight;
   };
 
   const handleSlotClick = useCallback(
@@ -304,7 +308,7 @@ export default function ResourceCalendar({
     <>
       <div className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
         {isMobile && listForMobile.length > 0 && (
-          <div ref={mobileDentistsRef} className="relative px-3 py-2 border-b border-slate-800 bg-slate-800/50">
+          <div ref={mobileDentistsRef} className="relative px-3 py-2 border-b border-slate-800 bg-slate-800/50 flex flex-col gap-2">
             {onDentistToggle ? (
               <>
                 <button
@@ -321,8 +325,23 @@ export default function ResourceCalendar({
                   </span>
                   <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${mobileDentistsOpen ? 'rotate-180' : ''}`} />
                 </button>
+                {dentists.length > 1 && (
+                  <div className="shrink-0">
+                    <label className="text-xs text-slate-400 block mb-1">Преглед на графика:</label>
+                    <select
+                      value={focusedDentistId ?? dentists[0]?.id ?? ''}
+                      onChange={(e) => setFocusedDentistId(e.target.value)}
+                      className="w-full py-2 pl-3 pr-8 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none appearance-none bg-no-repeat bg-[length:1rem] bg-[right_0.5rem_center]"
+                      style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")" }}
+                    >
+                      {dentists.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {mobileDentistsOpen && (
-                  <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-lg border border-slate-600 bg-slate-900 shadow-xl overflow-hidden flex flex-col max-h-[min(70vh,420px)]">
+                  <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-lg border border-slate-600 bg-slate-900 shadow-xl overflow-hidden flex flex-col max-h-[min(70vh,360px)]">
                     <div className="p-2 border-b border-slate-700 flex gap-2 shrink-0">
                       <button
                         type="button"
@@ -358,21 +377,6 @@ export default function ResourceCalendar({
                         );
                       })}
                     </div>
-                    {dentists.length > 1 && (
-                      <div className="p-2 border-t border-slate-700 shrink-0">
-                        <label className="text-xs text-slate-400 block mb-1">Преглед на графика:</label>
-                        <select
-                          value={focusedDentistId ?? dentists[0]?.id ?? ''}
-                          onChange={(e) => setFocusedDentistId(e.target.value)}
-                          className="w-full py-2 pl-3 pr-8 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none appearance-none bg-no-repeat bg-[length:1rem] bg-[right_0.5rem_center]"
-                          style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")" }}
-                        >
-                          {dentists.map((d) => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -422,8 +426,30 @@ export default function ResourceCalendar({
           </div>
         </div>
 
-        <div ref={gridScrollRef} className="flex-1 overflow-auto scroll-thin min-h-0">
-          <div className="flex relative min-w-0" style={{ minHeight: slots.length * SLOT_HEIGHT }}>
+        <div
+          ref={gridScrollRef}
+          className="flex-1 overflow-auto scroll-thin min-h-0 overscroll-contain touch-pan-y"
+          style={{ overscrollBehavior: 'contain', touchAction: isMobile ? 'pan-y pinch-zoom' : undefined }}
+          onTouchStart={(e) => {
+            if (e.touches.length === 2) {
+              const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+              lastPinchDist.current = d;
+            }
+          }}
+          onTouchMove={(e) => {
+            if (e.touches.length === 2 && lastPinchDist.current != null) {
+              const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+              const delta = d / lastPinchDist.current;
+              lastPinchDist.current = d;
+              setZoom((z) => Math.max(0.6, Math.min(1.8, z * delta)));
+            }
+          }}
+          onTouchEnd={(e) => {
+            if (e.touches.length < 2) lastPinchDist.current = null;
+          }}
+          onTouchCancel={() => { lastPinchDist.current = null; }}
+        >
+          <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
             {showNowLine && (
               <div
                 className="absolute left-0 right-0 h-0.5 bg-emerald-400 z-10 pointer-events-none"
@@ -436,7 +462,7 @@ export default function ResourceCalendar({
                 <div
                   key={slot}
                   className="text-xs text-slate-400 text-right pr-2 flex items-center justify-end border-b border-slate-800"
-                  style={{ height: SLOT_HEIGHT }}
+                  style={{ height: effectiveSlotHeight }}
                 >
                   {slot}
                 </div>
@@ -475,14 +501,15 @@ export default function ResourceCalendar({
                       }`}
                       style={{
                         top: timeToOffset(slot),
-                        height: Math.max(SLOT_HEIGHT - 2, 44),
+                        height: Math.max(effectiveSlotHeight - 2, 38),
                       }}
                     />
                   );})}
 
                   {getAppointmentsForColumn(d.id).map((a) => {
                     const top = timeToOffset(a.start);
-                    const h = Math.max(durationHeight(a.start, a.end), 24);
+                    const rawH = durationHeight(a.start, a.end);
+                    const h = Math.max(rawH, 38);
                     const isDragging = dragState?.appointment?.id === a.id && dragState?.hasMoved;
                     const isNoShow = a.attendance === 'no_show';
                     const isNhif = a.insurance === 'nhif';

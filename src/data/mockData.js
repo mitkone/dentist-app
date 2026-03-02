@@ -74,7 +74,7 @@ export const appointments = [
 ];
 
 export const HOURS = { start: 7, end: 19 };
-export const SLOT_MINUTES = 30;
+export const SLOT_MINUTES = 15;
 
 export function getSlots(hours = HOURS) {
   const slots = [];

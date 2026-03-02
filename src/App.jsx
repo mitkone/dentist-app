@@ -134,7 +134,7 @@ export default function App() {
         if (isToday && slotDateTime < new Date()) continue;
 
         const slotStartMin = timeStrToMinutes(slot);
-        const slotEndMin = slotStartMin + 30;
+        const slotEndMin = slotStartMin + 15;
         const hasOverlap = appointments.some((a) => {
           if (a.dentistId !== dentistId || a.date !== dateStr) return false;
           const aStart = timeStrToMinutes(a.start);
@@ -183,7 +183,7 @@ export default function App() {
           if (slotDateTime < new Date()) continue;
 
           const slotStartMin = timeStrToMinutes(slot);
-          const slotEndMin = slotStartMin + 30;
+          const slotEndMin = slotStartMin + 15;
 
           const hasOverlap = appointments.some((a) => {
             if (a.dentistId !== dentistId || a.date !== dateStr) return false;
@@ -885,7 +885,7 @@ export default function App() {
   showDentistsFilter={false}
 />
 
-        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black">
+        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
           <CalendarHeader
             currentDate={currentDate}
             onPrevDay={goPrevDay}
@@ -911,7 +911,7 @@ export default function App() {
               currentDate={currentDate}
             />
           )}
-          <div className="mt-4 flex-1 min-h-[480px]">
+          <div className="mt-4 flex-1 min-h-[480px] flex flex-col min-h-0">
             {!isSupabaseConfigured() && (
               <p className="text-sm text-amber-400/90 mb-2">
                 Добавете VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env за запазване в базата.
