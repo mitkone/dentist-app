@@ -76,6 +76,8 @@ export default function App() {
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
+  const [scheduleNotification, setScheduleNotification] = useState(null);
+  const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
 
   const { user, profile, signIn, signUp, signOut, resetPassword, needsPasswordReset, updatePassword, dismissPasswordReset } = useAuth() ?? {};
   const [adminSession, setAdminSessionState] = useState(() => getAdminSession());
@@ -296,7 +298,39 @@ export default function App() {
       setAppointmentsLoading(false);
     }
     fetchAppointments();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, appointmentsRefreshKey]);
+
+  const permissionsRef = useRef(null);
+  permissionsRef.current = permissions;
+  useEffect(() => {
+    if (!supabase || !permissionsRef.current?.myDentistId || adminSession) return;
+    const myId = permissionsRef.current.myDentistId;
+    const channel = supabase
+      .channel('dentist-schedule-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          const dentId = payload.eventType === 'DELETE' ? payload.old?.dentist_id : payload.new?.dentist_id;
+          const oldDentId = payload.eventType === 'UPDATE' ? payload.old?.dentist_id : null;
+          const affectsMe = dentId === myId || oldDentId === myId;
+          if (!affectsMe) return;
+          setAppointmentsRefreshKey((k) => k + 1);
+          const msg =
+            payload.eventType === 'INSERT'
+              ? 'Нов час е записан в графика ви'
+              : payload.eventType === 'DELETE'
+                ? 'Часът е изтрит от графика ви'
+                : 'Часът е променен в графика ви';
+          setScheduleNotification(msg);
+          setTimeout(() => setScheduleNotification(null), 5000);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [adminSession]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -1189,6 +1223,17 @@ export default function App() {
         patients={patients}
         getAdminPin={getAdminPin}
       />
+      {scheduleNotification && (
+        <div
+          role="alert"
+          className="fixed bottom-4 right-4 z-[9999] px-4 py-3 rounded-lg bg-emerald-600 text-white shadow-lg border border-emerald-500/50 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm font-medium">{scheduleNotification}</span>
+        </div>
+      )}
     </div>
   );
 }
