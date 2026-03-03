@@ -334,6 +334,7 @@ export default function App() {
         return `${actor} промени час: от ${oldPatient || patient}${oldStart ? ` ${oldStart}` : ''} на ${patient}${d.start ? ` ${d.start}` : ''}`;
       return `${actor} промени час на ${patient}${timeSlot}`;
     }
+    if (action === 'appointment_moved') return `${actor} премести час на ${patient}${timeSlot}`;
     if (action === 'vacation_added') return `${actorOrDentist} добави отпуск на ${dentistName}${vacationRange}`;
     if (action === 'vacation_deleted') return `${actorOrDentist} изтри отпуск на ${dentistName}${vacationRange}`;
     return `${actor} – ${action}`;
@@ -343,7 +344,7 @@ export default function App() {
     if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
     const storageKey = `dentist_notif_last_open_${myDentistId}`;
     const lastOpen = parseInt(localStorage.getItem(storageKey) || '0', 10);
-    const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted', 'vacation_added', 'vacation_deleted'];
+    const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted', 'appointment_moved', 'vacation_added', 'vacation_deleted'];
     supabase
       .from('activity_log')
       .select('id, action, details, created_at')
@@ -356,7 +357,7 @@ export default function App() {
           const d = e.details || {};
           const dentId = d.dentist_id ?? d.dentistId;
           if (['vacation_added', 'vacation_deleted'].includes(e.action)) return true;
-          return dentId === myDentistId;
+          return dentId != null && String(dentId) === String(myDentistId);
         });
         const notifs = list.map((e) => {
           const d = e.details;
@@ -378,12 +379,12 @@ export default function App() {
         (payload) => {
           const row = payload?.new ?? payload?.record ?? {};
           const action = row.action ?? row.action_type;
-          if (!['appointment_created', 'appointment_updated', 'appointment_deleted', 'vacation_added', 'vacation_deleted'].includes(action)) return;
+          if (!['appointment_created', 'appointment_updated', 'appointment_deleted', 'appointment_moved', 'vacation_added', 'vacation_deleted'].includes(action)) return;
           let d = row.details ?? row.raw?.details ?? {};
           if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
           if (!['vacation_added', 'vacation_deleted'].includes(action)) {
             const dentId = d.dentist_id ?? d.dentistId;
-            if (dentId !== myDentistId) return;
+            if (dentId == null || String(dentId) !== String(myDentistId)) return;
           }
           if (['vacation_added', 'vacation_deleted'].includes(action)) setVacationsRefreshKey((k) => k + 1);
           else setAppointmentsRefreshKey((k) => k + 1);
@@ -805,7 +806,7 @@ export default function App() {
           .eq('id', appointmentId)
           .then(({ error }) => {
             if (error) console.error('Failed to update appointment:', error);
-            else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_MOVED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, start, date } });
+            else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_MOVED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: apr?.patientName, start, date } });
           });
       }
 
@@ -880,7 +881,7 @@ export default function App() {
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           setAppointments((prev) => [...prev, mapped]);
-          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type, start } });
+          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentist_id: mapped.dentistId, dentistId: mapped.dentistId, type, start } });
         }
       } catch (err) {
         console.error('Failed to create appointment:', err);
@@ -950,7 +951,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to update appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start } });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start } });
         });
     }
     setEditAppointment(null);
@@ -979,7 +980,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to delete appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId: app?.dentistId, patientName: app?.patientName, date: app?.date, start: app?.start } });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: app?.dentistId, dentistId: app?.dentistId, patientName: app?.patientName, date: app?.date, start: app?.start } });
         });
     }
     setEditAppointment(null);
