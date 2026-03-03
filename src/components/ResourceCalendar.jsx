@@ -64,7 +64,6 @@ export default function ResourceCalendar({
   const lastPinchDist = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
 
-  const TIME_COL_WIDTH = 64;
   useEffect(() => {
     const grid = gridScrollRef.current;
     const header = headerScrollRef.current;
@@ -73,13 +72,13 @@ export default function ResourceCalendar({
     const syncGridToHeader = () => {
       if (skipSync) return;
       skipSync = true;
-      header.scrollLeft = Math.max(0, grid.scrollLeft - TIME_COL_WIDTH);
+      header.scrollLeft = Math.max(0, grid.scrollLeft);
       requestAnimationFrame(() => { skipSync = false; });
     };
     const syncHeaderToGrid = () => {
       if (skipSync) return;
       skipSync = true;
-      grid.scrollLeft = header.scrollLeft + TIME_COL_WIDTH;
+      grid.scrollLeft = header.scrollLeft;
       requestAnimationFrame(() => { skipSync = false; });
     };
     grid.addEventListener('scroll', syncGridToHeader);
