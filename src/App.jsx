@@ -300,37 +300,47 @@ export default function App() {
     fetchAppointments();
   }, [isAuthenticated, appointmentsRefreshKey]);
 
-  const permissionsRef = useRef(null);
-  permissionsRef.current = permissions;
+  const myDentistId = permissions.myDentistId;
   useEffect(() => {
-    if (!supabase || !permissionsRef.current?.myDentistId || adminSession) return;
-    const myId = permissionsRef.current.myDentistId;
+    if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
     const channel = supabase
-      .channel('dentist-schedule-changes')
+      .channel(`dentist-schedule-${myDentistId}-${Date.now()}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        (payload) => {
-          const dentId = payload.eventType === 'DELETE' ? payload.old?.dentist_id : payload.new?.dentist_id;
-          const oldDentId = payload.eventType === 'UPDATE' ? payload.old?.dentist_id : null;
-          const affectsMe = dentId === myId || oldDentId === myId;
-          if (!affectsMe) return;
+        { event: 'INSERT', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
+        () => {
           setAppointmentsRefreshKey((k) => k + 1);
-          const msg =
-            payload.eventType === 'INSERT'
-              ? 'Нов час е записан в графика ви'
-              : payload.eventType === 'DELETE'
-                ? 'Часът е изтрит от графика ви'
-                : 'Часът е променен в графика ви';
-          setScheduleNotification(msg);
+          setScheduleNotification('Нов час е записан в графика ви');
           setTimeout(() => setScheduleNotification(null), 5000);
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
+        () => {
+          setAppointmentsRefreshKey((k) => k + 1);
+          setScheduleNotification('Часът е променен в графика ви');
+          setTimeout(() => setScheduleNotification(null), 5000);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'appointments' },
+        (payload) => {
+          const oldDentId = payload.old?.dentist_id;
+          if (oldDentId !== myDentistId) return;
+          setAppointmentsRefreshKey((k) => k + 1);
+          setScheduleNotification('Часът е изтрит от графика ви');
+          setTimeout(() => setScheduleNotification(null), 5000);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') console.warn('Realtime subscription error – проверете дали appointments е в supabase_realtime publication');
+      });
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [adminSession]);
+  }, [adminSession, myDentistId, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
