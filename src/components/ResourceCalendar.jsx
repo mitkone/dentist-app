@@ -61,6 +61,7 @@ export default function ResourceCalendar({
   const headerScrollRef = useRef(null);
   const gridScrollRef = useRef(null);
   const calendarWrapRef = useRef(null);
+  const headerRowRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const lastPinchDist = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
@@ -97,22 +98,25 @@ export default function ResourceCalendar({
     const wrap = calendarWrapRef.current;
     const grid = gridScrollRef.current;
     const header = headerScrollRef.current;
+    const headerRow = headerRowRef.current;
     if (!wrap || !grid || typeof window === 'undefined') return;
     const onWheel = (e) => {
       if (window.innerWidth >= MOBILE_BREAKPOINT) {
-        let dx = e.deltaX || 0;
         const dy = e.deltaY || 0;
-        if (e.shiftKey && Math.abs(dy) > 0) dx = dy;
-        if (Math.abs(dx) > Math.abs(dy)) {
+        const dx = e.deltaX || 0;
+        const overHeader = headerRow?.contains(e.target);
+        const useHorizontal = overHeader ? Math.abs(dy) > 0 : Math.abs(dx) > Math.abs(dy);
+        if (useHorizontal && (Math.abs(dy) > 0 || Math.abs(dx) > 0)) {
+          const delta = overHeader ? dy : dx;
           const { scrollLeft, scrollWidth, clientWidth } = grid;
           const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
           const canScrollLeft = scrollLeft > 0;
-          if ((dx > 0 && canScrollRight) || (dx < 0 && canScrollLeft)) {
+          if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
             e.preventDefault();
-            grid.scrollLeft += dx;
+            grid.scrollLeft += delta;
             if (header) header.scrollLeft = grid.scrollLeft;
           }
-        } else if (Math.abs(dy) > 0) {
+        } else if (Math.abs(dy) > 0 && !overHeader) {
           const { scrollTop, scrollHeight, clientHeight } = grid;
           const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
           const canScrollUp = scrollTop > 0;
@@ -451,7 +455,7 @@ export default function ResourceCalendar({
             )}
           </div>
         )}
-        <div className="flex border-b border-slate-800 bg-slate-900 sticky top-0 z-20 bg-slate-900 shrink-0 overflow-hidden">
+        <div ref={headerRowRef} className="flex border-b border-slate-800 bg-slate-900 sticky top-0 z-20 bg-slate-900 shrink-0 overflow-hidden">
           <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3">
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
