@@ -324,7 +324,7 @@ export default function App() {
     const oldPatient = d.oldPatientName ?? d.old_patient_name;
     const oldStart = d.oldStart ?? d.old_start;
     const dentistName = d.dentist_name ?? d.dentistName ?? 'лекар';
-    const dateRange = (d.start_date && d.end_date) ? ` (${d.start_date} – ${d.end_date})` : '';
+    const vacationRange = (d.start_date && d.end_date) ? ` от ${d.start_date} до ${d.end_date}` : '';
     if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
     if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}${timeSlot}`;
     if (action === 'appointment_updated') {
@@ -332,8 +332,8 @@ export default function App() {
         return `${actor} промени час: от ${oldPatient || patient}${oldStart ? ` ${oldStart}` : ''} на ${patient}${d.start ? ` ${d.start}` : ''}`;
       return `${actor} промени час на ${patient}${timeSlot}`;
     }
-    if (action === 'vacation_added') return `${actor} добави отпуск за ${dentistName}${dateRange}`;
-    if (action === 'vacation_deleted') return `${actor} изтри отпуск на ${dentistName}${dateRange}`;
+    if (action === 'vacation_added') return `${actor} добави отпуск на ${dentistName}${vacationRange}`;
+    if (action === 'vacation_deleted') return `${actor} изтри отпуск на ${dentistName}${vacationRange}`;
     return `${actor} – ${action}`;
   }, []);
 
