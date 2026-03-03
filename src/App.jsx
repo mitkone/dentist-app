@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, LogIn, LogOut } from 'lucide-react';
+import { Activity, Bell, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -76,8 +76,20 @@ export default function App() {
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
-  const [scheduleNotification, setScheduleNotification] = useState(null);
+  const [scheduleNotifications, setScheduleNotifications] = useState([]);
+  const [scheduleNotificationsOpen, setScheduleNotificationsOpen] = useState(false);
+  const scheduleNotificationsRef = useRef(null);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (scheduleNotificationsRef.current && !scheduleNotificationsRef.current.contains(e.target)) {
+        setScheduleNotificationsOpen(false);
+      }
+    }
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const { user, profile, signIn, signUp, signOut, resetPassword, needsPasswordReset, updatePassword, dismissPasswordReset } = useAuth() ?? {};
   const [adminSession, setAdminSessionState] = useState(() => getAdminSession());
@@ -310,8 +322,7 @@ export default function App() {
         { event: 'INSERT', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
         () => {
           setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotification('Нов час е записан в графика ви');
-          setTimeout(() => setScheduleNotification(null), 5000);
+          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Нов час е записан в графика ви', createdAt: Date.now() }]);
         }
       )
       .on(
@@ -319,8 +330,7 @@ export default function App() {
         { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
         () => {
           setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotification('Часът е променен в графика ви');
-          setTimeout(() => setScheduleNotification(null), 5000);
+          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Часът е променен в графика ви', createdAt: Date.now() }]);
         }
       )
       .on(
@@ -330,8 +340,7 @@ export default function App() {
           const oldDentId = payload.old?.dentist_id;
           if (oldDentId !== myDentistId) return;
           setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotification('Часът е изтрит от графика ви');
-          setTimeout(() => setScheduleNotification(null), 5000);
+          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Часът е изтрит от графика ви', createdAt: Date.now() }]);
         }
       )
       .subscribe((status) => {
@@ -973,6 +982,50 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {permissions.myDentistId && (
+              <div ref={scheduleNotificationsRef} className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setScheduleNotificationsOpen((o) => !o); }}
+                  className="relative p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white"
+                  aria-label="Известия за графика"
+                >
+                  <Bell className="w-5 h-5" />
+                  {scheduleNotifications.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-emerald-500 rounded-full">
+                      {scheduleNotifications.length > 99 ? '99+' : scheduleNotifications.length}
+                    </span>
+                  )}
+                </button>
+                {scheduleNotificationsOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-72 max-h-64 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[9999] flex flex-col">
+                    <div className="p-2 border-b border-slate-700 flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-200">Промени в графика</span>
+                      {scheduleNotifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleNotifications([])}
+                          className="text-xs text-emerald-400 hover:text-emerald-300"
+                        >
+                          Изчисти
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                      {scheduleNotifications.length === 0 ? (
+                        <p className="p-3 text-sm text-slate-500">Няма нови известия</p>
+                      ) : (
+                        scheduleNotifications.map((n) => (
+                          <div key={n.id} className="px-3 py-2 border-b border-slate-700/50 last:border-0 text-sm text-slate-200">
+                            {n.text}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {supabase && (
               <>
                 {permissions.canViewAdmin && (
@@ -1233,17 +1286,6 @@ export default function App() {
         patients={patients}
         getAdminPin={getAdminPin}
       />
-      {scheduleNotification && (
-        <div
-          role="alert"
-          className="fixed bottom-4 right-4 z-[9999] px-4 py-3 rounded-lg bg-emerald-600 text-white shadow-lg border border-emerald-500/50 flex items-center gap-2"
-        >
-          <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-sm font-medium">{scheduleNotification}</span>
-        </div>
-      )}
     </div>
   );
 }
