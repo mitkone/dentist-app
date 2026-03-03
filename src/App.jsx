@@ -81,6 +81,7 @@ export default function App() {
   const [scheduleNotificationsSeen, setScheduleNotificationsSeen] = useState(true);
   const scheduleNotificationsRef = useRef(null);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
+  const [vacationsRefreshKey, setVacationsRefreshKey] = useState(0);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -322,6 +323,8 @@ export default function App() {
     const timeSlot = (d.start ? ` за ${d.start}` : '');
     const oldPatient = d.oldPatientName ?? d.old_patient_name;
     const oldStart = d.oldStart ?? d.old_start;
+    const dentistName = d.dentist_name ?? d.dentistName ?? 'лекар';
+    const dateRange = (d.start_date && d.end_date) ? ` (${d.start_date} – ${d.end_date})` : '';
     if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
     if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}${timeSlot}`;
     if (action === 'appointment_updated') {
@@ -329,6 +332,8 @@ export default function App() {
         return `${actor} промени час: от ${oldPatient || patient}${oldStart ? ` ${oldStart}` : ''} на ${patient}${d.start ? ` ${d.start}` : ''}`;
       return `${actor} промени час на ${patient}${timeSlot}`;
     }
+    if (action === 'vacation_added') return `${actor} добави отпуск за ${dentistName}${dateRange}`;
+    if (action === 'vacation_deleted') return `${actor} изтри отпуск на ${dentistName}${dateRange}`;
     return `${actor} – ${action}`;
   }, []);
 
@@ -336,7 +341,7 @@ export default function App() {
     if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
     const storageKey = `dentist_notif_last_open_${myDentistId}`;
     const lastOpen = parseInt(localStorage.getItem(storageKey) || '0', 10);
-    const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted'];
+    const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted', 'vacation_added', 'vacation_deleted'];
     supabase
       .from('activity_log')
       .select('id, action, details, created_at')
@@ -348,6 +353,7 @@ export default function App() {
         const list = (data || []).filter((e) => {
           const d = e.details || {};
           const dentId = d.dentist_id ?? d.dentistId;
+          if (['vacation_added', 'vacation_deleted'].includes(e.action)) return true;
           return dentId === myDentistId;
         });
         const notifs = list.map((e) => {
@@ -370,12 +376,15 @@ export default function App() {
         (payload) => {
           const row = payload?.new ?? payload?.record ?? {};
           const action = row.action ?? row.action_type;
-          if (!['appointment_created', 'appointment_updated', 'appointment_deleted'].includes(action)) return;
+          if (!['appointment_created', 'appointment_updated', 'appointment_deleted', 'vacation_added', 'vacation_deleted'].includes(action)) return;
           let d = row.details ?? row.raw?.details ?? {};
           if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
-          const dentId = d.dentist_id ?? d.dentistId;
-          if (dentId !== myDentistId) return;
-          setAppointmentsRefreshKey((k) => k + 1);
+          if (!['vacation_added', 'vacation_deleted'].includes(action)) {
+            const dentId = d.dentist_id ?? d.dentistId;
+            if (dentId !== myDentistId) return;
+          }
+          if (['vacation_added', 'vacation_deleted'].includes(action)) setVacationsRefreshKey((k) => k + 1);
+          else setAppointmentsRefreshKey((k) => k + 1);
           const text = formatNotificationText(action, d);
           setScheduleNotifications((prev) => [...prev, { id: row.id || crypto.randomUUID(), text, createdAt: Date.now() }]);
           setScheduleNotificationsSeen(false);
@@ -567,7 +576,7 @@ export default function App() {
     }
   
     fetchVacations();
-  }, []);
+  }, [vacationsRefreshKey]);
 
   const addPatient = useCallback(
     async ({ name, phone, notes, address, egn, email }) => {
@@ -617,6 +626,7 @@ export default function App() {
   const addVacation = useCallback(
     async ({ dentistId, start_date, end_date, note }) => {
       if (!supabase) return;
+      const dentistName = dentists.find((d) => d.id === dentistId)?.name ?? 'лекар';
       const { data, error } = await supabase
         .from('doctor_vacations')
         .insert({ dentist_id: dentistId, start_date, end_date, note })
@@ -625,29 +635,32 @@ export default function App() {
 
       if (!error && data) {
         setDoctorVacations((prev) => [...prev, data]);
-        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, start_date, end_date } });
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, dentist_name: dentistName, start_date, end_date } });
       } else if (error) {
         console.error('Failed to add vacation:', error);
       }
     },
-    []
+    [dentists]
   );
 
   const deleteVacation = useCallback(
     async (vacationId) => {
       if (!supabase || !window.confirm('Изтриване на този отпуск?')) return;
+      const vac = doctorVacations.find((v) => v.id === vacationId);
+      const dentistId = vac?.dentist_id;
+      const dentistName = dentists.find((d) => d.id === dentistId)?.name ?? 'лекар';
       const { error } = await supabase
         .from('doctor_vacations')
         .delete()
         .eq('id', vacationId);
       if (!error) {
         setDoctorVacations((prev) => prev.filter((v) => v.id !== vacationId));
-        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId });
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId, details: { dentist_id: dentistId, dentist_name: dentistName, start_date: vac?.start_date, end_date: vac?.end_date } });
       } else {
         console.error('Failed to delete vacation:', error);
       }
     },
-    []
+    [dentists, doctorVacations]
   );
 
   const updatePatient = useCallback((id, updates) => {
