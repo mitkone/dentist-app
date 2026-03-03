@@ -353,12 +353,7 @@ export default function App() {
       .order('created_at', { ascending: false })
       .limit(50)
       .then(({ data }) => {
-        const list = (data || []).filter((e) => {
-          const d = e.details || {};
-          const dentId = d.dentist_id ?? d.dentistId;
-          if (['vacation_added', 'vacation_deleted'].includes(e.action)) return true;
-          return dentId != null && String(dentId) === String(myDentistId);
-        });
+        const list = (data || []).filter(() => true);
         const notifs = list.map((e) => {
           const d = e.details;
           return { id: e.id, text: formatNotificationText(e.action, typeof d === 'string' ? (() => { try { return JSON.parse(d); } catch { return {}; } })() : (d || {})), createdAt: new Date(e.created_at).getTime() };
@@ -382,10 +377,6 @@ export default function App() {
           if (!['appointment_created', 'appointment_updated', 'appointment_deleted', 'appointment_moved', 'vacation_added', 'vacation_deleted'].includes(action)) return;
           let d = row.details ?? row.raw?.details ?? {};
           if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
-          if (!['vacation_added', 'vacation_deleted'].includes(action)) {
-            const dentId = d.dentist_id ?? d.dentistId;
-            if (dentId == null || String(dentId) !== String(myDentistId)) return;
-          }
           if (['vacation_added', 'vacation_deleted'].includes(action)) setVacationsRefreshKey((k) => k + 1);
           else setAppointmentsRefreshKey((k) => k + 1);
           const text = formatNotificationText(action, d);
