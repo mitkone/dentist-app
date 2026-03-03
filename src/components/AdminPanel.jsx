@@ -370,7 +370,8 @@ export default function AdminPanel({
                       <select
                         value={p.role || 'receptionist'}
                         onChange={(e) => updateProfileRole(p.id, e.target.value)}
-                        className="text-xs px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:ring-1 focus:ring-emerald-500/40 outline-none"
+                        className="text-sm px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-md text-slate-100 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none cursor-pointer hover:bg-slate-600"
+                        title="Промяна на роля"
                       >
                         <option value="admin">Админ</option>
                         <option value="dentist">Стоматолог</option>

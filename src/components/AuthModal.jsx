@@ -27,7 +27,7 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('receptionist');
   const [dentistId, setDentistId] = useState('');
-  const [phone, setPhone] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +56,7 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
     setError('');
     setLoading(true);
     try {
-      await signUp?.({ email, password, fullName, role, dentistId: role === 'dentist' ? dentistId : null, phone });
+      await signUp?.({ email, password, fullName, role, dentistId: role === 'dentist' ? dentistId : null });
       onClose();
     } catch (err) {
       setError(err.message || 'Грешка при регистрация');
@@ -156,16 +156,6 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 shrink-0">Телефон (по избор):</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+359..."
-                  className="flex-1 min-w-0 px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500/40 outline-none"
                 />
               </div>
               <div>
