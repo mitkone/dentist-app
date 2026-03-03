@@ -117,7 +117,8 @@ export default function App() {
 
   const logWithActor = useCallback(
     (payload) => {
-      const actorName = adminSession ? 'Админ' : (profile?.full_name || user?.email?.split('@')[0] || user?.email || '—');
+      const defaultActor = adminSession ? 'Админ' : (profile?.full_name || user?.email?.split('@')[0] || user?.email || '—');
+      const actorName = payload.details?.actor_name ?? defaultActor;
       logActivity(supabase, {
         ...payload,
         details: { ...payload.details, actor_name: actorName, actor_email: user?.email || null },
@@ -628,6 +629,7 @@ export default function App() {
     async ({ dentistId, start_date, end_date, note }) => {
       if (!supabase) return;
       const dentistName = dentists.find((d) => d.id === dentistId)?.name ?? 'лекар';
+      const actorName = adminSession ? 'Админ' : (profile?.full_name || user?.email?.split('@')[0] || user?.email || null);
       const { data, error } = await supabase
         .from('doctor_vacations')
         .insert({ dentist_id: dentistId, start_date, end_date, note })
@@ -636,12 +638,12 @@ export default function App() {
 
       if (!error && data) {
         setDoctorVacations((prev) => [...prev, data]);
-        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, dentist_name: dentistName, start_date, end_date } });
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, dentist_name: dentistName, start_date, end_date, actor_name: actorName } });
       } else if (error) {
         console.error('Failed to add vacation:', error);
       }
     },
-    [dentists]
+    [dentists, adminSession, profile, user]
   );
 
   const deleteVacation = useCallback(
@@ -656,12 +658,13 @@ export default function App() {
         .eq('id', vacationId);
       if (!error) {
         setDoctorVacations((prev) => prev.filter((v) => v.id !== vacationId));
-        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId, details: { dentist_id: dentistId, dentist_name: dentistName, start_date: vac?.start_date, end_date: vac?.end_date } });
+        const actorName = adminSession ? 'Админ' : (profile?.full_name || user?.email?.split('@')[0] || user?.email || null);
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId, details: { dentist_id: dentistId, dentist_name: dentistName, start_date: vac?.start_date, end_date: vac?.end_date, actor_name: actorName } });
       } else {
         console.error('Failed to delete vacation:', error);
       }
     },
-    [dentists, doctorVacations]
+    [dentists, doctorVacations, adminSession, profile, user]
   );
 
   const updatePatient = useCallback((id, updates) => {
