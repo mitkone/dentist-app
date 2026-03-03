@@ -60,6 +60,7 @@ export default function ResourceCalendar({
   const mobileDentistsRef = useRef(null);
   const headerScrollRef = useRef(null);
   const gridScrollRef = useRef(null);
+  const calendarWrapRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const lastPinchDist = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
@@ -93,35 +94,37 @@ export default function ResourceCalendar({
   }, []);
 
   useEffect(() => {
+    const wrap = calendarWrapRef.current;
     const grid = gridScrollRef.current;
     const header = headerScrollRef.current;
-    if (!grid || typeof window === 'undefined') return;
+    if (!wrap || !grid || typeof window === 'undefined') return;
     const onWheel = (e) => {
       if (window.innerWidth >= MOBILE_BREAKPOINT) {
-        if (e.shiftKey) {
+        let dx = e.deltaX || 0;
+        const dy = e.deltaY || 0;
+        if (e.shiftKey && Math.abs(dy) > 0) dx = dy;
+        if (Math.abs(dx) > Math.abs(dy)) {
           const { scrollLeft, scrollWidth, clientWidth } = grid;
           const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
           const canScrollLeft = scrollLeft > 0;
-          const delta = e.deltaY || e.deltaX;
-          if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
+          if ((dx > 0 && canScrollRight) || (dx < 0 && canScrollLeft)) {
             e.preventDefault();
-            const step = Math.min(120, Math.abs(delta));
-            grid.scrollLeft += delta > 0 ? step : -step;
+            grid.scrollLeft += dx;
             if (header) header.scrollLeft = grid.scrollLeft;
           }
-        } else {
+        } else if (Math.abs(dy) > 0) {
           const { scrollTop, scrollHeight, clientHeight } = grid;
           const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
           const canScrollUp = scrollTop > 0;
-          if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+          if ((dy > 0 && canScrollDown) || (dy < 0 && canScrollUp)) {
             e.preventDefault();
-            grid.scrollTop += e.deltaY;
+            grid.scrollTop += dy;
           }
         }
       }
     };
-    grid.addEventListener('wheel', onWheel, { passive: false });
-    return () => grid.removeEventListener('wheel', onWheel);
+    wrap.addEventListener('wheel', onWheel, { passive: false });
+    return () => wrap.removeEventListener('wheel', onWheel);
   }, []);
 
   const listForMobile = (allDentists.length ? allDentists : dentists);
@@ -358,7 +361,7 @@ export default function ResourceCalendar({
 
   return (
     <>
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+      <div ref={calendarWrapRef} className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
         {isMobile && listForMobile.length > 0 && (
           <div ref={mobileDentistsRef} className="relative px-3 py-2 border-b border-slate-800 bg-slate-800/50 flex flex-col gap-2">
             {onDentistToggle ? (
