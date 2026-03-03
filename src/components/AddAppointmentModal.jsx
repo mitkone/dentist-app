@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { appointmentTypeLabel } from '../data/mockData';
 import PatientChronologyBlock from './PatientChronologyBlock';
@@ -37,15 +37,21 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   const [patientPhone, setPatientPhone] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
-  const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef(null);
+  const q = (patientInput || '').trim().toLowerCase();
+  const suggestions = q.length >= 1
+    ? patients.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.phone || '').includes(q))
+    : [];
+  const matchedPatient = patients.find((p) => (p.name || '').trim().toLowerCase() === patientInput.trim().toLowerCase());
   useEffect(() => {
     if (open) {
-      setPatientInput(patients[0]?.name ?? '');
-      setPatientPhone(patients[0]?.phone ?? '');
+      setPatientInput('');
+      setPatientPhone('');
       setNotes('');
       setEndTime(addMinutesToTime(slot, 30));
     }
-  }, [open, patients, slot]);
+  }, [open, slot]);
   useEffect(() => {
     if (matchedPatient) setPatientPhone(matchedPatient.phone ?? '');
   }, [matchedPatient?.id]);
@@ -121,27 +127,38 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             </div>
           </div>
 
-          <div>
+          <div className="relative" ref={suggestionRef}>
             <label htmlFor="patientName" className="block text-sm font-medium text-slate-200 mb-1">
-              Пациент <span className="text-slate-500 font-normal">(изберете от списъка или въведете име)</span>
+              Пациент <span className="text-slate-500 font-normal">(въведете име или изберете от базата)</span>
             </label>
             <input
               id="patientName"
               name="patientName"
               type="text"
-              list="patient-suggestions"
               value={patientInput}
-              onChange={(e) => setPatientInput(e.target.value)}
-              placeholder="Въведете име на пациента..."
+              onChange={(e) => { setPatientInput(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => { if (patientInput.trim()) setShowSuggestions(true); }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="Въведете име или телефон..."
               required
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               autoComplete="off"
             />
-            <datalist id="patient-suggestions">
-              {patients.map((p) => (
-                <option key={p.id} value={p.name} />
-              ))}
-            </datalist>
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-0.5 max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-lg z-50">
+                {suggestions.slice(0, 8).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); setPatientInput(p.name || ''); setPatientPhone(p.phone || ''); setShowSuggestions(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 flex flex-col"
+                  >
+                    <span className="font-medium">{p.name || '—'}</span>
+                    {p.phone && <span className="text-xs text-slate-500">{p.phone}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
