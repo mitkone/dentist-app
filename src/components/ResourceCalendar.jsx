@@ -65,6 +65,87 @@ export default function ResourceCalendar({
   const lastPinchDist = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
 
+  useEffect(() => {
+    const grid = gridScrollRef.current;
+    const header = headerScrollRef.current;
+    if (!grid || !header) return;
+    let skipSync = false;
+    const syncGridToHeader = () => {
+      if (skipSync) return;
+      skipSync = true;
+      header.scrollLeft = Math.max(0, grid.scrollLeft);
+      requestAnimationFrame(() => { skipSync = false; });
+    };
+    const syncHeaderToGrid = () => {
+      if (skipSync) return;
+      skipSync = true;
+      grid.scrollLeft = header.scrollLeft;
+      requestAnimationFrame(() => { skipSync = false; });
+    };
+    grid.addEventListener('scroll', syncGridToHeader);
+    header.addEventListener('scroll', syncHeaderToGrid);
+    const ro = new ResizeObserver(syncGridToHeader);
+    ro.observe(grid);
+    return () => {
+      grid.removeEventListener('scroll', syncGridToHeader);
+      header.removeEventListener('scroll', syncHeaderToGrid);
+      ro.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const grid = gridScrollRef.current;
+    const header = headerScrollRef.current;
+    const headerRow = headerRowRef.current;
+    if (!grid || typeof window === 'undefined') return;
+    const onHeaderWheel = (e) => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) {
+        const dy = e.deltaY || 0;
+        if (Math.abs(dy) > 0) {
+          const { scrollLeft, scrollWidth, clientWidth } = grid;
+          const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
+          const canScrollLeft = scrollLeft > 0;
+          if ((dy > 0 && canScrollRight) || (dy < 0 && canScrollLeft)) {
+            e.preventDefault();
+            grid.scrollLeft += dy;
+            if (header) header.scrollLeft = grid.scrollLeft;
+          }
+        }
+      }
+    };
+    const onGridWheel = (e) => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) {
+        const dy = e.deltaY || 0;
+        const dx = e.deltaX || 0;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          const { scrollLeft, scrollWidth, clientWidth } = grid;
+          const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
+          const canScrollLeft = scrollLeft > 0;
+          if ((dx > 0 && canScrollRight) || (dx < 0 && canScrollLeft)) {
+            e.preventDefault();
+            grid.scrollLeft += dx;
+            if (header) header.scrollLeft = grid.scrollLeft;
+          }
+        } else if (Math.abs(dy) > 0) {
+          const { scrollTop, scrollHeight, clientHeight } = grid;
+          const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
+          const canScrollUp = scrollTop > 0;
+          if ((dy > 0 && canScrollDown) || (dy < 0 && canScrollUp)) {
+            e.preventDefault();
+            grid.scrollTop += dy;
+          }
+        }
+      }
+    };
+    if (headerRow) {
+      headerRow.addEventListener('wheel', onHeaderWheel, { passive: false });
+    }
+    grid.addEventListener('wheel', onGridWheel, { passive: false });
+    return () => {
+      if (headerRow) headerRow.removeEventListener('wheel', onHeaderWheel);
+      grid.removeEventListener('wheel', onGridWheel);
+    };
+  }, []);
 
   const listForMobile = (allDentists.length ? allDentists : dentists);
   const dentistsToShow = useMemo(() => {
@@ -390,45 +471,39 @@ export default function ResourceCalendar({
             )}
           </div>
         )}
+        <div ref={headerRowRef} className="flex border-b border-slate-800 bg-slate-900 sticky top-0 z-20 bg-slate-900 shrink-0 overflow-hidden">
+          <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3">
+            <Clock className="w-4 h-4 text-slate-400" />
+          </div>
+          <div ref={headerScrollRef} className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain" style={{ scrollbarGutter: 'stable' }}>
+          {dentistsToShow.map((d) => (
+            <div
+              key={d.id}
+              className="flex-1 min-w-[140px] sm:min-w-[160px] border-r border-slate-800 last:border-r-0 py-2 sm:py-3 px-2 sm:px-3 text-center"
+            >
+              {onDentistNameClick && canManageVacation ? (
+                <button
+                  type="button"
+                  onClick={() => onDentistNameClick(d)}
+                  className="w-full font-semibold text-slate-100 truncate hover:text-emerald-300 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded px-1"
+                  title="Профил на лекар"
+                >
+                  {d.name}
+                </button>
+              ) : (
+                <div className="font-semibold text-slate-100 truncate" title={d.name}>
+                  {d.name}
+                </div>
+              )}
+            </div>
+          ))}
+          </div>
+        </div>
+
         <div
           ref={gridScrollRef}
           className="flex-1 overflow-auto scroll-thin min-h-0 overscroll-contain touch-pan-y"
           style={{ overscrollBehavior: 'contain', touchAction: isMobile ? 'pan-y pinch-zoom' : undefined }}
-          onWheel={(e) => {
-            if (window.innerWidth < MOBILE_BREAKPOINT) return;
-            const g = gridScrollRef.current;
-            const h = headerScrollRef.current;
-            if (!g) return;
-            const dy = e.deltaY || 0;
-            const dx = e.deltaX || 0;
-            const overHeader = headerRowRef.current?.contains(e.target);
-            if (overHeader && Math.abs(dy) > 0) {
-              const { scrollLeft, scrollWidth, clientWidth } = g;
-              if ((dy > 0 && scrollLeft + clientWidth < scrollWidth - 1) || (dy < 0 && scrollLeft > 0)) {
-                e.preventDefault();
-                e.stopPropagation();
-                g.scrollLeft += dy;
-                if (h) h.scrollLeft = g.scrollLeft;
-              }
-            } else if (!overHeader) {
-              if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 0) {
-                const { scrollLeft, scrollWidth, clientWidth } = g;
-                if ((dx > 0 && scrollLeft + clientWidth < scrollWidth - 1) || (dx < 0 && scrollLeft > 0)) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  g.scrollLeft += dx;
-                  if (h) h.scrollLeft = g.scrollLeft;
-                }
-              } else if (Math.abs(dy) > 0) {
-                const { scrollTop, scrollHeight, clientHeight } = g;
-                if ((dy > 0 && scrollTop + clientHeight < scrollHeight - 1) || (dy < 0 && scrollTop > 0)) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  g.scrollTop += dy;
-                }
-              }
-            }
-          }}
           onTouchStart={(e) => {
             if (e.touches.length === 2) {
               const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -448,34 +523,6 @@ export default function ResourceCalendar({
           }}
           onTouchCancel={() => { lastPinchDist.current = null; }}
         >
-          <div ref={headerRowRef} className="flex border-b border-slate-800 bg-slate-900 sticky top-0 z-20 shrink-0">
-            <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3 bg-slate-900">
-              <Clock className="w-4 h-4 text-slate-400" />
-            </div>
-            <div ref={headerScrollRef} className="flex flex-1 min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain shrink-0" style={{ scrollbarGutter: 'stable' }}>
-              {dentistsToShow.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex-1 min-w-[140px] sm:min-w-[160px] border-r border-slate-800 last:border-r-0 py-2 sm:py-3 px-2 sm:px-3 text-center bg-slate-900"
-                >
-                  {onDentistNameClick && canManageVacation ? (
-                    <button
-                      type="button"
-                      onClick={() => onDentistNameClick(d)}
-                      className="w-full font-semibold text-slate-100 truncate hover:text-emerald-300 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded px-1"
-                      title="Профил на лекар"
-                    >
-                      {d.name}
-                    </button>
-                  ) : (
-                    <div className="font-semibold text-slate-100 truncate" title={d.name}>
-                      {d.name}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
           <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
             {showNowLine && (
               <div
