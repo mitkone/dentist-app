@@ -1,4 +1,4 @@
--- Enable Realtime for activity_log (for dentist notifications when receptionist adds/updates/deletes appointments)
+-- Enable Realtime for activity_log (required for add/update/delete notifications to dentists)
 DO $$
 BEGIN
   IF NOT EXISTS (

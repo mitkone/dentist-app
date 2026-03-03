@@ -316,9 +316,10 @@ export default function App() {
   const myDentistId = permissions.myDentistId;
 
   const formatNotificationText = useCallback((action, details = {}) => {
-    const actor = details.actor_name || 'Регистратор';
-    const patient = details.patientName ?? details.patient_name ?? 'пациент';
-    const timeSlot = details.start ? ` за ${details.start}` : '';
+    const d = typeof details === 'string' ? (() => { try { return JSON.parse(details); } catch { return {}; } })() : (details || {});
+    const actor = d.actor_name ?? d.actorName ?? 'Регистратор';
+    const patient = d.patientName ?? d.patient_name ?? 'пациент';
+    const timeSlot = (d.start ? ` за ${d.start}` : '');
     if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
     if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}`;
     if (action === 'appointment_updated') return `${actor} промени час на ${patient}`;
@@ -343,7 +344,10 @@ export default function App() {
           const dentId = d.dentist_id ?? d.dentistId;
           return dentId === myDentistId;
         });
-        const notifs = list.map((e) => ({ id: e.id, text: formatNotificationText(e.action, e.details || {}), createdAt: new Date(e.created_at).getTime() }));
+        const notifs = list.map((e) => {
+          const d = e.details;
+          return { id: e.id, text: formatNotificationText(e.action, typeof d === 'string' ? (() => { try { return JSON.parse(d); } catch { return {}; } })() : (d || {})), createdAt: new Date(e.created_at).getTime() };
+        });
         setScheduleNotifications(notifs);
         if (notifs.length > 0) setScheduleNotificationsSeen(false);
         localStorage.setItem(storageKey, String(Date.now()));
@@ -358,10 +362,11 @@ export default function App() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'activity_log' },
         (payload) => {
-          const row = payload.new || {};
-          const action = row.action;
+          const row = payload?.new ?? payload?.record ?? {};
+          const action = row.action ?? row.action_type;
           if (!['appointment_created', 'appointment_updated', 'appointment_deleted'].includes(action)) return;
-          const d = row.details || {};
+          let d = row.details ?? row.raw?.details ?? {};
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
           const dentId = d.dentist_id ?? d.dentistId;
           if (dentId !== myDentistId) return;
           setAppointmentsRefreshKey((k) => k + 1);
@@ -1013,7 +1018,10 @@ export default function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setScheduleNotificationsOpen((o) => !o);
-                    if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
+                    if (scheduleNotifications.length > 0) {
+                      setScheduleNotifications([]);
+                      setScheduleNotificationsSeen(true);
+                    }
                   }}
                   className="relative p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white"
                   aria-label="Известия за графика"
@@ -1115,7 +1123,7 @@ export default function App() {
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
-  showDentistsFilter={!!permissions.myDentistId}
+  showDentistsFilter={!permissions.myDentistId}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
