@@ -315,43 +315,40 @@ export default function App() {
   const myDentistId = permissions.myDentistId;
   useEffect(() => {
     if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
-    const channel = supabase
-      .channel(`dentist-schedule-${myDentistId}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
-        () => {
-          setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Нов час е записан в графика ви', createdAt: Date.now() }]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'appointments' },
-        (payload) => {
-          const newDentId = payload.new?.dentist_id;
-          const oldDentId = payload.old?.dentist_id;
-          if (newDentId !== myDentistId && oldDentId !== myDentistId) return;
-          setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Часът е променен в графика ви', createdAt: Date.now() }]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'appointments' },
-        (payload) => {
-          const oldDentId = payload.old?.dentist_id;
-          if (oldDentId !== myDentistId) return;
-          setAppointmentsRefreshKey((k) => k + 1);
-          setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Часът е изтрит от графика ви', createdAt: Date.now() }]);
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') console.warn('Realtime subscription error – проверете дали appointments е в supabase_realtime publication');
+    const storageKey = `dentist_notif_last_open_${myDentistId}`;
+    const lastOpen = parseInt(localStorage.getItem(storageKey) || '0', 10);
+    const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted'];
+    supabase
+      .from('activity_log')
+      .select('id, action, details, created_at')
+      .in('action', actions)
+      .gt('created_at', lastOpen ? new Date(lastOpen).toISOString() : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        const list = (data || []).filter((e) => {
+          const d = e.details || {};
+          const dentId = d.dentist_id ?? d.dentistId;
+          return dentId === myDentistId;
+        });
+        const actor = (d) => d?.actor_name || 'Регистратор';
+        const patient = (d) => d?.patientName || d?.patient_name || 'пациент';
+        const timeSlot = (d) => (d?.start ? ` за ${d.start}` : '');
+        const toText = (e) => {
+          const d = e.details || {};
+          const a = actor(d);
+          const p = patient(d);
+          const t = timeSlot(d);
+          if (e.action === 'appointment_created') return `${a} добави ${p}${t}`;
+          if (e.action === 'appointment_deleted') return `${a} изтри час на ${p}`;
+          if (e.action === 'appointment_updated') return `${a} промени час на ${p}`;
+          return `${a} – ${e.action}`;
+        };
+        setScheduleNotifications(
+          list.map((e) => ({ id: e.id, text: toText(e), createdAt: new Date(e.created_at).getTime() }))
+        );
+        localStorage.setItem(storageKey, String(Date.now()));
       });
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [adminSession, myDentistId, isAuthenticated]);
 
   useEffect(() => {
@@ -832,7 +829,7 @@ export default function App() {
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           setAppointments((prev) => [...prev, mapped]);
-          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type } });
+          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type, start } });
         }
       } catch (err) {
         console.error('Failed to create appointment:', err);
@@ -902,7 +899,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to update appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, patientName: patientName ?? app?.patientName, date, start } });
         });
     }
     setEditAppointment(null);
@@ -922,6 +919,7 @@ export default function App() {
   }, []);
 
   const onDeleteAppointment = useCallback((appointmentId) => {
+    const app = appointments.find((a) => a.id === appointmentId);
     setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
     if (supabase) {
       supabase
@@ -930,11 +928,11 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to delete appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId: app?.dentistId, patientName: app?.patientName, date: app?.date, start: app?.start } });
         });
     }
     setEditAppointment(null);
-  }, []);
+  }, [appointments]);
 
   if (!isAuthenticated) {
     return (
