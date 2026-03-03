@@ -320,9 +320,15 @@ export default function App() {
     const actor = d.actor_name ?? d.actorName ?? 'Регистратор';
     const patient = d.patientName ?? d.patient_name ?? 'пациент';
     const timeSlot = (d.start ? ` за ${d.start}` : '');
+    const oldPatient = d.oldPatientName ?? d.old_patient_name;
+    const oldStart = d.oldStart ?? d.old_start;
     if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
-    if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}`;
-    if (action === 'appointment_updated') return `${actor} промени час на ${patient}`;
+    if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}${timeSlot}`;
+    if (action === 'appointment_updated') {
+      if (oldStart || (oldPatient && oldPatient !== patient))
+        return `${actor} промени час: от ${oldPatient || patient}${oldStart ? ` ${oldStart}` : ''} на ${patient}${d.start ? ` ${d.start}` : ''}`;
+      return `${actor} промени час на ${patient}${timeSlot}`;
+    }
     return `${actor} – ${action}`;
   }, []);
 
@@ -927,7 +933,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to update appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, patientName: patientName ?? app?.patientName, date, start } });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start } });
         });
     }
     setEditAppointment(null);
