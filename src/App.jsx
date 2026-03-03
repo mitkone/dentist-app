@@ -724,12 +724,27 @@ export default function App() {
           if (notes?.trim()) mapped.notes = notes.trim();
           setAppointments((prev) => [...prev, mapped]);
           logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type } });
+          const dentist = dentists.find((d) => d.id === dentistId);
+          supabase.functions.invoke('send-appointment-email', {
+            body: {
+              dentist_id: dentistId,
+              dentist_name: dentist?.name,
+              patient_name: patientName,
+              date,
+              start,
+              end,
+              type: type || '',
+              notes: notes?.trim() || '',
+              patient_phone: patient?.phone || '',
+              patient_email: patient?.email || '',
+            },
+          }).then(({ error }) => { if (error) console.warn('Email не е изпратен:', error); });
         }
       } catch (err) {
         console.error('Failed to create appointment:', err);
       }
     },
-    [currentDate, patients]
+    [currentDate, patients, dentists]
   );
 
   const goPrevDay = () => {
