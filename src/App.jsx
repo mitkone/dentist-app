@@ -1018,10 +1018,7 @@ export default function App() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setScheduleNotificationsOpen((o) => !o);
-                    if (scheduleNotifications.length > 0) {
-                      setScheduleNotifications([]);
-                      setScheduleNotificationsSeen(true);
-                    }
+                    if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
                   }}
                   className="relative p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white"
                   aria-label="Известия за графика"
