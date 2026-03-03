@@ -414,7 +414,9 @@ export default function AdminPanel({
                 const expanded = expandedLogId === entry.id;
                 const details = entry.details || {};
                 const dentistName = details.dentistId ? dentists.find((d) => d.id === details.dentistId)?.name : details.dentist_id ? dentists.find((d) => d.id === details.dentist_id)?.name : null;
+                const actorLabel = details.actor_name || details.full_name || details.email || null;
                 const detailLines = [];
+                if (actorLabel) detailLines.push({ label: 'Кой', val: actorLabel });
                 if (details.patientName) detailLines.push({ label: 'Пациент', val: details.patientName });
                 if (dentistName || details.dentistId) detailLines.push({ label: 'Лекар', val: dentistName || details.dentistId });
                 if (details.date) detailLines.push({ label: 'Дата', val: details.date });
@@ -439,6 +441,9 @@ export default function AdminPanel({
                       <span className="flex-1 text-slate-200">
                         {ACTION_LABELS[entry.action] ?? entry.action}
                         {summaryName && !expanded && <span className="text-slate-400"> · {summaryName}</span>}
+                        {(details.actor_name || details.full_name || details.email) && !expanded && (
+                          <span className="text-slate-500 text-xs block mt-0.5">от {details.actor_name || details.full_name || details.email}</span>
+                        )}
                       </span>
                       {expanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
                     </button>

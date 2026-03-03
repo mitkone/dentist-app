@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, ChevronDown, Stethoscope } from 'lucide-react';
+import { Clock, ChevronDown, ChevronLeft, ChevronRight, Stethoscope } from 'lucide-react';
 import { getSlots, appointmentTypeLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
 
 const SLOT_HEIGHT = 40;
@@ -94,15 +94,29 @@ export default function ResourceCalendar({
 
   useEffect(() => {
     const grid = gridScrollRef.current;
+    const header = headerScrollRef.current;
     if (!grid || typeof window === 'undefined') return;
     const onWheel = (e) => {
       if (window.innerWidth >= MOBILE_BREAKPOINT) {
-        const { scrollTop, scrollHeight, clientHeight } = grid;
-        const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
-        const canScrollUp = scrollTop > 0;
-        if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
-          e.preventDefault();
-          grid.scrollTop += e.deltaY;
+        if (e.shiftKey) {
+          const { scrollLeft, scrollWidth, clientWidth } = grid;
+          const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
+          const canScrollLeft = scrollLeft > 0;
+          const delta = e.deltaY || e.deltaX;
+          if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
+            e.preventDefault();
+            const step = Math.min(120, Math.abs(delta));
+            grid.scrollLeft += delta > 0 ? step : -step;
+            if (header) header.scrollLeft = grid.scrollLeft;
+          }
+        } else {
+          const { scrollTop, scrollHeight, clientHeight } = grid;
+          const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
+          const canScrollUp = scrollTop > 0;
+          if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+            e.preventDefault();
+            grid.scrollTop += e.deltaY;
+          }
         }
       }
     };
@@ -438,6 +452,25 @@ export default function ResourceCalendar({
           <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-800 py-3">
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
+          {dentistsToShow.length > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                const g = gridScrollRef.current;
+                const h = headerScrollRef.current;
+                if (g && h) {
+                  const step = 180;
+                  g.scrollLeft = Math.max(0, g.scrollLeft - step);
+                  h.scrollLeft = g.scrollLeft;
+                }
+              }}
+              className="shrink-0 w-10 flex items-center justify-center border-r border-slate-800 bg-slate-800/60 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              title="Превърти наляво (или задръж Shift + колце на мишката)"
+              aria-label="Превърти наляво"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
           <div ref={headerScrollRef} className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain" style={{ scrollbarGutter: 'stable' }}>
           {dentistsToShow.map((d) => (
             <div
@@ -461,6 +494,26 @@ export default function ResourceCalendar({
             </div>
           ))}
           </div>
+          {dentistsToShow.length > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                const g = gridScrollRef.current;
+                const h = headerScrollRef.current;
+                if (g && h) {
+                  const step = 180;
+                  const maxLeft = g.scrollWidth - g.clientWidth;
+                  g.scrollLeft = Math.min(maxLeft, g.scrollLeft + step);
+                  h.scrollLeft = g.scrollLeft;
+                }
+              }}
+              className="shrink-0 w-10 flex items-center justify-center border-l border-slate-800 bg-slate-800/60 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              title="Превърти надясно (или задръж Shift + колце на мишката)"
+              aria-label="Превърти надясно"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
         <div

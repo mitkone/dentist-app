@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
         action: ACTIVITY_ACTIONS.USER_LOGIN,
         entity_type: 'profile',
         entity_id: data.user.id,
-        details: { email: data.user.email, full_name: profile?.full_name, role: profile?.role },
+        details: { email: data.user.email, full_name: profile?.full_name, role: profile?.role, actor_name: profile?.full_name || data.user.email },
       });
     }
   }

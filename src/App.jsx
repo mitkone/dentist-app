@@ -97,6 +97,17 @@ export default function App() {
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
 
+  const logWithActor = useCallback(
+    (payload) => {
+      const actorName = adminSession ? 'Админ' : (profile?.full_name || user?.email?.split('@')[0] || user?.email || '—');
+      logActivity(supabase, {
+        ...payload,
+        details: { ...payload.details, actor_name: actorName, actor_email: user?.email || null },
+      });
+    },
+    [supabase, user, profile, adminSession]
+  );
+
   const handleAdminPasswordSuccess = useCallback((password) => {
     setAdminSession(true, password);
     setAdminSessionState(true);
@@ -363,15 +374,15 @@ export default function App() {
     const id = `d-${Date.now()}`;
     setDentists((prev) => [...prev, { id, name, specialty, color }]);
     setSelectedDentistIds((prev) => [...prev, id]);
-    logActivity(supabase, { action: ACTIVITY_ACTIONS.DENTIST_ADDED, entity_type: 'dentist', entity_id: id, details: { name } });
-  }, []);
+    logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_ADDED, entity_type: 'dentist', entity_id: id, details: { name } });
+  }, [logWithActor]);
 
   const deleteDentist = useCallback((id) => {
     if (!window.confirm('Премахване на този стоматолог от списъка?')) return;
     setDentists((prev) => prev.filter((d) => d.id !== id));
     setSelectedDentistIds((prev) => prev.filter((x) => x !== id));
-    logActivity(supabase, { action: ACTIVITY_ACTIONS.DENTIST_DELETED, entity_type: 'dentist', entity_id: id });
-  }, []);
+    logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_DELETED, entity_type: 'dentist', entity_id: id });
+  }, [logWithActor]);
 
   const updateDentist = useCallback((id, updates) => {
     setDentists((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
@@ -494,7 +505,7 @@ export default function App() {
               email: data.email ?? '',
             },
           ]);
-          logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: data.id, details: { name: data.name } });
+          logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: data.id, details: { name: data.name } });
           // отвори веднага профила с хронологията
           setPatientDetailId(data.id);
         }
@@ -525,7 +536,7 @@ export default function App() {
 
       if (!error && data) {
         setDoctorVacations((prev) => [...prev, data]);
-        logActivity(supabase, { action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, start_date, end_date } });
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_ADDED, entity_type: 'vacation', entity_id: data.id, details: { dentist_id: dentistId, start_date, end_date } });
       } else if (error) {
         console.error('Failed to add vacation:', error);
       }
@@ -542,7 +553,7 @@ export default function App() {
         .eq('id', vacationId);
       if (!error) {
         setDoctorVacations((prev) => prev.filter((v) => v.id !== vacationId));
-        logActivity(supabase, { action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId });
+        logWithActor({ action: ACTIVITY_ACTIONS.VACATION_DELETED, entity_type: 'vacation', entity_id: vacationId });
       } else {
         console.error('Failed to delete vacation:', error);
       }
@@ -559,7 +570,7 @@ export default function App() {
         .eq('id', id)
         .then(({ error }) => {
           if (error) console.error('Failed to update patient:', error);
-          else logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_UPDATED, entity_type: 'patient', entity_id: id, details: updates });
+          else logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_UPDATED, entity_type: 'patient', entity_id: id, details: updates });
         });
   }, []);
 
@@ -571,7 +582,7 @@ export default function App() {
         if (!error) {
           setPatients((prev) => prev.filter((p) => p.id !== id));
           setPatientDetailId(null);
-          logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_DELETED, entity_type: 'patient', entity_id: id });
+          logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_DELETED, entity_type: 'patient', entity_id: id });
         } else {
           console.error('Failed to delete patient:', error);
         }
@@ -622,7 +633,7 @@ export default function App() {
         .single();
       if (!insertError && row && patientId === patientDetailId) {
         setPatientFiles((prev) => [{ ...row, url: getFilePublicUrl(storagePath) }, ...prev]);
-        logActivity(supabase, { action: ACTIVITY_ACTIONS.FILE_UPLOADED, entity_type: 'patient_file', entity_id: row.id, details: { patient_id: patientId, file_name: file.name } });
+        logWithActor({ action: ACTIVITY_ACTIONS.FILE_UPLOADED, entity_type: 'patient_file', entity_id: row.id, details: { patient_id: patientId, file_name: file.name } });
       }
     },
     [patientDetailId]
@@ -638,7 +649,7 @@ export default function App() {
       const { error } = await supabase.from('patient_files').delete().eq('id', fileId);
       if (!error) {
         setPatientFiles((prev) => prev.filter((f) => f.id !== fileId));
-        logActivity(supabase, { action: ACTIVITY_ACTIONS.FILE_DELETED, entity_type: 'patient_file', entity_id: fileId });
+        logWithActor({ action: ACTIVITY_ACTIONS.FILE_DELETED, entity_type: 'patient_file', entity_id: fileId });
       }
     },
     [patientFiles]
@@ -686,7 +697,7 @@ export default function App() {
           .eq('id', appointmentId)
           .then(({ error }) => {
             if (error) console.error('Failed to update appointment:', error);
-            else logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_MOVED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, start, date } });
+            else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_MOVED, entity_type: 'appointment', entity_id: appointmentId, details: { dentistId, start, date } });
           });
       }
 
@@ -713,7 +724,7 @@ export default function App() {
           if (!insErr && newPatient) {
             patient = { id: newPatient.id, name: newPatient.name, phone: '', notes: '', address: '', egn: '', email: '' };
             setPatients((prev) => [...prev, patient]);
-            logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: newPatient.id, details: { name: newPatient.name } });
+            logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: newPatient.id, details: { name: newPatient.name } });
           }
         }
       }
@@ -760,7 +771,7 @@ export default function App() {
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           setAppointments((prev) => [...prev, mapped]);
-          logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type } });
+          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentistId, type } });
         }
       } catch (err) {
         console.error('Failed to create appointment:', err);
@@ -830,7 +841,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to update appointment:', error);
-          else logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId });
         });
     }
     setEditAppointment(null);
@@ -858,7 +869,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to delete appointment:', error);
-          else logActivity(supabase, { action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_DELETED, entity_type: 'appointment', entity_id: appointmentId });
         });
     }
     setEditAppointment(null);
