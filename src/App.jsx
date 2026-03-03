@@ -1143,7 +1143,7 @@ export default function App() {
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
-  showDentistsFilter={!permissions.myDentistId}
+  showDentistsFilter={false}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
