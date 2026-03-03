@@ -1,6 +1,7 @@
 import { Lock, UserCheck } from 'lucide-react';
 
 const ADMIN_SESSION_KEY = 'hdent_admin_session';
+const ADMIN_PIN_KEY = 'hdent_admin_pin';
 
 export function getAdminSession() {
   try {
@@ -10,11 +11,24 @@ export function getAdminSession() {
   }
 }
 
-export function setAdminSession(value) {
+export function setAdminSession(value, adminPin = null) {
   try {
-    if (value) sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
-    else sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    if (value) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+      if (adminPin) sessionStorage.setItem(ADMIN_PIN_KEY, adminPin);
+    } else {
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      sessionStorage.removeItem(ADMIN_PIN_KEY);
+    }
   } catch {}
+}
+
+export function getAdminPin() {
+  try {
+    return sessionStorage.getItem(ADMIN_PIN_KEY) || null;
+  } catch {
+    return null;
+  }
 }
 
 export default function LandingAuth({ onAdminClick, onStaffClick }) {

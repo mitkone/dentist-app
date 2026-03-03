@@ -21,7 +21,7 @@ import DentistEditModal from './components/DentistEditModal';
 import AuthModal from './components/AuthModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
 import DentistProfileModal from './components/DentistProfileModal';
-import LandingAuth, { getAdminSession, setAdminSession } from './components/LandingAuth';
+import LandingAuth, { getAdminSession, setAdminSession, getAdminPin } from './components/LandingAuth';
 import QuickBookBar from './components/QuickBookBar';
 import { getPermissions } from './lib/permissions';
 
@@ -99,8 +99,8 @@ export default function App() {
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
 
-  const handleAdminPasswordSuccess = useCallback(() => {
-    setAdminSession(true);
+  const handleAdminPasswordSuccess = useCallback((password) => {
+    setAdminSession(true, password);
     setAdminSessionState(true);
     setShowAdminPassword(false);
     setAdminOpen(true);
@@ -1143,6 +1143,7 @@ export default function App() {
         onReorderAppointmentType={reorderAppointmentType}
         dentists={dentists}
         patients={patients}
+        getAdminPin={getAdminPin}
       />
     </div>
   );

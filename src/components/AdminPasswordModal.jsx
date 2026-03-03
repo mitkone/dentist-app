@@ -11,8 +11,9 @@ export default function AdminPasswordModal({ open, onClose, onSuccess }) {
     e.preventDefault();
     setError('');
     if (password.trim() === ADMIN_PASSWORD) {
+      const pwd = password.trim();
       setPassword('');
-      onSuccess?.();
+      onSuccess?.(pwd);
       onClose?.();
     } else {
       setError('Грешна парола');

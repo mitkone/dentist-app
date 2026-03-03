@@ -59,6 +59,7 @@ export default function AdminPanel({
   onReorderAppointmentType,
   dentists = [],
   patients = [],
+  getAdminPin,
 }) {
   const [systemCheck, setSystemCheck] = useState(null);
   const [hoursStart, setHoursStart] = useState(workingHours.start);
@@ -116,9 +117,28 @@ export default function AdminPanel({
     const payload = { role, updated_at: new Date().toISOString() };
     if (role === 'dentist') payload.dentist_id = dentistId || null;
     else payload.dentist_id = null;
+    const adminPin = typeof getAdminPin === 'function' ? getAdminPin() : null;
+    if (adminPin) {
+      const { data, error } = await supabase.rpc('admin_update_profile_role', {
+        target_id: profileId,
+        new_role: role,
+        new_dentist_id: role === 'dentist' ? (dentistId || null) : null,
+        admin_pin: adminPin,
+      });
+      if (data?.ok) {
+        setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, role, dentist_id: payload.dentist_id } : p)));
+      } else if (data?.error) {
+        alert(data.error);
+      } else if (error) {
+        alert(error.message || 'Грешка при промяна');
+      }
+      return;
+    }
     const { error } = await supabase.from('profiles').update(payload).eq('id', profileId);
     if (!error) {
       setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, role, dentist_id: payload.dentist_id } : p)));
+    } else {
+      alert(error.message || 'Грешка при промяна. Влезте като админ чрез парола.');
     }
   };
 
