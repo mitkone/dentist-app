@@ -78,6 +78,7 @@ export default function App() {
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
   const [scheduleNotifications, setScheduleNotifications] = useState([]);
   const [scheduleNotificationsOpen, setScheduleNotificationsOpen] = useState(false);
+  const [scheduleNotificationsSeen, setScheduleNotificationsSeen] = useState(true);
   const scheduleNotificationsRef = useRef(null);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
 
@@ -313,6 +314,17 @@ export default function App() {
   }, [isAuthenticated, appointmentsRefreshKey]);
 
   const myDentistId = permissions.myDentistId;
+
+  const formatNotificationText = useCallback((action, details = {}) => {
+    const actor = details.actor_name || 'Регистратор';
+    const patient = details.patientName ?? details.patient_name ?? 'пациент';
+    const timeSlot = details.start ? ` за ${details.start}` : '';
+    if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
+    if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}`;
+    if (action === 'appointment_updated') return `${actor} промени час на ${patient}`;
+    return `${actor} – ${action}`;
+  }, []);
+
   useEffect(() => {
     if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
     const storageKey = `dentist_notif_last_open_${myDentistId}`;
@@ -331,25 +343,36 @@ export default function App() {
           const dentId = d.dentist_id ?? d.dentistId;
           return dentId === myDentistId;
         });
-        const actor = (d) => d?.actor_name || 'Регистратор';
-        const patient = (d) => d?.patientName || d?.patient_name || 'пациент';
-        const timeSlot = (d) => (d?.start ? ` за ${d.start}` : '');
-        const toText = (e) => {
-          const d = e.details || {};
-          const a = actor(d);
-          const p = patient(d);
-          const t = timeSlot(d);
-          if (e.action === 'appointment_created') return `${a} добави ${p}${t}`;
-          if (e.action === 'appointment_deleted') return `${a} изтри час на ${p}`;
-          if (e.action === 'appointment_updated') return `${a} промени час на ${p}`;
-          return `${a} – ${e.action}`;
-        };
-        setScheduleNotifications(
-          list.map((e) => ({ id: e.id, text: toText(e), createdAt: new Date(e.created_at).getTime() }))
-        );
+        const notifs = list.map((e) => ({ id: e.id, text: formatNotificationText(e.action, e.details || {}), createdAt: new Date(e.created_at).getTime() }));
+        setScheduleNotifications(notifs);
+        if (notifs.length > 0) setScheduleNotificationsSeen(false);
         localStorage.setItem(storageKey, String(Date.now()));
       });
-  }, [adminSession, myDentistId, isAuthenticated]);
+  }, [adminSession, myDentistId, isAuthenticated, formatNotificationText]);
+
+  useEffect(() => {
+    if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
+    const channel = supabase
+      .channel(`dentist-activity-${myDentistId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activity_log' },
+        (payload) => {
+          const row = payload.new || {};
+          const action = row.action;
+          if (!['appointment_created', 'appointment_updated', 'appointment_deleted'].includes(action)) return;
+          const d = row.details || {};
+          const dentId = d.dentist_id ?? d.dentistId;
+          if (dentId !== myDentistId) return;
+          setAppointmentsRefreshKey((k) => k + 1);
+          const text = formatNotificationText(action, d);
+          setScheduleNotifications((prev) => [...prev, { id: row.id || crypto.randomUUID(), text, createdAt: Date.now() }]);
+          setScheduleNotificationsSeen(false);
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [adminSession, myDentistId, isAuthenticated, formatNotificationText]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -987,12 +1010,16 @@ export default function App() {
               <div ref={scheduleNotificationsRef} className="relative">
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setScheduleNotificationsOpen((o) => !o); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setScheduleNotificationsOpen((o) => !o);
+                    if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
+                  }}
                   className="relative p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white"
                   aria-label="Известия за графика"
                 >
                   <Bell className="w-5 h-5" />
-                  {scheduleNotifications.length > 0 && (
+                  {scheduleNotifications.length > 0 && !scheduleNotificationsSeen && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-emerald-500 rounded-full">
                       {scheduleNotifications.length > 99 ? '99+' : scheduleNotifications.length}
                     </span>
@@ -1005,7 +1032,7 @@ export default function App() {
                       {scheduleNotifications.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setScheduleNotifications([])}
+                          onClick={() => { setScheduleNotifications([]); setScheduleNotificationsSeen(true); }}
                           className="text-xs text-emerald-400 hover:text-emerald-300"
                         >
                           Изчисти
