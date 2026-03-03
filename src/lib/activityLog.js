@@ -19,6 +19,7 @@ export function logActivity(supabase, payload) {
 }
 
 export const ACTIVITY_ACTIONS = {
+  USER_LOGIN: 'user_login',
   APPOINTMENT_CREATED: 'appointment_created',
   APPOINTMENT_UPDATED: 'appointment_updated',
   APPOINTMENT_DELETED: 'appointment_deleted',

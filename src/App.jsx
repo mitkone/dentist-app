@@ -18,6 +18,7 @@ import AddVacationModal from './components/AddVacationModal';
 import AdminPanel from './components/AdminPanel';
 import AdminPasswordModal from './components/AdminPasswordModal';
 import AuthModal from './components/AuthModal';
+import ResetPasswordModal from './components/ResetPasswordModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
 import DentistProfileModal from './components/DentistProfileModal';
 import LandingAuth, { getAdminSession, setAdminSession, getAdminPin } from './components/LandingAuth';
@@ -76,7 +77,7 @@ export default function App() {
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
 
-  const { user, profile, signIn, signUp, signOut } = useAuth() ?? {};
+  const { user, profile, signIn, signUp, signOut, resetPassword, needsPasswordReset, updatePassword, dismissPasswordReset } = useAuth() ?? {};
   const [adminSession, setAdminSessionState] = useState(() => getAdminSession());
   const isAuthenticated = Boolean(user) || adminSession;
   const permissions = adminSession ? { canViewAllDentists: true, canBookAnyDentist: true, canEditDentists: true, canManageProfiles: true, canManageSettings: true, canViewAdmin: true, myDentistId: null } : getPermissions(profile);
@@ -1078,7 +1079,13 @@ export default function App() {
         onClose={() => setAuthModalOpen(false)}
         signIn={signIn}
         signUp={signUp}
+        resetPassword={resetPassword}
         dentists={dentists}
+      />
+      <ResetPasswordModal
+        open={needsPasswordReset}
+        onClose={dismissPasswordReset}
+        onUpdate={updatePassword}
       />
 
       <FreeSlotsModal

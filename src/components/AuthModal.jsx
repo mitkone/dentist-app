@@ -3,7 +3,7 @@ import { X, LogIn, UserPlus } from 'lucide-react';
 
 const REMEMBER_EMAIL_KEY = 'dentist_app_remember_email';
 
-export default function AuthModal({ open, onClose, signIn, signUp, dentists = [] }) {
+export default function AuthModal({ open, onClose, signIn, signUp, resetPassword, dentists = [] }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +30,8 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
 
   if (!open) return null;
 
@@ -46,6 +48,20 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
       onClose();
     } catch (err) {
       setError(err.message || 'Грешка при влизане');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await resetPassword?.(email);
+      setForgotSuccess(true);
+    } catch (err) {
+      setError(err.message || 'Грешка при изпращане');
     } finally {
       setLoading(false);
     }
@@ -102,40 +118,92 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
           )}
 
           {mode === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Парола</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/40"
-                />
-                Запомни ме (имейл)
-              </label>
-              <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-500 disabled:opacity-60">
-                {loading ? 'Влизане...' : 'Вход'}
-              </button>
-            </form>
+            forgotPassword ? (
+              forgotSuccess ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2">
+                    Проверете имейла си за линк за нулиране на паролата.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(false); setForgotSuccess(false); setError(''); }}
+                    className="w-full py-2.5 text-sm font-medium text-slate-200 hover:text-white border border-slate-600 rounded-lg hover:bg-slate-800"
+                  >
+                    Назад към вход
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <p className="text-sm text-slate-400">Въведете имейла си и ще получите линк за нулиране на паролата.</p>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setForgotPassword(false); setError(''); }}
+                      className="flex-1 py-2.5 text-sm font-medium text-slate-200 border border-slate-600 rounded-lg hover:bg-slate-800"
+                    >
+                      Отказ
+                    </button>
+                    <button type="submit" disabled={loading} className="flex-1 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-500 disabled:opacity-60">
+                      {loading ? 'Изпращане...' : 'Изпрати'}
+                    </button>
+                  </div>
+                </form>
+              )
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-1">Парола</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/40"
+                    />
+                    Запомни ме (имейл)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPassword(true); setError(''); }}
+                    className="text-xs text-slate-400 hover:text-emerald-400"
+                  >
+                    Забравена парола?
+                  </button>
+                </div>
+                <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-500 disabled:opacity-60">
+                  {loading ? 'Влизане...' : 'Вход'}
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>

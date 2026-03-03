@@ -64,15 +64,33 @@ export default function ResourceCalendar({
   const lastPinchDist = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
 
+  const TIME_COL_WIDTH = 64;
   useEffect(() => {
     const grid = gridScrollRef.current;
     const header = headerScrollRef.current;
     if (!grid || !header) return;
-    const sync = () => { header.scrollLeft = grid.scrollLeft; };
-    grid.addEventListener('scroll', sync);
-    const ro = new ResizeObserver(sync);
+    let skipSync = false;
+    const syncGridToHeader = () => {
+      if (skipSync) return;
+      skipSync = true;
+      header.scrollLeft = Math.max(0, grid.scrollLeft - TIME_COL_WIDTH);
+      requestAnimationFrame(() => { skipSync = false; });
+    };
+    const syncHeaderToGrid = () => {
+      if (skipSync) return;
+      skipSync = true;
+      grid.scrollLeft = header.scrollLeft + TIME_COL_WIDTH;
+      requestAnimationFrame(() => { skipSync = false; });
+    };
+    grid.addEventListener('scroll', syncGridToHeader);
+    header.addEventListener('scroll', syncHeaderToGrid);
+    const ro = new ResizeObserver(syncGridToHeader);
     ro.observe(grid);
-    return () => { grid.removeEventListener('scroll', sync); ro.disconnect(); };
+    return () => {
+      grid.removeEventListener('scroll', syncGridToHeader);
+      header.removeEventListener('scroll', syncHeaderToGrid);
+      ro.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -477,7 +495,7 @@ export default function ResourceCalendar({
                 aria-hidden
               />
             )}
-            <div className="w-16 shrink-0 border-r border-slate-800 bg-slate-900">
+            <div className="w-16 shrink-0 border-r border-slate-800 bg-slate-900 sticky left-0 z-[1]">
               {slots.map((slot) => (
                 <div
                   key={slot}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ACTION_LABELS = {
+  user_login: 'Вход в системата',
   appointment_created: 'Създаден час',
   appointment_updated: 'Редактиран час',
   appointment_deleted: 'Изтрит час',
@@ -422,7 +423,11 @@ export default function AdminPanel({
                 if (details.start_date && details.end_date) detailLines.push({ label: 'Период', val: `${details.start_date} – ${details.end_date}` });
                 if (details.file_name) detailLines.push({ label: 'Файл', val: details.file_name });
                 if (details.name && !details.patientName) detailLines.push({ label: 'Име', val: details.name });
+                if (details.full_name) detailLines.push({ label: 'Име', val: details.full_name });
+                if (details.email) detailLines.push({ label: 'Имейл', val: details.email });
+                if (details.role) detailLines.push({ label: 'Роля', val: roleLabel[details.role] || details.role });
 
+                const summaryName = details.name || details.full_name || details.patientName;
                 return (
                   <li key={entry.id}>
                     <button
@@ -433,7 +438,7 @@ export default function AdminPanel({
                       <span className="text-slate-500 shrink-0 text-xs mt-0.5">{formatWhen(entry.created_at)}</span>
                       <span className="flex-1 text-slate-200">
                         {ACTION_LABELS[entry.action] ?? entry.action}
-                        {details.name && !expanded && <span className="text-slate-400"> · {details.name}</span>}
+                        {summaryName && !expanded && <span className="text-slate-400"> · {summaryName}</span>}
                       </span>
                       {expanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
                     </button>
