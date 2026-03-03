@@ -563,6 +563,26 @@ export default function App() {
         });
   }, []);
 
+  const deletePatient = useCallback(
+    async (id) => {
+      if (!window.confirm('Сигурни ли сте, че искате да изтриете този пациент?')) return;
+      if (supabase) {
+        const { error } = await supabase.from('patients').delete().eq('id', id);
+        if (!error) {
+          setPatients((prev) => prev.filter((p) => p.id !== id));
+          setPatientDetailId(null);
+          logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_DELETED, entity_type: 'patient', entity_id: id });
+        } else {
+          console.error('Failed to delete patient:', error);
+        }
+      } else {
+        setPatients((prev) => prev.filter((p) => p.id !== id));
+        setPatientDetailId(null);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!patientDetailId || !supabase) {
       setPatientFiles([]);
@@ -678,8 +698,25 @@ export default function App() {
     async ({ dentistId, patientId, patientName: providedName, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
       const date = dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
-      const patient = patientId ? patients.find((p) => p.id === patientId) : null;
-      const patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
+      let patient = patientId ? patients.find((p) => p.id === patientId) : null;
+      let patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
+
+      // Ако има име но няма избран пациент – създай пациента в БД
+      if (supabase && patientName && !patientId) {
+        const existing = patients.find((p) => (p.name || '').trim().toLowerCase() === patientName.trim().toLowerCase());
+        if (!existing) {
+          const { data: newPatient, error: insErr } = await supabase
+            .from('patients')
+            .insert({ name: patientName.trim(), phone: null, notes: null, address: null, egn: null, email: null })
+            .select()
+            .single();
+          if (!insErr && newPatient) {
+            patient = { id: newPatient.id, name: newPatient.name, phone: '', notes: '', address: '', egn: '', email: '' };
+            setPatients((prev) => [...prev, patient]);
+            logActivity(supabase, { action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: newPatient.id, details: { name: newPatient.name } });
+          }
+        }
+      }
 
       if (!supabase) {
         setAppointments((prev) => [
@@ -937,7 +974,7 @@ export default function App() {
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
-  showDentistsFilter={false}
+  showDentistsFilter={!!permissions.myDentistId}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
@@ -1035,6 +1072,7 @@ export default function App() {
         open={Boolean(patientDetailId)}
         onClose={() => setPatientDetailId(null)}
         onSave={(updates) => patientDetailId && updatePatient(patientDetailId, updates)}
+        onDelete={deletePatient}
         appointments={appointments}
         dentists={dentists}
         patientFiles={patientFiles}
@@ -1120,7 +1158,14 @@ export default function App() {
         workingHours={workingHours}
         onSaveWorkingHours={saveWorkingHours}
         appointmentTypes={appointmentTypes}
-        onClearActivityLog={() => setActivityLog([])}
+        onClearActivityLog={async () => {
+          if (supabase) {
+            const { error } = await supabase.from('activity_log').delete().gte('created_at', '1970-01-01');
+            if (!error) setActivityLog([]);
+          } else {
+            setActivityLog([]);
+          }
+        }}
         onAddAppointmentType={addAppointmentType}
         onDeleteAppointmentType={deleteAppointmentType}
         onReorderAppointmentType={reorderAppointmentType}

@@ -20,6 +20,7 @@ export default function PatientDetailModal({
   open,
   onClose,
   onSave,
+  onDelete,
   appointments = [],
   dentists = [],
   patientFiles = [],
@@ -87,13 +88,28 @@ export default function PatientDetailModal({
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900">
           <h3 className="text-lg font-semibold text-white">Данни за пациента</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(patient?.id);
+                  onClose();
+                }}
+                className="p-1.5 rounded-lg text-red-400 hover:bg-red-900/40 hover:text-red-300"
+                title="Изтрий пациента"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 flex-1 overflow-y-auto min-h-0">

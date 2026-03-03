@@ -28,6 +28,7 @@ export const ACTIVITY_ACTIONS = {
   VACATION_DELETED: 'vacation_deleted',
   PATIENT_ADDED: 'patient_added',
   PATIENT_UPDATED: 'patient_updated',
+  PATIENT_DELETED: 'patient_deleted',
   DENTIST_ADDED: 'dentist_added',
   DENTIST_DELETED: 'dentist_deleted',
   FILE_UPLOADED: 'file_uploaded',
