@@ -457,12 +457,21 @@ export default function App() {
       if (newIdx < 0 || newIdx >= appointmentTypes.length) return;
       const next = [...appointmentTypes];
       [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+      let hasError = false;
       for (let i = 0; i < next.length; i++) {
-        await supabase.from('appointment_types').update({ sort_order: i }).eq('id', next[i].id);
+        const { error } = await supabase.from('appointment_types').update({ sort_order: i }).eq('id', next[i].id);
+        if (error) {
+          hasError = true;
+          break;
+        }
+      }
+      if (hasError) {
+        await fetchAppointmentTypesAndSpecialties();
+        return;
       }
       setAppointmentTypes(next);
     },
-    [appointmentTypes]
+    [appointmentTypes, supabase, fetchAppointmentTypesAndSpecialties]
   );
 
   useEffect(() => {
@@ -647,13 +656,25 @@ export default function App() {
   }, []);
 
   const onAppointmentMove = useCallback((appointmentId, { dentistId, start }) => {
+    const a = appointments.find((x) => x.id === appointmentId);
+    if (!a) return;
+    const myDentistId = permissions.myDentistId;
+    const canBookAny = permissions.canBookAnyDentist;
+    if (myDentistId && !canBookAny) {
+      if (a.dentistId !== myDentistId) {
+        return;
+      }
+      if (dentistId !== myDentistId) {
+        return;
+      }
+    }
     setAppointments((prev) => {
-      const a = prev.find((x) => x.id === appointmentId);
-      if (!a) return prev;
-      const durationMin = getDurationMinutes(a.start, a.end);
+      const apr = prev.find((x) => x.id === appointmentId);
+      if (!apr) return prev;
+      const durationMin = getDurationMinutes(apr.start, apr.end);
       const newEnd = addMinutes(start, durationMin);
-      const date = a.date;
-      const updated = { ...a, dentistId, start, end: newEnd };
+      const date = apr.date;
+      const updated = { ...apr, dentistId, start, end: newEnd };
 
       if (supabase) {
         supabase
@@ -672,7 +693,7 @@ export default function App() {
 
       return prev.map((x) => (x.id === appointmentId ? updated : x));
     });
-  }, []);
+  }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
     async ({ dentistId, patientId, patientName: providedName, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
