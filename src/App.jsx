@@ -658,10 +658,12 @@ export default function App() {
   );
 
   const onDentistToggle = useCallback((id) => {
-    setSelectedDentistIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }, []);
+    const myId = permissions.myDentistId;
+    setSelectedDentistIds((prev) => {
+      if (myId && id === myId) return prev;
+      return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+    });
+  }, [permissions.myDentistId]);
 
   const onSlotClick = useCallback((dentistId, slot) => {
     setModal({ open: true, dentistId, slot });
