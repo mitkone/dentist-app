@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { DENTIST_SPECIALTY_KEYS, specialtyLabel, DEFAULT_DENTIST_COLORS } from '../data/mockData';
+import { DEFAULT_DENTIST_COLORS } from '../data/mockData';
 
-export default function AddDentistModal({ open, onClose, onAdd, specialties = [] }) {
-  const specialtyOptions = specialties.length > 0 ? specialties : DENTIST_SPECIALTY_KEYS.map((key) => ({ key, label_bg: specialtyLabel(key) }));
+export default function AddDentistModal({ open, onClose, onAdd }) {
   const [name, setName] = useState('');
-  const [specialty, setSpecialty] = useState(specialtyOptions[0]?.key ?? DENTIST_SPECIALTY_KEYS[0]);
   const [color, setColor] = useState(DEFAULT_DENTIST_COLORS[0]);
 
   if (!open) return null;
@@ -15,9 +13,8 @@ export default function AddDentistModal({ open, onClose, onAdd, specialties = []
     e.stopPropagation();
     const trimmed = name.trim();
     if (!trimmed) return;
-    onAdd({ name: trimmed, specialty, color });
+    onAdd({ name: trimmed, specialty: 'General Dentistry', color });
     setName('');
-    setSpecialty(specialtyOptions[0]?.key ?? DENTIST_SPECIALTY_KEYS[0]);
     setColor(DEFAULT_DENTIST_COLORS[0]);
     setTimeout(() => onClose(), 0);
   };
@@ -55,24 +52,6 @@ export default function AddDentistModal({ open, onClose, onAdd, specialties = []
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               required
             />
-          </div>
-
-          <div>
-            <label htmlFor="dentist-specialty" className="block text-sm font-medium text-slate-200 mb-1">
-              Специалност
-            </label>
-            <select
-              id="dentist-specialty"
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
-            >
-              {specialtyOptions.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label_bg}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div>

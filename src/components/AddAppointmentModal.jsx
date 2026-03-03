@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { appointmentTypeLabel, specialtyLabel } from '../data/mockData';
+import { appointmentTypeLabel } from '../data/mockData';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
 
@@ -89,7 +89,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Стоматолог</label>
             <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">
-              {selectedDentist?.name} — {selectedDentist && specialtyLabel(selectedDentist.specialty)}
+              {selectedDentist?.name}
             </div>
           </div>
 

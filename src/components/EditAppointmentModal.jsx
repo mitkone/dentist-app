@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { appointmentTypeLabel, specialtyLabel, getSlots, HOURS } from '../data/mockData';
+import { appointmentTypeLabel, getSlots, HOURS } from '../data/mockData';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
 
@@ -132,9 +132,9 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               >
                 {dentists.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} — {specialtyLabel(d.specialty)}
-                  </option>
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
                 ))}
               </select>
             ) : (

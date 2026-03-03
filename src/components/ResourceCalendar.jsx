@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, ChevronDown, Stethoscope } from 'lucide-react';
-import { getSlots, appointmentTypeLabel, specialtyLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
+import { getSlots, appointmentTypeLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
 
 const SLOT_HEIGHT = 40;
 const DRAG_THRESHOLD = 5;
@@ -441,7 +441,6 @@ export default function ResourceCalendar({
                   {d.name}
                 </div>
               )}
-              <div className="text-xs text-slate-400 truncate">{specialtyLabel(d.specialty)}</div>
             </div>
           ))}
           </div>

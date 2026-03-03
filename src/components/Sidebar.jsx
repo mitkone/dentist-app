@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, Pencil, ChevronDown } from 'lucide-react';
-import { specialtyLabel } from '../data/mockData';
-
+import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown } from 'lucide-react';
 export default function Sidebar({ dentists,
   selectedDentistIds,
   onDentistToggle,
@@ -13,11 +11,8 @@ export default function Sidebar({ dentists,
   onAddPatient,
   onOpenPatientDetail,
   onOpenVacation,
-  onEditDentist,
-  specialties = [],
   showDentistsFilter = true,
 }) {
-  const specialtyLabelResolved = (key) => specialties.find((s) => s.key === key)?.label_bg ?? specialtyLabel(key);
   const q = (patientSearch || '').trim().toLowerCase();
   const filteredPatients = q
     ? patients.filter(
@@ -124,19 +119,9 @@ export default function Sidebar({ dentists,
                   />
                   <div className="min-w-0">
                     <span className="text-sm font-medium text-slate-100 block leading-snug">{d.name}</span>
-                    <span className="text-xs text-slate-400 block truncate">{specialtyLabelResolved(d.specialty)}</span>
                   </div>
                 </label>
                 <div className="flex gap-1 shrink-0 relative z-10">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onEditDentist?.(d.id); }}
-                    className="p-1.5 rounded text-slate-400 hover:bg-slate-600 hover:text-white shrink-0 opacity-70 group-hover:opacity-100"
-                    title="Профил / Специалност"
-                    aria-label="Редактирай"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
                   <button
                     type="button"
                     onClick={(e) => {

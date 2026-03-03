@@ -36,7 +36,6 @@ const CHECKS = [
   { key: 'activity_log', label: 'Лог', table: 'activity_log', column: 'id' },
   // В clinic_settings нямаме колона id, ползваме key
   { key: 'clinic_settings', label: 'Настройки', table: 'clinic_settings', column: 'key' },
-  { key: 'specialties', label: 'Специалности', table: 'specialties', column: 'id' },
   { key: 'appointment_types', label: 'Типове преглед', table: 'appointment_types', column: 'id' },
 ];
 
@@ -46,13 +45,11 @@ export default function AdminPanel({
   activityLog = [],
   loading,
   onRefresh,
+  onClearActivityLog,
   stats,
   supabase,
   workingHours = { start: 7, end: 19 },
   onSaveWorkingHours,
-  specialties = [],
-  onAddSpecialty,
-  onDeleteSpecialty,
   appointmentTypes = [],
   onAddAppointmentType,
   onDeleteAppointmentType,
@@ -64,8 +61,6 @@ export default function AdminPanel({
   const [systemCheck, setSystemCheck] = useState(null);
   const [hoursStart, setHoursStart] = useState(workingHours.start);
   const [hoursEnd, setHoursEnd] = useState(workingHours.end);
-  const [newSpecKey, setNewSpecKey] = useState('');
-  const [newSpecLabel, setNewSpecLabel] = useState('');
   const [newTypeLabel, setNewTypeLabel] = useState('');
   const [addTypeError, setAddTypeError] = useState('');
   const [profiles, setProfiles] = useState([]);
@@ -254,49 +249,6 @@ export default function AdminPanel({
             </div>
           )}
 
-          {onAddSpecialty && (
-            <div className="p-4 border-b border-slate-800">
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Специалности (лекари)</h3>
-              <ul className="space-y-1 mb-2 max-h-24 overflow-y-auto">
-                {specialties.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-2 py-1 px-2 rounded bg-slate-800 text-sm">
-                    <span className="text-slate-200">{s.label_bg}</span>
-                    <button type="button" onClick={() => onDeleteSpecialty(s.id)} className="p-1 rounded text-slate-400 hover:text-red-400">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex gap-2 flex-wrap items-center">
-                <input
-                  type="text"
-                  placeholder="Ключ (напр. Implantology)"
-                  value={newSpecKey}
-                  onChange={(e) => setNewSpecKey(e.target.value)}
-                  className="w-32 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Име на български"
-                  value={newSpecLabel}
-                  onChange={(e) => setNewSpecLabel(e.target.value)}
-                  className="w-36 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const k = newSpecKey.trim();
-                    const l = newSpecLabel.trim();
-                    if (k && l) { onAddSpecialty(k, l); setNewSpecKey(''); setNewSpecLabel(''); }
-                  }}
-                  className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-500"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
           {onAddAppointmentType && (
             <div className="p-4 border-b border-slate-800">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
@@ -439,7 +391,18 @@ export default function AdminPanel({
             </div>
           )}
 
-          <h3 className="text-sm font-medium text-slate-300 px-4 pt-3 pb-1">Последни действия</h3>
+          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+            <h3 className="text-sm font-medium text-slate-300">Последни действия</h3>
+            {activityLog.length > 0 && onClearActivityLog && (
+              <button
+                type="button"
+                onClick={() => { onClearActivityLog?.(); }}
+                className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-800"
+              >
+                Изчисти
+              </button>
+            )}
+          </div>
           {loading ? (
             <p className="px-4 py-6 text-slate-400 text-sm">Зареждане...</p>
           ) : activityLog.length === 0 ? (

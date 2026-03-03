@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, LogIn, LogOut, CalendarClock } from 'lucide-react';
+import { Activity, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -17,7 +17,6 @@ import EditAppointmentModal from './components/EditAppointmentModal';
 import AddVacationModal from './components/AddVacationModal';
 import AdminPanel from './components/AdminPanel';
 import AdminPasswordModal from './components/AdminPasswordModal';
-import DentistEditModal from './components/DentistEditModal';
 import AuthModal from './components/AuthModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
 import DentistProfileModal from './components/DentistProfileModal';
@@ -69,9 +68,7 @@ export default function App() {
   const [activityLog, setActivityLog] = useState([]);
   const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [workingHours, setWorkingHours] = useState({ start: 7, end: 19 });
-  const [specialties, setSpecialties] = useState([]);
   const [appointmentTypes, setAppointmentTypes] = useState([]);
-  const [editDentistId, setEditDentistId] = useState(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
   const [doctorAvailableSlots, setDoctorAvailableSlots] = useState({});
@@ -326,8 +323,6 @@ export default function App() {
 
   const fetchAppointmentTypesAndSpecialties = useCallback(async () => {
     if (!supabase) return;
-    const { data: spec } = await supabase.from('specialties').select('*').order('label_bg');
-    if (spec) setSpecialties(spec);
     let types = null;
     const { data: typesWithSort, error } = await supabase.from('appointment_types').select('*').order('sort_order', { ascending: true }).order('label_bg', { ascending: true });
     if (!error && typesWithSort) {
@@ -379,7 +374,6 @@ export default function App() {
 
   const updateDentist = useCallback((id, updates) => {
     setDentists((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
-    setEditDentistId(null);
   }, []);
 
   const saveWorkingHours = useCallback(
@@ -391,22 +385,6 @@ export default function App() {
     []
   );
 
-  const addSpecialty = useCallback(
-    async (key, label_bg) => {
-      if (!supabase) return;
-      const { data } = await supabase.from('specialties').insert({ key, label_bg }).select().single();
-      if (data) setSpecialties((prev) => [...prev, data]);
-    },
-    []
-  );
-  const deleteSpecialty = useCallback(
-    async (id) => {
-      if (!supabase) return;
-      await supabase.from('specialties').delete().eq('id', id);
-      setSpecialties((prev) => prev.filter((s) => s.id !== id));
-    },
-    []
-  );
   const addAppointmentType = useCallback(
     async (label_bg) => {
       if (!supabase) return { ok: false, error: 'Supabase не е конфигуриран' };
@@ -899,16 +877,6 @@ export default function App() {
           <div className="flex items-center gap-2">
             {supabase && (
               <>
-                {!permissions.myDentistId && (
-                  <button
-                    type="button"
-                    onClick={() => { setFreeSlotsInitialDentist(null); setFreeSlotsOpen(true); }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
-                  >
-                    <CalendarClock className="w-4 h-4" />
-                    <span className="hidden sm:inline">Свободни часове</span>
-                  </button>
-                )}
                 {permissions.canViewAdmin && (
                   <button
                     type="button"
@@ -968,8 +936,6 @@ export default function App() {
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
-  onEditDentist={permissions.canEditDentists ? setEditDentistId : undefined}
-  specialties={specialties}
   showDentistsFilter={false}
 />
 
@@ -1055,15 +1021,6 @@ export default function App() {
         open={addDentistOpen}
         onClose={() => setAddDentistOpen(false)}
         onAdd={addDentist}
-        specialties={specialties}
-      />
-
-      <DentistEditModal
-        open={Boolean(editDentistId)}
-        onClose={() => setEditDentistId(null)}
-        dentist={dentists.find((d) => d.id === editDentistId)}
-        specialties={specialties}
-        onSave={(id, updates) => updateDentist(id, updates)}
       />
 
       <AddPatientModal
@@ -1155,10 +1112,8 @@ export default function App() {
         supabase={supabase}
         workingHours={workingHours}
         onSaveWorkingHours={saveWorkingHours}
-        specialties={specialties}
-        onAddSpecialty={addSpecialty}
-        onDeleteSpecialty={deleteSpecialty}
         appointmentTypes={appointmentTypes}
+        onClearActivityLog={() => setActivityLog([])}
         onAddAppointmentType={addAppointmentType}
         onDeleteAppointmentType={deleteAppointmentType}
         onReorderAppointmentType={reorderAppointmentType}
