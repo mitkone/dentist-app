@@ -60,7 +60,6 @@ export default function ResourceCalendar({
   const mobileDentistsRef = useRef(null);
   const headerScrollRef = useRef(null);
   const gridScrollRef = useRef(null);
-  const calendarWrapRef = useRef(null);
   const headerRowRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const lastPinchDist = useRef(null);
@@ -95,28 +94,39 @@ export default function ResourceCalendar({
   }, []);
 
   useEffect(() => {
-    const wrap = calendarWrapRef.current;
     const grid = gridScrollRef.current;
     const header = headerScrollRef.current;
     const headerRow = headerRowRef.current;
-    if (!wrap || !grid || typeof window === 'undefined') return;
-    const onWheel = (e) => {
+    if (!grid || typeof window === 'undefined') return;
+    const onHeaderWheel = (e) => {
       if (window.innerWidth >= MOBILE_BREAKPOINT) {
         const dy = e.deltaY || 0;
-        const dx = e.deltaX || 0;
-        const overHeader = headerRow?.contains(e.target);
-        const useHorizontal = overHeader ? Math.abs(dy) > 0 : Math.abs(dx) > Math.abs(dy);
-        if (useHorizontal && (Math.abs(dy) > 0 || Math.abs(dx) > 0)) {
-          const delta = overHeader ? dy : dx;
+        if (Math.abs(dy) > 0) {
           const { scrollLeft, scrollWidth, clientWidth } = grid;
           const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
           const canScrollLeft = scrollLeft > 0;
-          if ((delta > 0 && canScrollRight) || (delta < 0 && canScrollLeft)) {
+          if ((dy > 0 && canScrollRight) || (dy < 0 && canScrollLeft)) {
             e.preventDefault();
-            grid.scrollLeft += delta;
+            grid.scrollLeft += dy;
             if (header) header.scrollLeft = grid.scrollLeft;
           }
-        } else if (Math.abs(dy) > 0 && !overHeader) {
+        }
+      }
+    };
+    const onGridWheel = (e) => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT) {
+        const dy = e.deltaY || 0;
+        const dx = e.deltaX || 0;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          const { scrollLeft, scrollWidth, clientWidth } = grid;
+          const canScrollRight = scrollLeft + clientWidth < scrollWidth - 1;
+          const canScrollLeft = scrollLeft > 0;
+          if ((dx > 0 && canScrollRight) || (dx < 0 && canScrollLeft)) {
+            e.preventDefault();
+            grid.scrollLeft += dx;
+            if (header) header.scrollLeft = grid.scrollLeft;
+          }
+        } else if (Math.abs(dy) > 0) {
           const { scrollTop, scrollHeight, clientHeight } = grid;
           const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
           const canScrollUp = scrollTop > 0;
@@ -127,8 +137,14 @@ export default function ResourceCalendar({
         }
       }
     };
-    wrap.addEventListener('wheel', onWheel, { passive: false });
-    return () => wrap.removeEventListener('wheel', onWheel);
+    if (headerRow) {
+      headerRow.addEventListener('wheel', onHeaderWheel, { passive: false });
+    }
+    grid.addEventListener('wheel', onGridWheel, { passive: false });
+    return () => {
+      if (headerRow) headerRow.removeEventListener('wheel', onHeaderWheel);
+      grid.removeEventListener('wheel', onGridWheel);
+    };
   }, []);
 
   const listForMobile = (allDentists.length ? allDentists : dentists);
@@ -365,7 +381,7 @@ export default function ResourceCalendar({
 
   return (
     <>
-      <div ref={calendarWrapRef} className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
         {isMobile && listForMobile.length > 0 && (
           <div ref={mobileDentistsRef} className="relative px-3 py-2 border-b border-slate-800 bg-slate-800/50 flex flex-col gap-2">
             {onDentistToggle ? (
