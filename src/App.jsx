@@ -327,8 +327,11 @@ export default function App() {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `dentist_id=eq.${myDentistId}` },
-        () => {
+        { event: 'UPDATE', schema: 'public', table: 'appointments' },
+        (payload) => {
+          const newDentId = payload.new?.dentist_id;
+          const oldDentId = payload.old?.dentist_id;
+          if (newDentId !== myDentistId && oldDentId !== myDentistId) return;
           setAppointmentsRefreshKey((k) => k + 1);
           setScheduleNotifications((prev) => [...prev, { id: crypto.randomUUID(), text: 'Часът е променен в графика ви', createdAt: Date.now() }]);
         }
