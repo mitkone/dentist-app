@@ -706,11 +706,12 @@ export default function App() {
   }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
+    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
       const date = dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
       let patient = patientId ? patients.find((p) => p.id === patientId) : null;
       let patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
+      const phone = providedPhone?.trim() || patient?.phone || null;
 
       // Ако има име но няма избран пациент – създай пациента в БД
       if (supabase && patientName && !patientId) {
@@ -718,11 +719,11 @@ export default function App() {
         if (!existing) {
           const { data: newPatient, error: insErr } = await supabase
             .from('patients')
-            .insert({ name: patientName.trim(), phone: null, notes: null, address: null, egn: null, email: null })
+            .insert({ name: patientName.trim(), phone, notes: null, address: null, egn: null, email: null })
             .select()
             .single();
           if (!insErr && newPatient) {
-            patient = { id: newPatient.id, name: newPatient.name, phone: '', notes: '', address: '', egn: '', email: '' };
+            patient = { id: newPatient.id, name: newPatient.name, phone: newPatient.phone ?? '', notes: '', address: '', egn: '', email: '' };
             setPatients((prev) => [...prev, patient]);
             logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: newPatient.id, details: { name: newPatient.name } });
           }

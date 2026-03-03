@@ -34,21 +34,26 @@ function addMinutesToTime(time, mins) {
 
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile }) {
   const [patientInput, setPatientInput] = useState('');
+  const [patientPhone, setPatientPhone] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
+  const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
   useEffect(() => {
     if (open) {
       setPatientInput(patients[0]?.name ?? '');
+      setPatientPhone(patients[0]?.phone ?? '');
       setNotes('');
       setEndTime(addMinutesToTime(slot, 30));
     }
   }, [open, patients, slot]);
+  useEffect(() => {
+    if (matchedPatient) setPatientPhone(matchedPatient.phone ?? '');
+  }, [matchedPatient?.id]);
   if (!open) return null;
 
   const selectedDentist = dentists.find((d) => d.id === dentist);
   const typeOptions = appointmentTypes.length > 0 ? appointmentTypes : DEFAULT_APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }));
   const defaultType = (typeOptions[0]?.label_bg) ?? (typeOptions[0]?.key) ?? 'Преглед';
-  const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
 
   const getDurationFromEnd = () => {
     const [sh, sm] = (slot || '09:00').split(':').map(Number);
@@ -64,10 +69,11 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
     const name = patientInput.trim();
     const patientId = matchedPatient?.id ?? null;
     const patientName = name || (matchedPatient?.name ?? '');
+    const phone = patientPhone.trim() || (matchedPatient?.phone ?? null);
     const durationMinutes = getDurationFromEnd();
     if (durationMinutes < 1) return;
     const end = endTime || addMinutesToTime(slot, 30);
-    onSubmit({ dentistId: dentist, patientId, patientName, start: slot, end, type, durationMinutes, insurance, notes: notes.trim() });
+    onSubmit({ dentistId: dentist, patientId, patientName, patientPhone: phone || null, start: slot, end, type, durationMinutes, insurance, notes: notes.trim() });
     onClose();
   };
 
@@ -136,6 +142,21 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
                 <option key={p.id} value={p.name} />
               ))}
             </datalist>
+          </div>
+
+          <div>
+            <label htmlFor="patientPhone" className="block text-sm font-medium text-slate-200 mb-1">
+              Телефон <span className="text-slate-500 font-normal">(по избор)</span>
+            </label>
+            <input
+              id="patientPhone"
+              name="patientPhone"
+              type="tel"
+              value={patientPhone}
+              onChange={(e) => setPatientPhone(e.target.value)}
+              placeholder="+359 ..."
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+            />
           </div>
 
           <PatientChronologyBlock
