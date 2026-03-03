@@ -158,14 +158,14 @@ export default function AuthModal({ open, onClose, signIn, signUp, dentists = []
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Телефон <span className="text-slate-500 font-normal">(по избор)</span></label>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 shrink-0">Телефон (по избор):</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+359..."
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  className="flex-1 min-w-0 px-2 py-1 text-xs bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-emerald-500/40 outline-none"
                 />
               </div>
               <div>

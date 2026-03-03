@@ -111,6 +111,17 @@ export default function AdminPanel({
     setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, permissions } : p)));
   };
 
+  const updateProfileRole = async (profileId, role, dentistId = null) => {
+    if (!supabase) return;
+    const payload = { role, updated_at: new Date().toISOString() };
+    if (role === 'dentist') payload.dentist_id = dentistId || null;
+    else payload.dentist_id = null;
+    const { error } = await supabase.from('profiles').update(payload).eq('id', profileId);
+    if (!error) {
+      setProfiles((prev) => prev.map((p) => (p.id === profileId ? { ...p, role, dentist_id: payload.dentist_id } : p)));
+    }
+  };
+
   const roleLabel = { admin: 'Админ', dentist: 'Стоматолог', receptionist: 'Регистратор' };
 
   if (!open) return null;
@@ -349,13 +360,39 @@ export default function AdminPanel({
               </h3>
               <ul className="space-y-2 max-h-48 overflow-y-auto">
                 {profiles.map((p) => (
-                  <li key={p.id} className="flex flex-col gap-1 py-2 px-3 rounded-lg bg-slate-800 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-100 font-medium truncate">{p.full_name || p.email}</span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 shrink-0">{roleLabel[p.role] || p.role}</span>
+                  <li key={p.id} className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-100 font-medium truncate min-w-0">{p.full_name || p.email}</span>
                     </div>
                     <span className="text-xs text-slate-500 truncate">{p.email}</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <label className="text-xs text-slate-400 shrink-0">Роля:</label>
+                      <select
+                        value={p.role || 'receptionist'}
+                        onChange={(e) => updateProfileRole(p.id, e.target.value)}
+                        className="text-xs px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:ring-1 focus:ring-emerald-500/40 outline-none"
+                      >
+                        <option value="admin">Админ</option>
+                        <option value="dentist">Стоматолог</option>
+                        <option value="receptionist">Регистратор</option>
+                      </select>
+                      {(p.role || '') === 'dentist' && dentists.length > 0 && (
+                        <>
+                          <label className="text-xs text-slate-400 shrink-0">Лекар:</label>
+                          <select
+                            value={p.dentist_id || ''}
+                            onChange={(e) => updateProfileRole(p.id, 'dentist', e.target.value || null)}
+                            className="text-xs px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:ring-1 focus:ring-emerald-500/40 outline-none flex-1 min-w-0 max-w-[140px]"
+                          >
+                            <option value="">— Изберете —</option>
+                            {dentists.map((d) => (
+                              <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                          </select>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-0">
                       <label className="inline-flex items-center gap-1 text-xs">
                         <input
                           type="checkbox"
