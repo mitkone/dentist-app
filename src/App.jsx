@@ -83,7 +83,9 @@ export default function App() {
   const permissions = adminSession ? { canViewAllDentists: true, canBookAnyDentist: true, canEditDentists: true, canManageProfiles: true, canManageSettings: true, canViewAdmin: true, myDentistId: null } : getPermissions(profile);
 
   const effectiveSelectedDentistIds = permissions.myDentistId && dentists.some((d) => d.id === permissions.myDentistId)
-    ? (selectedDentistIds.includes(permissions.myDentistId) ? selectedDentistIds : [permissions.myDentistId])
+    ? selectedDentistIds.includes(permissions.myDentistId)
+      ? selectedDentistIds
+      : [permissions.myDentistId, ...selectedDentistIds.filter((id) => id !== permissions.myDentistId)]
     : selectedDentistIds;
 
   const dentistViewInitialized = useRef(false);
