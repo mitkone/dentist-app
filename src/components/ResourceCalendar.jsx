@@ -44,6 +44,7 @@ export default function ResourceCalendar({
   onDentistNameClick,
   canManageVacation = true,
   appointmentTypes = [],
+  canMoveAppointment = false,
 }) {
   const getTypeDisplay = (type) =>
     appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -252,6 +253,7 @@ export default function ResourceCalendar({
   );
 
   const handlePointerDown = useCallback((e, appointment, dentistColor) => {
+    if (!canMoveAppointment) return;
     if (e.button !== 0 && e.pointerType !== 'touch') return;
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -268,7 +270,13 @@ export default function ResourceCalendar({
       y: e.clientY,
       hasMoved: false,
     });
-  }, []);
+  }, [canMoveAppointment]);
+
+  const handleAppointmentClick = useCallback((e, appointment) => {
+    e.stopPropagation();
+    if (canMoveAppointment) return;
+    if (onAppointmentClick) onAppointmentClick(appointment);
+  }, [canMoveAppointment, onAppointmentClick]);
 
   useEffect(() => {
     if (!dragState) return;
@@ -590,17 +598,18 @@ export default function ResourceCalendar({
                     return (
                       <div
                         key={a.id}
-                        onPointerDown={(e) => handlePointerDown(e, a, d.color)}
+                        onPointerDown={canMoveAppointment ? (e) => handlePointerDown(e, a, d.color) : undefined}
+                        onClick={!canMoveAppointment ? (e) => handleAppointmentClick(e, a) : undefined}
                         onContextMenu={(e) => e.preventDefault()}
-                        className={`absolute left-1 right-1 rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-2 py-1 ring-1 ring-black/20 touch-none select-none transition-opacity duration-150 ${
-                          isDragging ? 'opacity-40 pointer-events-none' : ''
-                        } ${isNoShow ? 'ring-red-400/70' : ''}`}
+                        className={`absolute left-1 right-1 rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-2 py-1 ring-1 ring-black/20 transition-opacity duration-150 ${
+                          canMoveAppointment ? 'touch-none select-none' : ''
+                        } ${isDragging ? 'opacity-40 pointer-events-none' : ''} ${isNoShow ? 'ring-red-400/70' : ''}`}
                         style={{
                           top,
                           height: h - 2,
                           backgroundColor: isNoShow ? '#b91c1c' : d.color, // червено за „не се яви“
                           color: '#fff',
-                          cursor: dragState?.appointment?.id === a.id ? 'grabbing' : 'grab',
+                          cursor: canMoveAppointment ? (dragState?.appointment?.id === a.id ? 'grabbing' : 'grab') : 'pointer',
                         }}
                       >
                         <span className="text-xs font-medium truncate drop-shadow-sm">
