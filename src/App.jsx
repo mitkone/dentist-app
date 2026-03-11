@@ -330,6 +330,11 @@ export default function App() {
     if (action === 'appointment_created') return `${actor} добави ${patient}${timeSlot}`;
     if (action === 'appointment_deleted') return `${actor} изтри час на ${patient}${timeSlot}`;
     if (action === 'appointment_updated') {
+      const oldDate = d.oldDate ?? d.old_date;
+      const newDate = d.date;
+      const dateChanged = oldDate && newDate && oldDate !== newDate;
+      if (dateChanged)
+        return `${actor} промени час на ${patient}: от ${oldDate} на ${newDate}${d.start ? ` ${d.start}` : ''}`;
       if (oldStart || (oldPatient && oldPatient !== patient))
         return `${actor} промени час: от ${oldPatient || patient}${oldStart ? ` ${oldStart}` : ''} на ${patient}${d.start ? ` ${d.start}` : ''}`;
       return `${actor} промени час на ${patient}${timeSlot}`;
@@ -903,9 +908,9 @@ export default function App() {
     setEditAppointment(appointment);
   }, []);
 
-  const onUpdateAppointment = useCallback((appointmentId, { dentistId, start, end, patientName, patientId, type, notes, attendance, insurance }) => {
+  const onUpdateAppointment = useCallback((appointmentId, { date: newDate, dentistId, start, end, patientName, patientId, type, notes, attendance, insurance }) => {
     const app = appointments.find((a) => a.id === appointmentId);
-    const date = app?.date;
+    const date = newDate || app?.date;
     if (!date) return;
     setAppointments((prev) =>
       prev.map((a) =>
@@ -913,6 +918,7 @@ export default function App() {
           ? a
           : {
               ...a,
+              date,
               dentistId,
               start,
               end,
@@ -942,7 +948,7 @@ export default function App() {
         .eq('id', appointmentId)
         .then(({ error }) => {
           if (error) console.error('Failed to update appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start } });
+          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start, oldDate: app?.date } });
         });
     }
     setEditAppointment(null);

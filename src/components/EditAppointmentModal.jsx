@@ -47,6 +47,7 @@ function isAppointmentInPast(appointment) {
 }
 
 export default function EditAppointmentModal({ open, onClose, appointment, dentists, patients, onSave, onDelete, workingHours = HOURS, appointmentTypes = [], appointments = [], onOpenPatientProfile, canChangeDentist = true }) {
+  const [date, setDate] = useState('');
   const [dentistId, setDentistId] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -64,6 +65,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
 
   useEffect(() => {
     if (appointment) {
+      setDate(appointment.date ?? '');
       setDentistId(appointment.dentistId);
       setStart(appointment.start);
       setEnd(appointment.end ?? addMinutes(appointment.start, 30));
@@ -86,6 +88,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
     const endTime = end || addMinutes(start, durationMinutes);
     const name = patientInput.trim();
     onSave(appointment.id, {
+      date: date || appointment.date,
       dentistId,
       start,
       end: endTime,
@@ -123,6 +126,17 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label className="block text-sm font-medium text-slate-200 mb-1">Дата</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm [color-scheme:dark]"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-200 mb-1">Стоматолог</label>
             {canChangeDentist ? (
