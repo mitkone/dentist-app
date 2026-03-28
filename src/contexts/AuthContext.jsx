@@ -79,6 +79,7 @@ export function AuthProvider({ children }) {
     if (supabase) await supabase.auth.signOut();
   }
 
+  /** Изпраща имейл с линк за смяна на парола (чрез Supabase Auth). Работи, ако в Supabase са настроени SMTP/Site URL и имейл шаблоните. */
   async function resetPassword(email) {
     if (!supabase) throw new Error('Supabase не е конфигуриран');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

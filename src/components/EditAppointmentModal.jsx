@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { appointmentTypeLabel, getSlots, HOURS } from '../data/mockData';
+import { appointmentTypeLabel, getSlots, HOURS, OTHER_APPOINTMENT_TYPE_KEY } from '../data/mockData';
+import { withOtherOption, resolveTypeForSave, parseTypeFromAppointment } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
 
@@ -52,14 +53,21 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [patientInput, setPatientInput] = useState('');
-  const [type, setType] = useState('Checkup');
+  const [typeKey, setTypeKey] = useState('Checkup');
+  const [customTypeText, setCustomTypeText] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [notes, setNotes] = useState('');
   const [attendance, setAttendance] = useState('pending');
   const [insurance, setInsurance] = useState('private');
 
   const slots = getSlots(workingHours);
-  const typeOptions = appointmentTypes.length > 0 ? appointmentTypes : APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }));
+  const typeOptions = useMemo(
+    () =>
+      withOtherOption(
+        appointmentTypes.length > 0 ? appointmentTypes : APPOINTMENT_TYPES.map((t) => ({ key: t.value, label_bg: appointmentTypeLabel(t.labelKey) }))
+      ),
+    [appointmentTypes]
+  );
   const isPast = appointment ? isAppointmentInPast(appointment) : false;
   const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
 
@@ -71,9 +79,9 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       setEnd(appointment.end ?? addMinutes(appointment.start, 30));
       const p = appointment.patientId ? patients.find((x) => x.id === appointment.patientId) : null;
       setPatientInput(p?.name ?? appointment.patientName ?? '');
-      const t = appointment.type;
-      const resolved = typeOptions.find((o) => o.key === t || o.label_bg === t)?.label_bg ?? t;
-      setType(resolved || typeOptions[0]?.label_bg || 'Преглед');
+      const parsed = parseTypeFromAppointment(appointment.type, typeOptions);
+      setTypeKey(parsed.key);
+      setCustomTypeText(parsed.custom);
       setDurationMinutes(getDurationMinutes(appointment.start, appointment.end));
       setNotes(appointment.notes ?? '');
       setAttendance(appointment.attendance || 'pending');
@@ -94,7 +102,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       end: endTime,
       patientName: (name || matchedPatient?.name) ?? appointment.patientName,
       patientId: matchedPatient?.id || undefined,
-      type,
+      type: resolveTypeForSave(typeKey, customTypeText, typeOptions),
       notes: notes.trim() || '',
       attendance: isPast ? attendance : undefined,
       insurance,
@@ -224,16 +232,25 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">Вид преглед</label>
             <select
-              value={typeOptions.find((o) => o.key === type || o.label_bg === type)?.label_bg ?? type}
-              onChange={(e) => setType(e.target.value)}
+              value={typeKey}
+              onChange={(e) => setTypeKey(e.target.value)}
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {typeOptions.map((opt) => (
-                <option key={opt.key ?? opt.label_bg} value={opt.label_bg}>
+                <option key={opt.key ?? opt.label_bg} value={opt.key}>
                   {opt.label_bg}
                 </option>
               ))}
             </select>
+            {typeKey === OTHER_APPOINTMENT_TYPE_KEY && (
+              <input
+                type="text"
+                value={customTypeText}
+                onChange={(e) => setCustomTypeText(e.target.value)}
+                placeholder="Опишете манипулацията..."
+                className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+              />
+            )}
           </div>
 
           <div>

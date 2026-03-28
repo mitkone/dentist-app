@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, ChevronDown, Stethoscope } from 'lucide-react';
+import { Clock, ChevronDown, Stethoscope, StickyNote } from 'lucide-react';
 import { getSlots, appointmentTypeLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
 
 const SLOT_HEIGHT = 40;
@@ -25,6 +25,42 @@ function getDurationMinutes(start, end) {
   return (eh - sh) * 60 + (em - sm);
 }
 
+function mondayOfWeek(d) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function weekDateKeysFrom(anchor) {
+  const mon = mondayOfWeek(anchor);
+  const keys = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(mon);
+    dt.setDate(mon.getDate() + i);
+    keys.push(dt.toLocaleDateString('en-CA'));
+  }
+  return keys;
+}
+
+function assignAppointmentLanes(apps) {
+  const sorted = [...apps].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+  const laneEnds = [];
+  sorted.forEach((a) => {
+    let L = 0;
+    while (laneEnds[L] && a.start < laneEnds[L]) L++;
+    laneEnds[L] = a.end;
+    a._lane = L;
+  });
+  const n = sorted.length ? Math.max(...sorted.map((x) => x._lane)) + 1 : 1;
+  sorted.forEach((a) => {
+    a._laneCount = n;
+  });
+  return sorted;
+}
+
 export default function ResourceCalendar({
   dentists,
   appointments,
@@ -45,6 +81,7 @@ export default function ResourceCalendar({
   canManageVacation = true,
   appointmentTypes = [],
   canMoveAppointment = false,
+  viewMode = 'day',
 }) {
   const getTypeDisplay = (type) =>
     appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -171,22 +208,35 @@ export default function ResourceCalendar({
 
   const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
 
-  const isSlotAvailable = (dentistId, slot) => {
-    const key = `${dentistId}_${dateStr}`;
+  const weekDateKeys = useMemo(
+    () => (viewMode === 'week' ? weekDateKeysFrom(currentDate) : []),
+    [currentDate, viewMode]
+  );
+
+  const isSlotAvailable = (dentistId, slot, dayKey = dateStr) => {
+    const key = `${dentistId}_${dayKey}`;
     const availableSet = doctorAvailableSlots[key];
     if (!availableSet) return true; // няма запис – всички слотове са свободни
     if (availableSet.size === 0) return false; // празен списък – няма свободни
     return availableSet.has(slot);
   };
 
-  const isOnVacation = (dentistId) => {
+  const isOnVacation = (dentistId, dayKey = dateStr) => {
     return doctorVacations.some(
       (v) =>
         v.dentist_id === dentistId &&
-        v.start_date <= dateStr &&
-        v.end_date >= dateStr
+        v.start_date <= dayKey &&
+        v.end_date >= dayKey
     );
   };
+
+  const getAppointmentsForWeekDay = (dayKey) =>
+    appointments.filter(
+      (a) =>
+        a.date === dayKey &&
+        dentists.some((dent) => dent.id === a.dentistId) &&
+        patientMatchesSearch(a)
+    );
 
   const getPatientDisplayName = (a) =>
     (a.patientId && patients.find((p) => p.id === a.patientId)?.name) || a.patientName || 'Пациент';
@@ -240,16 +290,16 @@ export default function ResourceCalendar({
   };
 
   const handleSlotClick = useCallback(
-    (dentistId, slot, e) => {
+    (dentistId, slot, e, slotDateKey) => {
       if (ignoreNextSlotClickRef.current) {
         ignoreNextSlotClickRef.current = false;
-        e.preventDefault();
-        e.stopPropagation();
+        e?.preventDefault();
+        e?.stopPropagation();
         return;
       }
-      onSlotClick(dentistId, slot);
+      onSlotClick(dentistId, slot, slotDateKey ?? dateStr);
     },
-    [onSlotClick]
+    [onSlotClick, dateStr]
   );
 
   const handlePointerDown = useCallback((e, appointment, dentistColor) => {
@@ -387,6 +437,157 @@ export default function ResourceCalendar({
         )
       : null;
 
+  if (viewMode === 'week') {
+    const primaryDentistId = dentistsToShow[0]?.id;
+    return (
+      <>
+        <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shrink-0 overflow-hidden">
+            <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3">
+              <Clock className="w-4 h-4 text-slate-500" />
+            </div>
+            <div
+              ref={headerScrollRef}
+              className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain"
+              style={{ scrollbarGutter: 'stable' }}
+            >
+              {weekDateKeys.map((dayKey) => {
+                const d = new Date(`${dayKey}T12:00:00`);
+                const label = d.toLocaleDateString('bg-BG', { weekday: 'short', day: 'numeric', month: 'short' });
+                return (
+                  <div
+                    key={dayKey}
+                    className="flex-1 min-w-[72px] sm:min-w-[100px] border-r border-slate-200 last:border-r-0 py-2 px-1 text-center"
+                  >
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-900 leading-tight">{label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            ref={gridScrollRef}
+            className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
+              <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[1]">
+                {slots.map((slot) => (
+                  <div
+                    key={slot}
+                    className="text-xs text-slate-500 text-right pr-2 flex items-center justify-end border-b border-slate-200"
+                    style={{ height: effectiveSlotHeight }}
+                  >
+                    {slot}
+                  </div>
+                ))}
+              </div>
+
+              {weekDateKeys.map((dayKey) => {
+                const vacation = primaryDentistId ? isOnVacation(primaryDentistId, dayKey) : false;
+                const dayApps = getAppointmentsForWeekDay(dayKey).map((x) => ({ ...x }));
+                const laidOut = assignAppointmentLanes(dayApps);
+                return (
+                  <div
+                    key={dayKey}
+                    className={`flex-1 min-w-[72px] sm:min-w-[100px] relative border-r border-slate-200 last:border-r-0 ${
+                      vacation ? 'bg-red-50' : 'bg-slate-50'
+                    }`}
+                  >
+                    {slots.map((slot) => {
+                      const available = primaryDentistId ? isSlotAvailable(primaryDentistId, slot, dayKey) : true;
+                      const disabled = vacation || !primaryDentistId || !available;
+                      const isUnavailable = !vacation && primaryDentistId && !available;
+                      return (
+                        <button
+                          key={`${dayKey}-${slot}`}
+                          type="button"
+                          data-slot={slot}
+                          data-dentist-id={primaryDentistId}
+                          data-day={dayKey}
+                          onClick={(e) => {
+                            if (disabled || !primaryDentistId) return;
+                            handleSlotClick(primaryDentistId, slot, e, dayKey);
+                          }}
+                          className={`absolute left-0.5 right-0.5 rounded border border-transparent transition-colors ${
+                            vacation
+                              ? 'cursor-not-allowed opacity-50'
+                              : isUnavailable
+                                ? 'bg-rose-100 border-rose-300/70 cursor-not-allowed'
+                                : 'hover:bg-emerald-500/20 hover:ring-1 hover:ring-emerald-400/50 hover:border-emerald-400/30'
+                          }`}
+                          style={{
+                            top: timeToOffset(slot),
+                            height: Math.max(effectiveSlotHeight - 2, 38),
+                          }}
+                        />
+                      );
+                    })}
+
+                    {laidOut.map((a) => {
+                      const dent = dentists.find((dent) => dent.id === a.dentistId) || dentistsToShow[0];
+                      const col = dent?.color || '#64748b';
+                      const top = timeToOffset(a.start);
+                      const rawH = durationHeight(a.start, a.end);
+                      const h = Math.max(rawH, 38);
+                      const lane = a._lane ?? 0;
+                      const laneCount = a._laneCount || 1;
+                      const wPct = 100 / laneCount;
+                      const leftPct = lane * wPct;
+                      const isNoShow = a.attendance === 'no_show';
+                      const isNhif = a.insurance === 'nhif';
+                      const hasNotes = Boolean(a.notes?.trim());
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={(e) => handleAppointmentClick(e, a)}
+                          onContextMenu={(e) => e.preventDefault()}
+                          className="absolute rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
+                          style={{
+                            top,
+                            height: h - 2,
+                            left: `calc(${leftPct}% + 1px)`,
+                            width: `calc(${wPct}% - 2px)`,
+                            backgroundColor: isNoShow ? '#b91c1c' : col,
+                            color: '#fff',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-0.5 min-w-0">
+                            <span className="text-[10px] sm:text-xs font-medium truncate drop-shadow-sm leading-tight">
+                              {getPatientDisplayName(a)}
+                            </span>
+                            {hasNotes && (
+                              <StickyNote className="w-3 h-3 shrink-0 opacity-95" aria-hidden title="Има бележка за часа" />
+                            )}
+                          </div>
+                          <span className="text-[9px] opacity-95 truncate drop-shadow-sm leading-tight">
+                            {getTypeDisplay(a.type)}
+                          </span>
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {isNhif && (
+                              <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-emerald-500 text-slate-900 tracking-wide">
+                                НЗОК
+                              </span>
+                            )}
+                            {isNoShow && (
+                              <span className="text-[8px] font-semibold uppercase tracking-wide drop-shadow-sm">НЕ СЕ ЯВИ</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -510,8 +711,8 @@ export default function ResourceCalendar({
 
         <div
           ref={gridScrollRef}
-          className="flex-1 overflow-auto scroll-thin min-h-0 overscroll-contain touch-pan-y"
-          style={{ overscrollBehavior: 'contain', touchAction: isMobile ? 'pan-y pinch-zoom' : undefined }}
+          className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           onTouchStart={(e) => {
             if (e.touches.length === 2) {
               const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -572,7 +773,7 @@ export default function ResourceCalendar({
                       data-dentist-id={d.id}
                       onClick={(e) => {
                         if (disabled) return;
-                        handleSlotClick(d.id, slot, e);
+                        handleSlotClick(d.id, slot, e, dateStr);
                       }}
                       className={`absolute left-0.5 right-0.5 rounded border border-transparent transition-colors ${
                         vacation
@@ -595,6 +796,7 @@ export default function ResourceCalendar({
                     const isDragging = dragState?.appointment?.id === a.id && dragState?.hasMoved;
                     const isNoShow = a.attendance === 'no_show';
                     const isNhif = a.insurance === 'nhif';
+                    const hasNotes = Boolean(a.notes?.trim());
                     return (
                       <div
                         key={a.id}
@@ -612,9 +814,14 @@ export default function ResourceCalendar({
                           cursor: canMoveAppointment ? (dragState?.appointment?.id === a.id ? 'grabbing' : 'grab') : 'pointer',
                         }}
                       >
-                        <span className="text-xs font-medium truncate drop-shadow-sm">
-                          {getPatientDisplayName(a)}
-                        </span>
+                        <div className="flex items-start justify-between gap-1 min-w-0">
+                          <span className="text-xs font-medium truncate drop-shadow-sm">
+                            {getPatientDisplayName(a)}
+                          </span>
+                          {hasNotes && (
+                            <StickyNote className="w-3.5 h-3.5 shrink-0 opacity-95" aria-hidden title="Има бележка за часа" />
+                          )}
+                        </div>
                         <span className="text-[10px] opacity-95 truncate drop-shadow-sm">
                           {getTypeDisplay(a.type)}
                         </span>

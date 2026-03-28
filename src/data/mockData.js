@@ -44,7 +44,12 @@ export const dentists = [
   { id: 'd12', name: 'Д-р Андреева', specialty: 'General Dentistry', color: '#3b82f6' },
   { id: 'd13', name: 'Д-р Панайотова', specialty: 'General Dentistry', color: '#06b6d4' },
   { id: 'd14', name: 'Д-р Ивайлова', specialty: 'General Dentistry', color: '#84cc16' },
+  { id: 'd15', name: 'Д-р Ковачев', specialty: 'General Dentistry', color: '#db2777' },
 ];
+
+/** Синтетична опция в падащите менюта за свободен текст (записва се в status). */
+export const OTHER_APPOINTMENT_TYPE_KEY = '__other__';
+export const OTHER_APPOINTMENT_LABEL = 'Друго (по избор)';
 
 export const DEFAULT_DENTIST_COLORS = ['#14b8a6', '#3b82f6', '#a855f7', '#f97316', '#ec4899', '#eab308'];
 

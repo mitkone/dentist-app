@@ -5,6 +5,23 @@ import DentistBar from './DentistBar';
 const formatHeaderDate = (d) =>
   d.toLocaleDateString('bg-BG', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
+function mondayOfWeek(d) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function formatWeekRangeLabel(anchor) {
+  const mon = mondayOfWeek(anchor);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  const opts = { day: 'numeric', month: 'long' };
+  return `${mon.toLocaleDateString('bg-BG', opts)} – ${sun.toLocaleDateString('bg-BG', { ...opts, year: 'numeric' })}`;
+}
+
 function toInputDate(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -23,16 +40,37 @@ export default function CalendarHeader({
   selectedDentistIds = [],
   onDentistToggle,
   showDentistBar = true,
+  viewMode = 'day',
+  onViewModeChange,
 }) {
   const [showDentists, setShowDentists] = useState(false);
+  const weekLabel = viewMode === 'week' ? formatWeekRangeLabel(currentDate) : formatHeaderDate(currentDate);
 
   return (
     <header className="flex flex-col gap-3 md:gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-slate-900">График</h1>
+          {onViewModeChange && (
+            <span className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => onViewModeChange('day')}
+                className={`px-2.5 py-1 rounded-md transition-colors ${viewMode === 'day' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                Ден
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewModeChange('week')}
+                className={`px-2.5 py-1 rounded-md transition-colors ${viewMode === 'week' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                Седмица
+              </button>
+            </span>
+          )}
           <span className="text-slate-500">·</span>
-          <span className="text-slate-600 font-medium">{formatHeaderDate(currentDate)}</span>
+          <span className="text-slate-600 font-medium">{weekLabel}</span>
           {showDentistBar && (
           <div className="hidden md:block">
             {onDentistToggle && dentists.length > 0 && (

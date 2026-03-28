@@ -56,7 +56,8 @@ export default function App() {
   const [appointments, setAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [appointmentsError, setAppointmentsError] = useState(null);
-  const [modal, setModal] = useState({ open: false, dentistId: null, slot: null });
+  const [modal, setModal] = useState({ open: false, dentistId: null, slot: null, bookingDate: null });
+  const [calendarView, setCalendarView] = useState('day');
   const [addDentistOpen, setAddDentistOpen] = useState(false);
   const [addPatientOpen, setAddPatientOpen] = useState(false);
   const [patientDetailId, setPatientDetailId] = useState(null);
@@ -766,8 +767,8 @@ export default function App() {
     });
   }, [permissions.myDentistId]);
 
-  const onSlotClick = useCallback((dentistId, slot) => {
-    setModal({ open: true, dentistId, slot });
+  const onSlotClick = useCallback((dentistId, slot, bookingDate) => {
+    setModal({ open: true, dentistId, slot, bookingDate: bookingDate ?? null });
   }, []);
 
   const onAppointmentMove = useCallback((appointmentId, { dentistId, start }) => {
@@ -811,8 +812,8 @@ export default function App() {
   }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '' }) => {
-      const date = dateKey(currentDate);
+    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', appointmentDate }) => {
+      const date = appointmentDate || dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
       let patient = patientId ? patients.find((p) => p.id === patientId) : null;
       let patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
@@ -895,6 +896,18 @@ export default function App() {
   const goNextDay = () => {
     const d = new Date(currentDate);
     d.setDate(d.getDate() + 1);
+    setCurrentDate(d);
+  };
+
+  const goPrevWeek = () => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 7);
+    setCurrentDate(d);
+  };
+
+  const goNextWeek = () => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + 7);
     setCurrentDate(d);
   };
 
@@ -1000,6 +1013,7 @@ export default function App() {
           onClose={() => setAuthModalOpen(false)}
           signIn={signIn}
           signUp={signUp}
+          resetPassword={resetPassword}
           dentists={dentists}
         />
       </>
@@ -1144,11 +1158,11 @@ export default function App() {
   showDentistsFilter={false}
 />
 
-        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-slate-50 overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
+        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-slate-50 min-h-0">
           <CalendarHeader
             currentDate={currentDate}
-            onPrevDay={goPrevDay}
-            onNextDay={goNextDay}
+            onPrevDay={calendarView === 'week' ? goPrevWeek : goPrevDay}
+            onNextDay={calendarView === 'week' ? goNextWeek : goNextDay}
             onToday={goToday}
             onDatePick={goToDate}
             nextFree={permissions.canBookAnyDentist ? null : nextFreeSummary}
@@ -1156,6 +1170,8 @@ export default function App() {
             selectedDentistIds={effectiveSelectedDentistIds}
             onDentistToggle={onDentistToggle}
             showDentistBar={dentists.length > 1}
+            viewMode={calendarView}
+            onViewModeChange={setCalendarView}
           />
           {permissions.canBookAnyDentist && (
             <QuickBookBar
@@ -1163,7 +1179,7 @@ export default function App() {
               findFirstFreeForDate={findFirstFreeForDate}
               findAllFreeSlotsForDate={findAllFreeSlotsForDate}
               onBook={(dentistId, { date, time }) => {
-                setModal({ open: true, dentistId, slot: time });
+                setModal({ open: true, dentistId, slot: time, bookingDate: date });
                 goToDate(date);
               }}
               canUse
@@ -1203,6 +1219,7 @@ export default function App() {
   onDentistNameClick={(d) => setDentistProfileModal(d)}
   canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
   appointmentTypes={appointmentTypes}
+  viewMode={calendarView}
 />
             )}
           </div>
@@ -1214,6 +1231,7 @@ export default function App() {
         onClose={() => setModal((m) => ({ ...m, open: false }))}
         dentist={modal.dentistId}
         slot={modal.slot}
+        bookingDate={modal.bookingDate}
         dentists={dentists}
         patients={patients}
         onSubmit={onAddAppointment}
