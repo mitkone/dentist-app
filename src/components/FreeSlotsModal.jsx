@@ -89,11 +89,11 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
   const formatDate = (d) => d?.toLocaleDateString?.('bg-BG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) ?? '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-emerald-400 shrink-0" />
               Свободни часове
             </h3>
@@ -101,40 +101,40 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
               <select
                 value={dentist?.id ?? ''}
                 onChange={(e) => setDentist(dentists.find((d) => d.id === e.target.value))}
-                className="mt-2 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm"
+                className="mt-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm"
               >
                 {dentists.map((d) => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
             ) : (
-              <p className="text-sm text-slate-400 mt-0.5">{dentist?.name}</p>
+              <p className="text-sm text-slate-500 mt-0.5">{dentist?.name}</p>
             )}
             <div className="mt-2 flex items-center gap-2">
-              <label className="text-xs text-slate-400">Дата:</label>
+              <label className="text-xs text-slate-500">Дата:</label>
               <input
                 type="date"
                 value={dateStr}
                 onChange={(e) => setDate(parseDateStr(e.target.value) ?? date)}
-                className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm [color-scheme:dark]"
+                className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm [color-scheme:light]"
               />
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-5">
           {loading ? (
-            <p className="text-slate-400 py-8">Зареждане...</p>
+            <p className="text-slate-500 py-8">Зареждане...</p>
           ) : (
             <>
               <div className="flex gap-2 mb-4">
-                <button type="button" onClick={selectAll} className="px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700">
+                <button type="button" onClick={selectAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200">
                   Избери всички
                 </button>
-                <button type="button" onClick={clearAll} className="px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 rounded-lg hover:bg-slate-700">
+                <button type="button" onClick={clearAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200">
                   Изчисти
                 </button>
               </div>
@@ -147,7 +147,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
                     className={`py-2 px-2 rounded-lg text-sm font-medium transition-colors ${
                       selected.has(slot)
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
                     }`}
                   >
                     {slot}
@@ -161,7 +161,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
           )}
 
           <div className="flex gap-2 mt-5">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-200 bg-slate-700 rounded-lg hover:bg-slate-600">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-800 bg-slate-200 rounded-lg hover:bg-slate-300">
               Отказ
             </button>
             <button type="button" onClick={handleSave} disabled={saving || loading || !supabase} className="flex-1 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 disabled:opacity-50">

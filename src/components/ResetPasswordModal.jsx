@@ -34,12 +34,12 @@ export default function ResetPasswordModal({ open, onClose, onUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-sm overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-200">
           <Lock className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-lg font-semibold text-white">Нова парола</h3>
-          <button type="button" onClick={onClose} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <h3 className="text-lg font-semibold text-slate-900">Нова парола</h3>
+          <button type="button" onClick={onClose} className="ml-auto p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -47,27 +47,27 @@ export default function ResetPasswordModal({ open, onClose, onUpdate }) {
           {error && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</p>
           )}
-          <p className="text-sm text-slate-400">Въведете нова парола за акаунта си.</p>
+          <p className="text-sm text-slate-500">Въведете нова парола за акаунта си.</p>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Нова парола</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Нова парола</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Потвърди парола</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Потвърди парола</label>
             <input
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
             />
           </div>
           <button type="submit" disabled={loading} className="w-full py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-500 disabled:opacity-60">

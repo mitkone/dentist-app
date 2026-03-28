@@ -12,26 +12,26 @@ export default function DentistProfileModal({
   if (!open || !dentist) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-sm overflow-hidden"
+        className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-sm overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <span
               className="w-10 h-10 rounded-full shrink-0"
               style={{ backgroundColor: dentist.color }}
             />
             <div>
-              <h3 className="text-lg font-semibold text-white">{dentist.name}</h3>
-              <p className="text-sm text-slate-400">Профил на стоматолог</p>
+              <h3 className="text-lg font-semibold text-slate-900">{dentist.name}</h3>
+              <p className="text-sm text-slate-500">Профил на стоматолог</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900"
           >
             <X className="w-5 h-5" />
           </button>
@@ -42,7 +42,7 @@ export default function DentistProfileModal({
             <button
               type="button"
               onClick={() => { onClose(); onOpenVacation(dentist.id); }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
             >
               <CalendarOff className="w-5 h-5 text-amber-400" />
               <span>Отпуски</span>
@@ -52,7 +52,7 @@ export default function DentistProfileModal({
             <button
               type="button"
               onClick={() => { onClose(); onOpenFreeSlots(dentist); }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
             >
               <Calendar className="w-5 h-5 text-emerald-400" />
               <span>Свободни часове</span>

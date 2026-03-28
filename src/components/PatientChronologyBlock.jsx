@@ -39,8 +39,8 @@ export default function PatientChronologyBlock({
   if (!patientId && !patientName) return null;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-      <h4 className="text-sm font-medium text-slate-200 mb-2 flex items-center gap-2">
+    <div className="rounded-lg border border-slate-200 bg-slate-100/90 p-3">
+      <h4 className="text-sm font-medium text-slate-800 mb-2 flex items-center gap-2">
         <CalendarCheck className="w-4 h-4 text-emerald-400" />
         Хронология на пациента
       </h4>
@@ -51,16 +51,16 @@ export default function PatientChronologyBlock({
           {visitHistory.map((a) => (
             <li
               key={a.id}
-              className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1 px-2 rounded bg-slate-800 text-slate-200"
+              className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1 px-2 rounded bg-slate-100 text-slate-800"
             >
-              <span className="font-medium text-slate-100">{formatDisplayDate(a.date)}</span>
+              <span className="font-medium text-slate-900">{formatDisplayDate(a.date)}</span>
               {a.start && (
-                <span className="text-slate-400">
+                <span className="text-slate-500">
                   {a.start}
                   {a.end ? ` – ${a.end}` : ''}
                 </span>
               )}
-              <span className="text-slate-400 w-full">
+              <span className="text-slate-500 w-full">
                 {dentists.find((d) => d.id === a.dentistId)?.name ?? '—'} · {getTypeLabel(a.type)}
                 {a.attendance && a.attendance !== 'pending' && (
                   <span className="ml-1 text-amber-400">· {attendanceLabel(a.attendance)}</span>
@@ -79,7 +79,7 @@ export default function PatientChronologyBlock({
         <button
           type="button"
           onClick={() => onOpenProfile(patientId)}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-400 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 hover:border-emerald-500/50"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:border-emerald-400/60"
         >
           <User className="w-3.5 h-3.5" />
           Профил и прикачени файлове (снимки)

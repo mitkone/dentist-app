@@ -81,13 +81,13 @@ export default function PatientDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/25 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-slate-900 shadow-xl border-0 sm:border border-slate-800 w-full max-w-full sm:max-w-md h-full max-h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl overflow-hidden flex flex-col"
+        className="bg-white shadow-xl border-0 sm:border border-slate-200 w-full max-w-full sm:max-w-md h-full max-h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900">
-          <h3 className="text-lg font-semibold text-white">Данни за пациента</h3>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <h3 className="text-lg font-semibold text-slate-900">Данни за пациента</h3>
           <div className="flex items-center gap-1">
             {onDelete && (
               <button
@@ -96,7 +96,7 @@ export default function PatientDetailModal({
                   onDelete(patient?.id);
                   onClose();
                 }}
-                className="p-1.5 rounded-lg text-red-400 hover:bg-red-900/40 hover:text-red-300"
+                className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700"
                 title="Изтрий пациента"
               >
                 <Trash2 className="w-5 h-5" />
@@ -105,7 +105,7 @@ export default function PatientDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900"
             >
               <X className="w-5 h-5" />
             </button>
@@ -114,18 +114,18 @@ export default function PatientDetailModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 flex-1 overflow-y-auto min-h-0">
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Име</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Име</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-slate-400" />
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <Phone className="w-4 h-4 text-slate-500" />
               Телефон
             </label>
             <input
@@ -133,13 +133,13 @@ export default function PatientDetailModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+359 ..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-400" />
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-slate-500" />
               Адрес
             </label>
             <input
@@ -147,13 +147,13 @@ export default function PatientDetailModal({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Град, адрес"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-slate-400" />
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-slate-500" />
               ЕГН
             </label>
             <input
@@ -161,14 +161,14 @@ export default function PatientDetailModal({
               value={egn}
               onChange={(e) => setEgn(e.target.value)}
               placeholder="10 цифри"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               maxLength={10}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-slate-400" />
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <Mail className="w-4 h-4 text-slate-500" />
               Имейл
             </label>
             <input
@@ -176,13 +176,13 @@ export default function PatientDetailModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-400" />
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-500" />
               Бележки
             </label>
             <textarea
@@ -190,17 +190,17 @@ export default function PatientDetailModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Бележки за пациента..."
               rows={4}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y min-h-[80px]"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y min-h-[80px]"
             />
           </div>
 
           {visitHistory.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                 <CalendarCheck className="w-4 h-4 text-emerald-400" />
                 История на посещения
               </h4>
-              <ul className="space-y-1.5 max-h-44 overflow-y-auto scroll-thin rounded-lg border border-slate-700 bg-slate-800/50 p-2">
+              <ul className="space-y-1.5 max-h-44 overflow-y-auto scroll-thin rounded-lg border border-slate-200 bg-slate-100/80 p-2">
                 {visitHistory.map((a) => (
                   <li
                     key={a.id}
@@ -208,17 +208,17 @@ export default function PatientDetailModal({
                     tabIndex={0}
                     onClick={() => setSelectedVisit(a)}
                     onKeyDown={(e) => e.key === 'Enter' && setSelectedVisit(a)}
-                    className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 py-1.5 px-2 rounded border border-slate-700/80 bg-slate-800 text-slate-200 text-sm cursor-pointer hover:bg-slate-700/80 hover:border-slate-600"
+                    className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 py-1.5 px-2 rounded border border-slate-200/80 bg-slate-100 text-slate-800 text-sm cursor-pointer hover:bg-slate-200/80 hover:border-slate-300"
                   >
-                    <span className="font-medium text-slate-100">{formatDisplayDate(a.date)}</span>
-                    {a.start && <span className="text-xs text-slate-400">{a.start}{a.end ? ` – ${a.end}` : ''}</span>}
-                    <span className="text-slate-400 text-xs w-full mt-0.5">
+                    <span className="font-medium text-slate-900">{formatDisplayDate(a.date)}</span>
+                    {a.start && <span className="text-xs text-slate-500">{a.start}{a.end ? ` – ${a.end}` : ''}</span>}
+                    <span className="text-slate-500 text-xs w-full mt-0.5">
                       {dentists.find((d) => d.id === a.dentistId)?.name ?? '—'} · {getTypeLabel(a.type)}
                       {(a.attendance && a.attendance !== 'pending') && (
                         <span className="ml-1 text-amber-400">· {attendanceLabel(a.attendance)}</span>
                       )}
                       {a.insurance && (
-                        <span className="ml-1 text-slate-400">· {insuranceLabel(a.insurance)}</span>
+                        <span className="ml-1 text-slate-500">· {insuranceLabel(a.insurance)}</span>
                       )}
                     </span>
                   </li>
@@ -228,36 +228,36 @@ export default function PatientDetailModal({
           )}
 
           {selectedVisit && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setSelectedVisit(null)}>
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-50/60" onClick={() => setSelectedVisit(null)}>
               <div
-                className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-sm p-4 shadow-xl"
+                className="bg-slate-100 rounded-xl border border-slate-200 w-full max-w-sm p-4 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-white">Посещение {formatDisplayDate(selectedVisit.date)}</h4>
-                  <button type="button" onClick={() => setSelectedVisit(null)} className="p-1 rounded text-slate-400 hover:text-white">
+                  <h4 className="font-semibold text-slate-900">Посещение {formatDisplayDate(selectedVisit.date)}</h4>
+                  <button type="button" onClick={() => setSelectedVisit(null)} className="p-1 rounded text-slate-500 hover:text-slate-900">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="text-slate-300 text-sm">
+                <p className="text-slate-600 text-sm">
                   {selectedVisit.start}{selectedVisit.end ? ` – ${selectedVisit.end}` : ''} · {dentists.find((d) => d.id === selectedVisit.dentistId)?.name ?? '—'}
                 </p>
-                <p className="text-slate-400 text-sm mt-1">{getTypeLabel(selectedVisit.type)}</p>
+                <p className="text-slate-500 text-sm mt-1">{getTypeLabel(selectedVisit.type)}</p>
                 {selectedVisit.insurance && (
-                  <p className="text-slate-400 text-sm mt-1">
-                    Плащане: <span className="text-slate-200">{insuranceLabel(selectedVisit.insurance)}</span>
+                  <p className="text-slate-500 text-sm mt-1">
+                    Плащане: <span className="text-slate-800">{insuranceLabel(selectedVisit.insurance)}</span>
                   </p>
                 )}
                 {selectedVisit.attendance && selectedVisit.attendance !== 'pending' && (
                   <p className="text-sm mt-2">
-                    <span className="text-slate-400">Статус: </span>
+                    <span className="text-slate-500">Статус: </span>
                     <span className={selectedVisit.attendance === 'showed' ? 'text-emerald-400' : 'text-red-400'}>{attendanceLabel(selectedVisit.attendance)}</span>
                   </p>
                 )}
                 {selectedVisit.notes && (
-                  <div className="mt-3 pt-3 border-t border-slate-600">
+                  <div className="mt-3 pt-3 border-t border-slate-300">
                     <p className="text-xs text-slate-500 mb-1">Бележки</p>
-                    <p className="text-slate-200 text-sm whitespace-pre-wrap">{selectedVisit.notes}</p>
+                    <p className="text-slate-800 text-sm whitespace-pre-wrap">{selectedVisit.notes}</p>
                   </div>
                 )}
                 {!selectedVisit.notes && (!selectedVisit.attendance || selectedVisit.attendance === 'pending') && (
@@ -269,7 +269,7 @@ export default function PatientDetailModal({
 
           {canUseFiles && (
             <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                 <Paperclip className="w-4 h-4 text-emerald-400" />
                 Файлове
               </h4>
@@ -295,18 +295,18 @@ export default function PatientDetailModal({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-400 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-400 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200 disabled:opacity-50"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   {uploading ? 'Качване...' : 'Качи файл'}
                 </button>
               </div>
               {patientFiles.length > 0 ? (
-                <ul className="space-y-1.5 max-h-36 overflow-y-auto scroll-thin rounded-lg border border-slate-700 bg-slate-800/50 p-2">
+                <ul className="space-y-1.5 max-h-36 overflow-y-auto scroll-thin rounded-lg border border-slate-200 bg-slate-100/80 p-2">
                   {patientFiles.map((f) => (
                     <li
                       key={f.id}
-                      className="flex items-center justify-between gap-2 py-1.5 px-2 rounded border border-slate-700/80 bg-slate-800 text-slate-200 text-sm"
+                      className="flex items-center justify-between gap-2 py-1.5 px-2 rounded border border-slate-200/80 bg-slate-100 text-slate-800 text-sm"
                     >
                       <a
                         href={f.url}
@@ -320,7 +320,7 @@ export default function PatientDetailModal({
                       <button
                         type="button"
                         onClick={() => onDeleteFile?.(patient.id, f.id)}
-                        className="p-1 rounded text-slate-400 hover:bg-red-900/60 hover:text-red-400 shrink-0"
+                        className="p-1 rounded text-slate-500 hover:bg-red-50 hover:text-red-600 shrink-0"
                         title="Изтрий файл"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -338,7 +338,7 @@ export default function PatientDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-200 bg-slate-700 rounded-lg hover:bg-slate-600"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-800 bg-slate-200 rounded-lg hover:bg-slate-300"
             >
               Затвори
             </button>

@@ -14,13 +14,13 @@ class ErrorBoundary extends React.Component {
       return (
         <div style={{
           minHeight: '100vh',
-          background: '#0f172a',
-          color: '#e2e8f0',
+          background: '#f8fafc',
+          color: '#0f172a',
           padding: 24,
           fontFamily: 'system-ui, sans-serif',
         }}>
           <h1 style={{ fontSize: 18, marginBottom: 8 }}>Грешка в приложението</h1>
-          <pre style={{ fontSize: 12, color: '#f87171', overflow: 'auto' }}>
+          <pre style={{ fontSize: 12, color: '#b91c1c', overflow: 'auto' }}>
             {this.state.error?.message || String(this.state.error)}
           </pre>
         </div>

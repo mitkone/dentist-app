@@ -143,33 +143,33 @@ export default function AdminPanel({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/25" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col max-h-screen overflow-hidden"
+        className="w-full max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col max-h-screen overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
+          <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <Activity className="w-5 h-5 text-emerald-400" />
             Админ панел
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="border-b border-slate-800 shrink-0">
+        <div className="border-b border-slate-200 shrink-0">
           <button
             type="button"
             onClick={() => setSystemCheckOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-slate-800/50"
+            className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-slate-100/80"
           >
-            <h3 className="text-sm font-medium text-slate-300">Проверка на системата</h3>
-            {systemCheckOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            <h3 className="text-sm font-medium text-slate-600">Проверка на системата</h3>
+            {systemCheckOpen ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
           </button>
           {systemCheckOpen && (
             <div className="px-4 pb-4 pt-0">
@@ -183,7 +183,7 @@ export default function AdminPanel({
                     return (
                       <li key={key} className="flex items-center gap-1.5">
                         {ok ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                        <span className={ok ? 'text-slate-200' : 'text-red-300'}>{label}</span>
+                        <span className={ok ? 'text-slate-800' : 'text-red-300'}>{label}</span>
                       </li>
                     );
                   })}
@@ -194,29 +194,29 @@ export default function AdminPanel({
         </div>
 
         {stats && (
-          <div className="grid grid-cols-3 gap-2 p-4 border-b border-slate-800 shrink-0">
-            <div className="rounded-lg bg-slate-800 border border-slate-700 p-3 text-center">
+          <div className="grid grid-cols-3 gap-2 p-4 border-b border-slate-200 shrink-0">
+            <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
               <Calendar className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-              <span className="text-xl font-bold text-white block">{stats.appointmentsToday}</span>
-              <span className="text-xs text-slate-400">Часа днес</span>
+              <span className="text-xl font-bold text-slate-900 block">{stats.appointmentsToday}</span>
+              <span className="text-xs text-slate-500">Часа днес</span>
             </div>
-            <div className="rounded-lg bg-slate-800 border border-slate-700 p-3 text-center">
+            <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
               <Users className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-              <span className="text-xl font-bold text-white block">{stats.patientsCount}</span>
-              <span className="text-xs text-slate-400">Пациенти</span>
+              <span className="text-xl font-bold text-slate-900 block">{stats.patientsCount}</span>
+              <span className="text-xs text-slate-500">Пациенти</span>
             </div>
-            <div className="rounded-lg bg-slate-800 border border-slate-700 p-3 text-center">
+            <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
               <Stethoscope className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-              <span className="text-xl font-bold text-white block">{stats.dentistsCount}</span>
-              <span className="text-xs text-slate-400">Стоматолози</span>
+              <span className="text-xl font-bold text-slate-900 block">{stats.dentistsCount}</span>
+              <span className="text-xs text-slate-500">Стоматолози</span>
             </div>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto scroll-thin min-h-0">
           {onSaveWorkingHours && (
-            <div className="p-4 border-b border-slate-800">
-              <h3 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+            <div className="p-4 border-b border-slate-200">
+              <h3 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-emerald-400" />
                 Работни часове
               </h3>
@@ -227,16 +227,16 @@ export default function AdminPanel({
                   max={23}
                   value={hoursStart}
                   onChange={(e) => setHoursStart(Number(e.target.value))}
-                  className="w-14 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm"
+                  className="w-14 px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-slate-900 text-sm"
                 />
-                <span className="text-slate-400">–</span>
+                <span className="text-slate-500">–</span>
                 <input
                   type="number"
                   min={0}
                   max={24}
                   value={hoursEnd}
                   onChange={(e) => setHoursEnd(Number(e.target.value))}
-                  className="w-14 px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm"
+                  className="w-14 px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-slate-900 text-sm"
                 />
                 <span className="text-slate-500 text-xs">час</span>
                 <button
@@ -251,24 +251,24 @@ export default function AdminPanel({
           )}
 
           {onAddAppointmentType && (
-            <div className="p-4 border-b border-slate-800">
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Видове преглед</h3>
+            <div className="p-4 border-b border-slate-200">
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Видове преглед</h3>
               <p className="text-xs text-slate-500 mb-2">↑↓ за подреждане · въведете име и натиснете +</p>
               <ul className="space-y-1.5 mb-3 max-h-48 overflow-y-auto scroll-thin min-h-[2.5rem]">
                 {appointmentTypes.length === 0 && (
-                  <li className="py-3 px-3 rounded-lg bg-slate-800/50 text-slate-500 text-sm italic">
+                  <li className="py-3 px-3 rounded-lg bg-slate-100/80 text-slate-500 text-sm italic">
                     Няма добавени видове. Добавете първия по-долу.
                   </li>
                 )}
                 {appointmentTypes.map((t, idx) => (
-                  <li key={t.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
+                  <li key={t.id} className="flex items-center gap-2 py-2 px-3 rounded-lg bg-slate-100 text-sm">
                     {onReorderAppointmentType && (
                       <div className="flex flex-col gap-0 shrink-0" title="Подреди">
                         <button
                           type="button"
                           onClick={() => onReorderAppointmentType(t.id, 'up')}
                           disabled={idx === 0}
-                          className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1 rounded text-slate-500 hover:text-emerald-600 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Нагоре"
                         >
                           <ChevronUp className="w-4 h-4" />
@@ -277,28 +277,28 @@ export default function AdminPanel({
                           type="button"
                           onClick={() => onReorderAppointmentType(t.id, 'down')}
                           disabled={idx === appointmentTypes.length - 1}
-                          className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1 rounded text-slate-500 hover:text-emerald-600 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
                           aria-label="Надолу"
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
                       </div>
                     )}
-                    <span className="flex-1 text-slate-200 truncate min-w-0">{t.label_bg}</span>
-                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-700 shrink-0" title="Изтрий">
+                    <span className="flex-1 text-slate-800 truncate min-w-0">{t.label_bg}</span>
+                    <button type="button" onClick={() => onDeleteAppointmentType(t.id)} className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-slate-200 shrink-0" title="Изтрий">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-2 flex-wrap items-center border-t border-slate-700 pt-3">
+              <div className="flex gap-2 flex-wrap items-center border-t border-slate-200 pt-3">
                 <input
                   type="text"
                   placeholder="Име (напр. Имплант)"
                   value={newTypeLabel}
                   onChange={(e) => { setNewTypeLabel(e.target.value); setAddTypeError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), document.getElementById('add-type-btn')?.click())}
-                  className="flex-1 min-w-[140px] px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-slate-100 text-xs placeholder-slate-500"
+                  className="flex-1 min-w-[140px] px-2 py-1.5 bg-slate-100 border border-slate-200 rounded text-slate-900 text-xs placeholder-slate-400"
                 />
                 <button
                   id="add-type-btn"
@@ -326,24 +326,24 @@ export default function AdminPanel({
           )}
 
           {profiles.length > 0 && (
-            <div className="p-4 border-b border-slate-800">
-              <h3 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+            <div className="p-4 border-b border-slate-200">
+              <h3 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
                 <UserCog className="w-4 h-4 text-emerald-400" />
                 Регистрирани профили
               </h3>
               <ul className="space-y-2 max-h-48 overflow-y-auto">
                 {profiles.map((p) => (
-                  <li key={p.id} className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-slate-800 text-sm">
+                  <li key={p.id} className="flex flex-col gap-2 py-2 px-3 rounded-lg bg-slate-100 text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-slate-100 font-medium truncate min-w-0">{p.full_name || p.email}</span>
+                      <span className="text-slate-900 font-medium truncate min-w-0">{p.full_name || p.email}</span>
                     </div>
                     <span className="text-xs text-slate-500 truncate">{p.email}</span>
                     <div className="flex flex-wrap gap-2 items-center">
-                      <label className="text-xs text-slate-400 shrink-0">Роля:</label>
+                      <label className="text-xs text-slate-500 shrink-0">Роля:</label>
                       <select
                         value={p.role || 'receptionist'}
                         onChange={(e) => updateProfileRole(p.id, e.target.value)}
-                        className="text-sm px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-md text-slate-100 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none cursor-pointer hover:bg-slate-600"
+                        className="text-sm px-3 py-1.5 bg-slate-200 border border-slate-300 rounded-md text-slate-900 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none cursor-pointer hover:bg-slate-300"
                         title="Промяна на роля"
                       >
                         <option value="admin">Админ</option>
@@ -352,11 +352,11 @@ export default function AdminPanel({
                       </select>
                       {(p.role || '') === 'dentist' && dentists.length > 0 && (
                         <>
-                          <label className="text-xs text-slate-400 shrink-0">Лекар:</label>
+                          <label className="text-xs text-slate-500 shrink-0">Лекар:</label>
                           <select
                             value={p.dentist_id || ''}
                             onChange={(e) => updateProfileRole(p.id, 'dentist', e.target.value || null)}
-                            className="text-xs px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 focus:ring-1 focus:ring-emerald-500/40 outline-none flex-1 min-w-0 max-w-[140px]"
+                            className="text-xs px-2 py-1 bg-slate-200 border border-slate-300 rounded text-slate-900 focus:ring-1 focus:ring-emerald-500/40 outline-none flex-1 min-w-0 max-w-[140px]"
                           >
                             <option value="">— Изберете —</option>
                             {dentists.map((d) => (
@@ -372,7 +372,7 @@ export default function AdminPanel({
                           type="checkbox"
                           checked={!!(p.permissions?.can_book_all ?? (p.role === 'receptionist' || p.role === 'admin'))}
                           onChange={(e) => updateProfilePermissions(p.id, { ...p.permissions, can_book_all: e.target.checked })}
-                          className="rounded border-slate-600"
+                          className="rounded border-slate-300"
                         />
                         <span>Запис на всички</span>
                       </label>
@@ -381,7 +381,7 @@ export default function AdminPanel({
                           type="checkbox"
                           checked={!!(p.permissions?.can_view_admin ?? (p.role === 'admin'))}
                           onChange={(e) => updateProfilePermissions(p.id, { ...p.permissions, can_view_admin: e.target.checked })}
-                          className="rounded border-slate-600"
+                          className="rounded border-slate-300"
                         />
                         <span>Вижда админ</span>
                       </label>
@@ -393,19 +393,19 @@ export default function AdminPanel({
           )}
 
           <div className="flex items-center justify-between px-4 pt-3 pb-1">
-            <h3 className="text-sm font-medium text-slate-300">Последни действия</h3>
+            <h3 className="text-sm font-medium text-slate-600">Последни действия</h3>
             {activityLog.length > 0 && onClearActivityLog && (
               <button
                 type="button"
                 onClick={() => { onClearActivityLog?.(); }}
-                className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-800"
+                className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded hover:bg-slate-100"
               >
                 Изчисти
               </button>
             )}
           </div>
           {loading ? (
-            <p className="px-4 py-6 text-slate-400 text-sm">Зареждане...</p>
+            <p className="px-4 py-6 text-slate-500 text-sm">Зареждане...</p>
           ) : activityLog.length === 0 ? (
             <p className="px-4 py-6 text-slate-500 text-sm">Няма записани действия</p>
           ) : (
@@ -435,24 +435,24 @@ export default function AdminPanel({
                     <button
                       type="button"
                       onClick={() => setExpandedLogId(expanded ? null : entry.id)}
-                      className="w-full flex gap-2 py-2 px-3 rounded-lg bg-slate-800/80 border border-slate-700 text-sm text-left hover:bg-slate-800 transition-colors"
+                      className="w-full flex gap-2 py-2 px-3 rounded-lg bg-slate-100 border border-slate-200 text-sm text-left hover:bg-slate-100 transition-colors"
                     >
                       <span className="text-slate-500 shrink-0 text-xs mt-0.5">{formatWhen(entry.created_at)}</span>
-                      <span className="flex-1 text-slate-200">
+                      <span className="flex-1 text-slate-800">
                         {ACTION_LABELS[entry.action] ?? entry.action}
-                        {summaryName && !expanded && <span className="text-slate-400"> · {summaryName}</span>}
+                        {summaryName && !expanded && <span className="text-slate-500"> · {summaryName}</span>}
                         {(details.actor_name || details.full_name || details.email) && !expanded && (
                           <span className="text-slate-500 text-xs block mt-0.5">от {details.actor_name || details.full_name || details.email}</span>
                         )}
                       </span>
-                      {expanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                      {expanded ? <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
                     </button>
                     {expanded && detailLines.length > 0 && (
-                      <div className="mt-1 ml-2 pl-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/80 text-xs space-y-1">
+                      <div className="mt-1 ml-2 pl-3 py-2 rounded-lg bg-slate-100/90 border border-slate-200/80 text-xs space-y-1">
                         {detailLines.map(({ label, val }) => (
                           <div key={label} className="flex gap-2">
                             <span className="text-slate-500 w-16 shrink-0">{label}:</span>
-                            <span className="text-slate-200">{val}</span>
+                            <span className="text-slate-800">{val}</span>
                           </div>
                         ))}
                       </div>

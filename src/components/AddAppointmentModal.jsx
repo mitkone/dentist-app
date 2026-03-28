@@ -84,14 +84,14 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900">
-          <h3 className="text-lg font-semibold text-white">Нов час</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <h3 className="text-lg font-semibold text-slate-900">Нов час</h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900"
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,18 +99,18 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Стоматолог</label>
-            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">
+            <label className="block text-sm font-medium text-slate-800 mb-1">Стоматолог</label>
+            <div className="px-3 py-2 rounded-lg bg-slate-100 text-slate-900 text-sm border border-slate-200">
               {selectedDentist?.name}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Начало</label>
-            <div className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 text-sm border border-slate-700">{slot}</div>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Начало</label>
+            <div className="px-3 py-2 rounded-lg bg-slate-100 text-slate-900 text-sm border border-slate-200">{slot}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Край на часа</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Край на часа</label>
             <div className="flex flex-wrap gap-2 items-center">
               <TimePicker24 value={endTime} onChange={setEndTime} />
               <span className="text-xs text-slate-500">или бързи:</span>
@@ -119,7 +119,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
                   key={mins}
                   type="button"
                   onClick={() => setEndTime(addMinutesToTime(slot, mins))}
-                  className="px-2 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  className="px-2 py-1 rounded text-xs font-medium bg-slate-200 text-slate-800 hover:bg-slate-300"
                 >
                   {label}
                 </button>
@@ -128,7 +128,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div className="relative" ref={suggestionRef}>
-            <label htmlFor="patientName" className="block text-sm font-medium text-slate-200 mb-1">
+            <label htmlFor="patientName" className="block text-sm font-medium text-slate-800 mb-1">
               Пациент <span className="text-slate-500 font-normal">(въведете име или изберете от базата)</span>
             </label>
             <input
@@ -141,17 +141,17 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               placeholder="Въведете име или телефон..."
               required
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               autoComplete="off"
             />
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-0.5 max-h-40 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-lg z-50">
+              <div className="absolute left-0 right-0 top-full mt-0.5 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-100 shadow-lg z-50">
                 {suggestions.slice(0, 8).map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); setPatientInput(p.name || ''); setPatientPhone(p.phone || ''); setShowSuggestions(false); }}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700 flex flex-col"
+                    className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-slate-200 flex flex-col"
                   >
                     <span className="font-medium">{p.name || '—'}</span>
                     {p.phone && <span className="text-xs text-slate-500">{p.phone}</span>}
@@ -162,7 +162,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div>
-            <label htmlFor="patientPhone" className="block text-sm font-medium text-slate-200 mb-1">
+            <label htmlFor="patientPhone" className="block text-sm font-medium text-slate-800 mb-1">
               Телефон <span className="text-slate-500 font-normal">(по избор)</span>
             </label>
             <input
@@ -172,7 +172,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               value={patientPhone}
               onChange={(e) => setPatientPhone(e.target.value)}
               placeholder="+359 ..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
 
@@ -186,13 +186,13 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           />
 
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-slate-200 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-slate-800 mb-1">
               Вид преглед
             </label>
             <select
               id="type"
               name="type"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {typeOptions.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -203,7 +203,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           </div>
 
           <div>
-            <label htmlFor="appointment-notes" className="block text-sm font-medium text-slate-200 mb-1">
+            <label htmlFor="appointment-notes" className="block text-sm font-medium text-slate-800 mb-1">
               Бележка за часа <span className="text-slate-500 font-normal">(по избор)</span>
             </label>
             <textarea
@@ -212,31 +212,31 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Напр. алергии, препоръки..."
               rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
             />
           </div>
 
           <div>
-            <span className="block text-sm font-medium text-slate-200 mb-1">
+            <span className="block text-sm font-medium text-slate-800 mb-1">
               Плащане
             </span>
             <div className="flex gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-800">
                 <input
                   type="radio"
                   name="insurance"
                   value="private"
                   defaultChecked
-                  className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                  className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-white"
                 />
                 <span>Частно</span>
               </label>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-200">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-800">
                 <input
                   type="radio"
                   name="insurance"
                   value="nhif"
-                  className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
+                  className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-white"
                 />
                 <span>По здравна каса</span>
               </label>
@@ -247,7 +247,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-200 bg-slate-700 rounded-lg hover:bg-slate-600"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-800 bg-slate-200 rounded-lg hover:bg-slate-300"
             >
               Отказ
             </button>

@@ -17,24 +17,24 @@ export default function DentistEditModal({ open, onClose, dentist, specialties =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25" onClick={onClose}>
       <div
-        className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-sm p-5"
+        className="bg-white rounded-xl border border-slate-200 w-full max-w-sm p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Профил на лекар</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800">
+          <h3 className="text-lg font-semibold text-slate-900">Профил на лекар</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-slate-300 text-sm mb-4">{dentist.name}</p>
+        <p className="text-slate-600 text-sm mb-4">{dentist.name}</p>
         <form onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-slate-200 mb-1">Специалност</label>
+          <label className="block text-sm font-medium text-slate-800 mb-1">Специалност</label>
           <select
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 text-sm"
+            className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm"
           >
             {specialties.length > 0 ? (
               specialties.map((s) => (
@@ -52,7 +52,7 @@ export default function DentistEditModal({ open, onClose, dentist, specialties =
             )}
           </select>
           <div className="flex gap-2 mt-4">
-            <button type="button" onClick={onClose} className="flex-1 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-lg hover:bg-slate-600">
+            <button type="button" onClick={onClose} className="flex-1 py-2 text-sm font-medium text-slate-600 bg-slate-200 rounded-lg hover:bg-slate-300">
               Отказ
             </button>
             <button type="submit" className="flex-1 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500">

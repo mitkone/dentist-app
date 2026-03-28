@@ -23,14 +23,14 @@ export default function AdminPasswordModal({ open, onClose, onSuccess }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/25" onClick={onClose}>
       <div
-        className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-sm p-5"
+        className="bg-white rounded-xl border border-slate-200 w-full max-w-sm p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5 text-emerald-400" />
-          <h3 className="text-lg font-semibold text-white">Парола за админ</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Парола за админ</h3>
         </div>
         <form onSubmit={handleSubmit}>
           <input
@@ -38,7 +38,7 @@ export default function AdminPasswordModal({ open, onClose, onSuccess }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Въведете парола"
-            className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+            className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
             autoFocus
           />
           {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
@@ -46,7 +46,7 @@ export default function AdminPasswordModal({ open, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 text-sm font-medium text-slate-300 bg-slate-700 rounded-lg hover:bg-slate-600"
+              className="flex-1 py-2 text-sm font-medium text-slate-600 bg-slate-200 rounded-lg hover:bg-slate-300"
             >
               Отказ
             </button>

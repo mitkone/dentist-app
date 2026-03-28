@@ -30,7 +30,7 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm border transition-colors ${
             allSelected
               ? 'bg-emerald-600 text-white border-emerald-500'
-              : 'bg-slate-900 text-slate-200 border-slate-600 hover:border-emerald-500 hover:text-emerald-300'
+              : 'bg-white text-slate-800 border-slate-300 hover:border-emerald-500 hover:text-emerald-700'
           }`}
         >
           <Stethoscope className="w-3.5 h-3.5" />
@@ -46,7 +46,7 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs md:text-sm border transition-colors ${
                 selected
                   ? 'bg-slate-100 text-slate-900 border-emerald-500'
-                  : 'bg-slate-800 text-slate-200 border-slate-600 hover:border-emerald-500 hover:text-emerald-300'
+                  : 'bg-slate-100 text-slate-800 border-slate-300 hover:border-emerald-500 hover:text-emerald-700'
               }`}
             >
               <span
@@ -59,7 +59,7 @@ export default function DentistBar({ dentists, selectedDentistIds, onDentistTogg
         })}
         </div>
       </div>
-      <div className="absolute right-0 top-0 bottom-2 w-8 md:w-6 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none" aria-hidden />
+      <div className="absolute right-0 top-0 bottom-2 w-8 md:w-6 bg-gradient-to-l from-white to-transparent pointer-events-none" aria-hidden />
     </div>
   );
 }

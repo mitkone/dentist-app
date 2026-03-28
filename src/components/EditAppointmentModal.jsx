@@ -109,17 +109,17 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-md overflow-hidden"
+        className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900">
-          <h3 className="text-lg font-semibold text-white">Редактиране на час</h3>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
+          <h3 className="text-lg font-semibold text-slate-900">Редактиране на час</h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900"
           >
             <X className="w-5 h-5" />
           </button>
@@ -127,23 +127,23 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Дата</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Дата</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm [color-scheme:dark]"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm [color-scheme:light]"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Стоматолог</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Стоматолог</label>
             {canChangeDentist ? (
               <select
                 value={dentistId}
                 onChange={(e) => setDentistId(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               >
                 {dentists.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -152,18 +152,18 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 ))}
               </select>
             ) : (
-              <div className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-sm">
+              <div className="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-900 text-sm">
                 {dentists.find((d) => d.id === dentistId)?.name ?? dentistId}
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Начало</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Начало</label>
             <select
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {slots.map((s) => (
                 <option key={s} value={s}>
@@ -174,7 +174,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Край на часа</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Край на часа</label>
             <div className="flex flex-wrap gap-2 items-center">
               <TimePicker24 value={end} onChange={setEnd} />
               {DURATION_PRESETS.map(({ mins, label }) => (
@@ -182,7 +182,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                   key={mins}
                   type="button"
                   onClick={() => setEnd(addMinutes(start, mins))}
-                  className="px-2 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  className="px-2 py-1 rounded text-xs font-medium bg-slate-200 text-slate-800 hover:bg-slate-300"
                 >
                   {label}
                 </button>
@@ -191,7 +191,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
-            <label htmlFor="edit-patientName" className="block text-sm font-medium text-slate-200 mb-1">
+            <label htmlFor="edit-patientName" className="block text-sm font-medium text-slate-800 mb-1">
               Пациент <span className="text-slate-500 font-normal">(изберете или въведете име)</span>
             </label>
             <input
@@ -202,7 +202,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
               onChange={(e) => setPatientInput(e.target.value)}
               placeholder="Въведете име на пациента..."
               required
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
               autoComplete="off"
             />
             <datalist id="edit-patient-suggestions">
@@ -222,11 +222,11 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           />
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Вид преглед</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Вид преглед</label>
             <select
               value={typeOptions.find((o) => o.key === type || o.label_bg === type)?.label_bg ?? type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             >
               {typeOptions.map((opt) => (
                 <option key={opt.key ?? opt.label_bg} value={opt.label_bg}>
@@ -237,7 +237,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Плащане</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Плащане</label>
             <div className="flex gap-3">
               <button
                 type="button"
@@ -245,7 +245,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                   insurance === 'private'
                     ? 'bg-slate-100 text-slate-900'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                 }`}
               >
                 Частно
@@ -256,7 +256,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                   insurance === 'nhif'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                 }`}
               >
                 По здравна каса
@@ -265,19 +265,19 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1">Бележки за часа</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Бележки за часа</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Бележки по прегледа..."
               rows={3}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
             />
           </div>
 
           {isPast && (
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">Пациентът</label>
+              <label className="block text-sm font-medium text-slate-800 mb-2">Пациентът</label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -285,7 +285,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                     attendance === 'showed'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
                   Дойде
@@ -296,7 +296,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                     attendance === 'no_show'
                       ? 'bg-red-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
                   Не се яви
@@ -307,7 +307,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                     attendance === 'pending'
                       ? 'bg-amber-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
                   —
@@ -320,7 +320,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
             <button
               type="button"
               onClick={handleDelete}
-              className="px-4 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-slate-700/80 rounded-lg border border-slate-600"
+              className="px-4 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-slate-200/80 rounded-lg border border-slate-300"
             >
               <Trash2 className="w-4 h-4 inline-block mr-1.5 align-middle" />
               Изтрий час
@@ -328,7 +328,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-200 bg-slate-700 rounded-lg hover:bg-slate-600"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-800 bg-slate-200 rounded-lg hover:bg-slate-300"
             >
               Отказ
             </button>

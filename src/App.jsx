@@ -1007,8 +1007,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-black">
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
@@ -1027,8 +1027,8 @@ export default function App() {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Хаджиев Дент</h1>
-              <p className="text-xs text-slate-400">Запазване на часове</p>
+              <h1 className="text-lg font-bold text-slate-900">Хаджиев Дент</h1>
+              <p className="text-xs text-slate-500">Запазване на часове</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1041,25 +1041,25 @@ export default function App() {
                     setScheduleNotificationsOpen((o) => !o);
                     if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
                   }}
-                  className="relative p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white"
+                  className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                   aria-label="Известия за графика"
                 >
                   <Bell className="w-5 h-5" />
                   {scheduleNotifications.length > 0 && !scheduleNotificationsSeen && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-emerald-500 rounded-full">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-slate-900 bg-emerald-500 rounded-full">
                       {scheduleNotifications.length > 99 ? '99+' : scheduleNotifications.length}
                     </span>
                   )}
                 </button>
                 {scheduleNotificationsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-72 max-h-64 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[9999] flex flex-col">
-                    <div className="p-2 border-b border-slate-700 flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-200">Промени в графика</span>
+                  <div className="absolute right-0 top-full mt-1 w-72 max-h-64 overflow-y-auto bg-slate-100 border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
+                    <div className="p-2 border-b border-slate-200 flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-800">Промени в графика</span>
                       {scheduleNotifications.length > 0 && (
                         <button
                           type="button"
                           onClick={() => { setScheduleNotifications([]); setScheduleNotificationsSeen(true); }}
-                          className="text-xs text-emerald-400 hover:text-emerald-300"
+                          className="text-xs text-emerald-400 hover:text-emerald-700"
                         >
                           Изчисти
                         </button>
@@ -1070,7 +1070,7 @@ export default function App() {
                         <p className="p-3 text-sm text-slate-500">Няма нови известия</p>
                       ) : (
                         scheduleNotifications.map((n) => (
-                          <div key={n.id} className="px-3 py-2 border-b border-slate-700/50 last:border-0 text-sm text-slate-200">
+                          <div key={n.id} className="px-3 py-2 border-b border-slate-200/50 last:border-0 text-sm text-slate-800">
                             {n.text}
                           </div>
                         ))
@@ -1086,7 +1086,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setShowAdminPassword(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-sm"
                   >
                     <Activity className="w-4 h-4" />
                     Админ
@@ -1099,7 +1099,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleStaffLogout}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-sm"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">{profile?.full_name || user.email}</span>
@@ -1108,7 +1108,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleStaffLogout}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-sm"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Изход (Админ)</span>
@@ -1117,7 +1117,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-sm"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-sm"
                 >
                   <LogIn className="w-4 h-4" />
                   Вход
@@ -1128,7 +1128,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-black">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-50">
       <Sidebar
   dentists={dentists}
   selectedDentistIds={effectiveSelectedDentistIds}
@@ -1144,7 +1144,7 @@ export default function App() {
   showDentistsFilter={false}
 />
 
-        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-black overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
+        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-slate-50 overscroll-contain" style={{ overscrollBehavior: 'contain' }}>
           <CalendarHeader
             currentDate={currentDate}
             onPrevDay={goPrevDay}
@@ -1182,7 +1182,7 @@ export default function App() {
               </p>
             )}
             {appointmentsLoading ? (
-              <p className="text-slate-400 py-8">Зареждане на часове...</p>
+              <p className="text-slate-500 py-8">Зареждане на часове...</p>
             ) : (
               <ResourceCalendar
   dentists={filteredDentists}

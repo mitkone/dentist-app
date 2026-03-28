@@ -82,29 +82,29 @@ export default function AuthModal({ open, onClose, signIn, signUp, resetPassword
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 rounded-xl shadow-xl border border-slate-800 w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-          <h3 className="text-lg font-semibold text-white">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-900">
             {mode === 'login' ? 'Вход' : 'Регистрация'}
           </h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white">
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex border-b border-slate-800">
+        <div className="flex border-b border-slate-200">
           <button
             type="button"
             onClick={() => { setMode('login'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium ${mode === 'login' ? 'text-emerald-400 border-b-2 border-emerald-500 bg-slate-800/50' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium ${mode === 'login' ? 'text-emerald-700 border-b-2 border-emerald-500 bg-emerald-50/80' : 'text-slate-500 hover:text-slate-800'}`}
           >
             <LogIn className="w-4 h-4" /> Вход
           </button>
           <button
             type="button"
             onClick={() => { setMode('register'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium ${mode === 'register' ? 'text-emerald-400 border-b-2 border-emerald-500 bg-slate-800/50' : 'text-slate-400 hover:text-slate-200'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium ${mode === 'register' ? 'text-emerald-700 border-b-2 border-emerald-500 bg-emerald-50/80' : 'text-slate-500 hover:text-slate-800'}`}
           >
             <UserPlus className="w-4 h-4" /> Регистрация
           </button>
@@ -127,29 +127,29 @@ export default function AuthModal({ open, onClose, signIn, signUp, resetPassword
                   <button
                     type="button"
                     onClick={() => { setForgotPassword(false); setForgotSuccess(false); setError(''); }}
-                    className="w-full py-2.5 text-sm font-medium text-slate-200 hover:text-white border border-slate-600 rounded-lg hover:bg-slate-800"
+                    className="w-full py-2.5 text-sm font-medium text-slate-800 hover:text-slate-900 border border-slate-300 rounded-lg hover:bg-slate-100"
                   >
                     Назад към вход
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <p className="text-sm text-slate-400">Въведете имейла си и ще получите линк за нулиране на паролата.</p>
+                  <p className="text-sm text-slate-500">Въведете имейла си и ще получите линк за нулиране на паролата.</p>
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
+                    <label className="block text-sm font-medium text-slate-800 mb-1">Имейл</label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => { setForgotPassword(false); setError(''); }}
-                      className="flex-1 py-2.5 text-sm font-medium text-slate-200 border border-slate-600 rounded-lg hover:bg-slate-800"
+                      className="flex-1 py-2.5 text-sm font-medium text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-100"
                     >
                       Отказ
                     </button>
@@ -162,39 +162,39 @@ export default function AuthModal({ open, onClose, signIn, signUp, resetPassword
             ) : (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
+                  <label className="block text-sm font-medium text-slate-800 mb-1">Имейл</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Парола</label>
+                  <label className="block text-sm font-medium text-slate-800 mb-1">Парола</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/40"
+                      className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500/40"
                     />
                     Запомни ме (имейл)
                   </label>
                   <button
                     type="button"
                     onClick={() => { setForgotPassword(true); setError(''); }}
-                    className="text-xs text-slate-400 hover:text-emerald-400"
+                    className="text-xs text-slate-500 hover:text-emerald-600"
                   >
                     Забравена парола?
                   </button>
@@ -207,42 +207,42 @@ export default function AuthModal({ open, onClose, signIn, signUp, resetPassword
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Пълно име</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Пълно име</label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Д-р Иванов"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Имейл</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Имейл</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Парола</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Парола</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Роля</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Роля</label>
                 <select
                   value={role}
                   onChange={(e) => { setRole(e.target.value); setDentistId(''); }}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                  className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                 >
                   <option value="admin">Администратор</option>
                   <option value="dentist">Стоматолог</option>
@@ -251,11 +251,11 @@ export default function AuthModal({ open, onClose, signIn, signUp, resetPassword
               </div>
               {role === 'dentist' && dentists.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">Профил на лекар</label>
+                  <label className="block text-sm font-medium text-slate-800 mb-1">Профил на лекар</label>
                   <select
                     value={dentistId}
                     onChange={(e) => setDentistId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
                   >
                     <option value="">— Изберете —</option>
                     {dentists.map((d) => (
