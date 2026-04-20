@@ -50,7 +50,7 @@ export const dentists = [
 /** Синтетична опция в падащите менюта за свободен текст (записва се в status). */
 export const OTHER_APPOINTMENT_TYPE_KEY = '__other__';
 export const OTHER_APPOINTMENT_LABEL = 'Друго (по избор)';
-export const APPOINTMENT_LOCATION_OPTIONS = ['Нови Искър', 'Дружба'];
+export const APPOINTMENT_LOCATION_OPTIONS = ['Дружба', 'Нови Искър'];
 
 export const DEFAULT_DENTIST_COLORS = ['#14b8a6', '#3b82f6', '#a855f7', '#f97316', '#ec4899', '#eab308'];
 

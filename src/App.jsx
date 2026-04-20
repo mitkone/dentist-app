@@ -852,7 +852,7 @@ export default function App() {
   }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', location = 'Нови Искър', appointmentDate }) => {
+    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', location = 'Дружба', appointmentDate }) => {
       const date = appointmentDate || dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
       let patient = patientId ? patients.find((p) => p.id === patientId) : null;
@@ -969,7 +969,7 @@ export default function App() {
     setEditAppointment(appointment);
   }, []);
 
-  const onUpdateAppointment = useCallback((appointmentId, { date: newDate, dentistId, start, end, patientName, patientId, type, notes, attendance, insurance }) => {
+  const onUpdateAppointment = useCallback((appointmentId, { date: newDate, dentistId, start, end, patientName, patientId, type, notes, attendance, insurance, location }) => {
     const app = appointments.find((a) => a.id === appointmentId);
     const date = newDate || app?.date;
     if (!date) return;
@@ -989,6 +989,7 @@ export default function App() {
               notes: notes !== undefined ? notes : a.notes,
               attendance: attendance !== undefined ? attendance : a.attendance,
               insurance: insurance !== undefined ? insurance : a.insurance,
+              location: location !== undefined ? location : a.location,
             }
       )
     );
@@ -1003,13 +1004,21 @@ export default function App() {
       if (notes !== undefined) payload.notes = notes;
       if (attendance !== undefined) payload.attendance = attendance;
       if (insurance !== undefined) payload.insurance = insurance;
+      if (location !== undefined) payload.location = location;
       supabase
         .from('appointments')
         .update(payload)
         .eq('id', appointmentId)
         .then(({ error }) => {
-          if (error) console.error('Failed to update appointment:', error);
-          else logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start, oldDate: app?.date } });
+          if (error && String(error.message || '').includes('location')) {
+            const payloadLegacy = { ...payload };
+            delete payloadLegacy.location;
+            supabase.from('appointments').update(payloadLegacy).eq('id', appointmentId);
+          } else if (error) {
+            console.error('Failed to update appointment:', error);
+          } else {
+            logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start, oldDate: app?.date } });
+          }
         });
     }
     setEditAppointment(null);

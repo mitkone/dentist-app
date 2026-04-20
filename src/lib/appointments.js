@@ -22,7 +22,7 @@ export function rowToAppointment(row) {
     notes: row.notes ?? '',
     attendance: row.attendance || 'pending',
     insurance: row.insurance || 'private',
-    location: row.location || 'Нови Искър',
+    location: row.location || 'Дружба',
   };
 }
 
@@ -45,7 +45,7 @@ export function appointmentToRow(appointment, overrides = {}) {
     end_time: toSupabaseTime(date, end),
     status: appointment.type ?? appointment.status ?? 'scheduled',
     insurance: appointment.insurance ?? overrides.insurance ?? 'private',
-    location: appointment.location ?? overrides.location ?? 'Нови Искър',
+    location: appointment.location ?? overrides.location ?? 'Дружба',
     ...overrides,
   };
 }

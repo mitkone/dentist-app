@@ -194,6 +194,11 @@ export default function ResourceCalendar({
     return focused ? [focused] : dentists;
   }, [isMobile, dentists, focusedDentistId]);
   useEffect(() => {
+    if (!dentists.length) return;
+    const inList = dentists.some((d) => d.id === focusedDentistId);
+    if (!inList || focusedDentistId === null) setFocusedDentistId(dentists[0].id);
+  }, [dentists, focusedDentistId]);
+  useEffect(() => {
     if (!isMobile || !dentists.length) return;
     const inList = dentists.some((d) => d.id === focusedDentistId);
     if (!inList || focusedDentistId === null) setFocusedDentistId(dentists[0].id);
@@ -441,10 +446,26 @@ export default function ResourceCalendar({
       : null;
 
   if (viewMode === 'week') {
-    const primaryDentistId = dentistsToShow[0]?.id;
+    const primaryDentistId = focusedDentistId || dentists[0]?.id;
     return (
       <>
         <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          {dentists.length > 1 && (
+            <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+              <label className="text-xs text-slate-500 block mb-1">Лекар за седмичен преглед:</label>
+              <select
+                value={primaryDentistId ?? ''}
+                onChange={(e) => setFocusedDentistId(e.target.value)}
+                className="w-full max-w-xs py-2 pl-3 pr-8 bg-white border border-slate-300 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none appearance-none"
+              >
+                {dentists.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shrink-0 overflow-hidden">
             <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3">
               <Clock className="w-4 h-4 text-slate-500" />

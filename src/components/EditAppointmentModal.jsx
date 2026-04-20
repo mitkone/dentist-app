@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { appointmentTypeLabel, getSlots, HOURS, OTHER_APPOINTMENT_TYPE_KEY } from '../data/mockData';
+import { appointmentTypeLabel, getSlots, HOURS, OTHER_APPOINTMENT_TYPE_KEY, APPOINTMENT_LOCATION_OPTIONS } from '../data/mockData';
 import { withOtherOption, resolveTypeForSave, parseTypeFromAppointment } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
@@ -59,6 +59,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   const [notes, setNotes] = useState('');
   const [attendance, setAttendance] = useState('pending');
   const [insurance, setInsurance] = useState('private');
+  const [location, setLocation] = useState(APPOINTMENT_LOCATION_OPTIONS[0]);
 
   const slots = getSlots(workingHours);
   const typeOptions = useMemo(
@@ -86,6 +87,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       setNotes(appointment.notes ?? '');
       setAttendance(appointment.attendance || 'pending');
       setInsurance(appointment.insurance || 'private');
+      setLocation(appointment.location || APPOINTMENT_LOCATION_OPTIONS[0]);
     }
   }, [appointment, patients, typeOptions]);
 
@@ -106,6 +108,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       notes: notes.trim() || '',
       attendance: isPast ? attendance : undefined,
       insurance,
+      location,
     });
     onClose();
   };
@@ -251,6 +254,21 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 className="mt-2 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
               />
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Кабинет</label>
+            <select
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+            >
+              {APPOINTMENT_LOCATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
