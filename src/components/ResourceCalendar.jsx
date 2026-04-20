@@ -460,10 +460,10 @@ export default function ResourceCalendar({
   ) : null;
 
   if (viewMode === 'week') {
-    const primaryDentistId =
-      selectedDentistIds.find((id) => dentists.some((d) => d.id === id)) ||
-      focusedDentistId ||
-      dentists[0]?.id;
+    const selectedInView = dentists.filter((d) => selectedDentistIds.includes(d.id));
+    const singleSelectedDentistId = selectedInView.length === 1 ? selectedInView[0].id : null;
+    const weekDentistIds = selectedInView.length > 0 ? selectedInView.map((d) => d.id) : dentists.map((d) => d.id);
+    const primaryDentistId = singleSelectedDentistId;
     return (
       <>
         <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -494,9 +494,9 @@ export default function ResourceCalendar({
                     >
                       {label}
                     </button>
-                    {primaryDentistId && (
+                    {singleSelectedDentistId && (
                       <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                        {doctorDayLocations[`${primaryDentistId}_${dayKey}`] || '—'}
+                        {doctorDayLocations[`${singleSelectedDentistId}_${dayKey}`] || '—'}
                       </div>
                     )}
                   </div>
@@ -524,8 +524,10 @@ export default function ResourceCalendar({
               </div>
 
               {weekDateKeys.map((dayKey) => {
-                const vacation = primaryDentistId ? isOnVacation(primaryDentistId, dayKey) : false;
-                const dayApps = primaryDentistId ? getAppointmentsForWeekDay(dayKey, primaryDentistId).map((x) => ({ ...x })) : [];
+                const vacation = singleSelectedDentistId ? isOnVacation(singleSelectedDentistId, dayKey) : false;
+                const dayApps = appointments
+                  .filter((a) => a.date === dayKey && weekDentistIds.includes(a.dentistId) && patientMatchesSearch(a))
+                  .map((x) => ({ ...x }));
                 const laidOut = assignAppointmentLanes(dayApps);
                 return (
                   <div
@@ -535,19 +537,19 @@ export default function ResourceCalendar({
                     }`}
                   >
                     {slots.map((slot) => {
-                      const available = primaryDentistId ? isSlotAvailable(primaryDentistId, slot, dayKey) : true;
-                      const disabled = vacation || !primaryDentistId || !available;
-                      const isUnavailable = !vacation && primaryDentistId && !available;
+                      const available = singleSelectedDentistId ? isSlotAvailable(singleSelectedDentistId, slot, dayKey) : true;
+                      const disabled = vacation || !singleSelectedDentistId || !available;
+                      const isUnavailable = !vacation && !!singleSelectedDentistId && !available;
                       return (
                         <button
                           key={`${dayKey}-${slot}`}
                           type="button"
                           data-slot={slot}
-                          data-dentist-id={primaryDentistId}
+                          data-dentist-id={singleSelectedDentistId}
                           data-day={dayKey}
                           onClick={(e) => {
-                            if (disabled || !primaryDentistId) return;
-                            handleSlotClick(primaryDentistId, slot, e, dayKey);
+                            if (disabled || !singleSelectedDentistId) return;
+                            handleSlotClick(singleSelectedDentistId, slot, e, dayKey);
                           }}
                           className={`absolute left-0.5 right-0.5 rounded border border-transparent transition-colors ${
                             vacation
@@ -581,7 +583,6 @@ export default function ResourceCalendar({
                       return (
                         <div
                           key={a.id}
-                          title={`Лекар: ${(dentists.find((x) => x.id === a.dentistId)?.name || '—')} | Преглед: ${getTypeDisplay(a.type) || '—'} | Час: ${a.start}${a.end ? ` - ${a.end}` : ''} | Кабинет: ${a.location || '—'}`}
                           onMouseEnter={(e) => {
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
                             setHoverInfo({
@@ -606,17 +607,6 @@ export default function ResourceCalendar({
                           }}
                           onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                           onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
-                          onMouseOver={(e) => {
-                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
-                            setHoverInfo({
-                              x: e.clientX,
-                              y: e.clientY,
-                              dentist: dn,
-                              type: getTypeDisplay(a.type),
-                              time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
-                              location: a.location || '',
-                            });
-                          }}
                           onMouseLeave={() => setHoverInfo(null)}
                           onPointerLeave={() => setHoverInfo(null)}
                           onClick={(e) => handleAppointmentClick(e, a)}
@@ -884,7 +874,6 @@ export default function ResourceCalendar({
                     return (
                       <div
                         key={a.id}
-                        title={`Лекар: ${d.name || '—'} | Преглед: ${getTypeDisplay(a.type) || '—'} | Час: ${a.start}${a.end ? ` - ${a.end}` : ''} | Кабинет: ${a.location || '—'}`}
                         onMouseEnter={(e) => {
                           setHoverInfo({
                             x: e.clientX,
