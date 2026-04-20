@@ -15,7 +15,7 @@ function useIsMobile() {
     update();
     mql.addEventListener('change', update);
     return () => mql.removeEventListener('change', update);
-  }, []);
+  }, [viewMode]);
   return isMobile;
 }
 
@@ -132,7 +132,7 @@ export default function ResourceCalendar({
       header.removeEventListener('scroll', syncHeaderToGrid);
       ro.disconnect();
     };
-  }, []);
+  }, [viewMode]);
 
   useEffect(() => {
     const grid = gridScrollRef.current;

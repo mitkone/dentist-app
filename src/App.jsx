@@ -86,6 +86,8 @@ export default function App() {
   const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
   const [doctorAvailableSlots, setDoctorAvailableSlots] = useState({});
   const [doctorDayLocations, setDoctorDayLocations] = useState({});
+  const [locationDoctorId, setLocationDoctorId] = useState('');
+  const [dayLocationDraft, setDayLocationDraft] = useState('Дружба');
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
@@ -118,6 +120,7 @@ export default function App() {
       : [permissions.myDentistId, ...selectedDentistIds.filter((id) => id !== permissions.myDentistId)]
     : selectedDentistIds;
   const visibleDentistIds = effectiveSelectedDentistIds.length > 0 ? effectiveSelectedDentistIds : dentists.map((d) => d.id);
+  const filteredDentists = dentists.filter((d) => visibleDentistIds.includes(d.id));
 
   const dentistViewInitialized = useRef(false);
   useEffect(() => {
@@ -129,6 +132,54 @@ export default function App() {
   }, [permissions.myDentistId, adminSession, dentists]);
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
+
+  useEffect(() => {
+    const first = filteredDentists[0]?.id || dentists[0]?.id || '';
+    if (!first) return;
+    setLocationDoctorId((prev) => (prev && dentists.some((d) => d.id === prev) ? prev : first));
+  }, [filteredDentists, dentists]);
+
+  useEffect(() => {
+    if (!locationDoctorId) return;
+    const key = `${locationDoctorId}_${dateKey(currentDate)}`;
+    setDayLocationDraft(doctorDayLocations[key] || 'Дружба');
+  }, [locationDoctorId, currentDate, doctorDayLocations]);
+
+  const saveDayLocation = useCallback(async () => {
+    if (!supabase || !locationDoctorId) return;
+    const dKey = dateKey(currentDate);
+    const slotKey = `${locationDoctorId}_${dKey}`;
+    const existingSlots = doctorAvailableSlots[slotKey] ? Array.from(doctorAvailableSlots[slotKey]) : [];
+    let { error } = await supabase
+      .from('doctor_available_slots')
+      .upsert(
+        {
+          dentist_id: locationDoctorId,
+          date: dKey,
+          slots: existingSlots,
+          location: dayLocationDraft,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'dentist_id,date' }
+      );
+    if (error && String(error.message || '').includes('location')) {
+      ({ error } = await supabase
+        .from('doctor_available_slots')
+        .upsert(
+          {
+            dentist_id: locationDoctorId,
+            date: dKey,
+            slots: existingSlots,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'dentist_id,date' }
+        ));
+    }
+    if (!error) {
+      setDoctorDayLocations((prev) => ({ ...prev, [slotKey]: dayLocationDraft }));
+      refreshDoctorSlots();
+    }
+  }, [supabase, locationDoctorId, dayLocationDraft, currentDate, doctorAvailableSlots, refreshDoctorSlots]);
 
   const logWithActor = useCallback(
     (payload) => {
@@ -279,7 +330,6 @@ export default function App() {
     return best;
   })();
 
-  const filteredDentists = dentists.filter((d) => visibleDentistIds.includes(d.id));
   const todayKeyStr = dateKey(currentDate);
   const appointmentsToday = appointments.filter((a) => a.date === todayKeyStr).length;
   const adminStats = {
@@ -1255,6 +1305,12 @@ export default function App() {
             showDentistBar={dentists.length > 1}
             viewMode={calendarView}
             onViewModeChange={setCalendarView}
+            doctorsForLocation={filteredDentists.length ? filteredDentists : dentists}
+            locationDoctorId={locationDoctorId}
+            onLocationDoctorChange={setLocationDoctorId}
+            dayLocation={dayLocationDraft}
+            onDayLocationChange={setDayLocationDraft}
+            onSaveDayLocation={saveDayLocation}
           />
           {permissions.canBookAnyDentist && (
             <QuickBookBar
@@ -1453,6 +1509,7 @@ export default function App() {
         onReorderAppointmentType={reorderAppointmentType}
         dentists={dentists}
         patients={patients}
+        appointments={appointments}
         getAdminPin={getAdminPin}
       />
     </div>

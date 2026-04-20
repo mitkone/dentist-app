@@ -12,7 +12,6 @@ export default function Sidebar({ dentists,
   onOpenPatientDetail,
   onOpenVacation,
   showDentistsFilter = true,
-  onOpenDentistSchedule,
   activeDentistIds = [],
   onClearDentistSchedule,
 }) {
@@ -222,12 +221,12 @@ export default function Sidebar({ dentists,
           </p>
         )}
 
-        {dentists.length > 0 && onOpenDentistSchedule && (
+        {dentists.length > 0 && (
           <div className="mt-4 pt-3 border-t border-slate-200 hidden md:block">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-medium text-slate-700">Бърз достъп до график</span>
+                <span className="text-sm font-medium text-slate-700">Ляв панел: по-чист вариант</span>
               </div>
               {onClearDentistSchedule && (
                 <button
@@ -235,30 +234,27 @@ export default function Sidebar({ dentists,
                   onClick={onClearDentistSchedule}
                   className="text-xs text-slate-500 hover:text-emerald-700 px-1.5 py-1 rounded hover:bg-slate-100"
                 >
-                  Покажи всички
+                  Изчисти филтъра
                 </button>
               )}
             </div>
             <div className="grid grid-cols-1 gap-1.5 pr-1">
-              {dentists.map((d) => {
-                const isActive = activeDentistIds.includes(d.id);
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => onOpenDentistSchedule(d.id)}
-                    className={`w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
-                      isActive
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                    title={`${isActive ? 'Скрий' : 'Покажи'} графика на ${d.name}`}
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                    <span className="truncate text-sm">{d.name}</span>
-                  </button>
-                );
-              })}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
+                Изборът на лекари вече е само от горното меню <span className="font-medium text-slate-800">„Лекари“</span>, за да няма дублиране.
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
+                <p className="text-xs font-medium text-slate-700 mb-1">Идея за това място:</p>
+                <ul className="text-xs text-slate-600 space-y-1">
+                  <li>• Днес: брой пациенти и свободни слотове</li>
+                  <li>• Бърз бутон: „Нов пациент“</li>
+                  <li>• Напомняния за отпуски/блокирани дни</li>
+                </ul>
+              </div>
+              {activeDentistIds.length > 0 && (
+                <div className="rounded-lg border border-emerald-300/70 bg-emerald-50 p-2 text-xs text-emerald-800">
+                  Активни филтри: {activeDentistIds.length}
+                </div>
+              )}
             </div>
           </div>
         )}
