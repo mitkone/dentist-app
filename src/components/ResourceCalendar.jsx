@@ -668,6 +668,7 @@ export default function ResourceCalendar({
             </div>
           </div>
         </div>
+        {hoverTooltip}
       </>
     );
   }
