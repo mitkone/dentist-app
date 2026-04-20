@@ -42,12 +42,6 @@ export default function CalendarHeader({
   showDentistBar = true,
   viewMode = 'day',
   onViewModeChange,
-  doctorsForLocation = [],
-  locationDoctorId = '',
-  onLocationDoctorChange,
-  dayLocation = '',
-  onDayLocationChange,
-  onSaveDayLocation,
 }) {
   const [showDentists, setShowDentists] = useState(false);
   const weekLabel = viewMode === 'week' ? formatWeekRangeLabel(currentDate) : formatHeaderDate(currentDate);
@@ -154,35 +148,6 @@ export default function CalendarHeader({
             selectedDentistIds={selectedDentistIds}
             onDentistToggle={onDentistToggle}
           />
-        </div>
-      )}
-      {onSaveDayLocation && doctorsForLocation.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white">
-          <span className="text-xs font-medium text-slate-600">Локация за деня:</span>
-          <select
-            value={locationDoctorId}
-            onChange={(e) => onLocationDoctorChange?.(e.target.value)}
-            className="px-2 py-1.5 text-xs bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
-          >
-            {doctorsForLocation.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-          <select
-            value={dayLocation}
-            onChange={(e) => onDayLocationChange?.(e.target.value)}
-            className="px-2 py-1.5 text-xs bg-slate-100 border border-slate-300 rounded-lg text-slate-900"
-          >
-            <option value="Дружба">Дружба</option>
-            <option value="Нови Искър">Нови Искър</option>
-          </select>
-          <button
-            type="button"
-            onClick={onSaveDayLocation}
-            className="px-2.5 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
-          >
-            Запази
-          </button>
         </div>
       )}
     </header>
