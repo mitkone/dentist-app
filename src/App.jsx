@@ -812,10 +812,14 @@ export default function App() {
     if (!dentistId) return;
     const myId = permissions.myDentistId;
     setSelectedDentistIds((prev) => {
-      if (myId && dentistId === myId) return prev;
-      return prev.includes(dentistId) ? prev.filter((x) => x !== dentistId) : [...prev, dentistId];
+      // Когато няма явна селекция, приемаме "всички", за да може toggle да работи интуитивно.
+      const base = prev.length > 0 ? prev : dentists.map((d) => d.id);
+      if (myId && dentistId === myId) return base;
+      const next = base.includes(dentistId) ? base.filter((x) => x !== dentistId) : [...base, dentistId];
+      // Не оставяме празен избор в quick access; връщаме към "всички".
+      return next.length > 0 ? next : dentists.map((d) => d.id);
     });
-  }, [permissions.myDentistId]);
+  }, [permissions.myDentistId, dentists]);
 
   const clearDentistScheduleFocus = useCallback(() => {
     const myId = permissions.myDentistId;

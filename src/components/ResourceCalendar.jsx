@@ -583,6 +583,7 @@ export default function ResourceCalendar({
                       return (
                         <div
                           key={a.id}
+                          title={`Лекар: ${(dentists.find((x) => x.id === a.dentistId)?.name || '—')} | Преглед: ${getTypeDisplay(a.type) || '—'} | Час: ${a.start}${a.end ? ` - ${a.end}` : ''} | Кабинет: ${a.location || '—'}`}
                           onMouseEnter={(e) => {
                             if (isMobile) return;
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
