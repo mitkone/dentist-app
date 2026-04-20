@@ -238,11 +238,11 @@ export default function ResourceCalendar({
     );
   };
 
-  const getAppointmentsForWeekDay = (dayKey) =>
+  const getAppointmentsForWeekDay = (dayKey, dentistId) =>
     appointments.filter(
       (a) =>
         a.date === dayKey &&
-        dentists.some((dent) => dent.id === a.dentistId) &&
+        a.dentistId === dentistId &&
         patientMatchesSearch(a)
     );
 
@@ -460,26 +460,13 @@ export default function ResourceCalendar({
   ) : null;
 
   if (viewMode === 'week') {
-    const primaryDentistId = focusedDentistId || dentists[0]?.id;
+    const primaryDentistId =
+      selectedDentistIds.find((id) => dentists.some((d) => d.id === id)) ||
+      focusedDentistId ||
+      dentists[0]?.id;
     return (
       <>
         <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          {dentists.length > 1 && (
-            <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
-              <label className="text-xs text-slate-500 block mb-1">Лекар за седмичен преглед:</label>
-              <select
-                value={primaryDentistId ?? ''}
-                onChange={(e) => setFocusedDentistId(e.target.value)}
-                className="w-full max-w-xs py-2 pl-3 pr-8 bg-white border border-slate-300 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none appearance-none"
-              >
-                {dentists.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shrink-0 overflow-hidden">
             <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3">
               <Clock className="w-4 h-4 text-slate-500" />
@@ -538,7 +525,7 @@ export default function ResourceCalendar({
 
               {weekDateKeys.map((dayKey) => {
                 const vacation = primaryDentistId ? isOnVacation(primaryDentistId, dayKey) : false;
-                const dayApps = getAppointmentsForWeekDay(dayKey).map((x) => ({ ...x }));
+                const dayApps = primaryDentistId ? getAppointmentsForWeekDay(dayKey, primaryDentistId).map((x) => ({ ...x })) : [];
                 const laidOut = assignAppointmentLanes(dayApps);
                 return (
                   <div
@@ -619,11 +606,22 @@ export default function ResourceCalendar({
                           }}
                           onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                           onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                          onMouseOver={(e) => {
+                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            setHoverInfo({
+                              x: e.clientX,
+                              y: e.clientY,
+                              dentist: dn,
+                              type: getTypeDisplay(a.type),
+                              time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
+                              location: a.location || '',
+                            });
+                          }}
                           onMouseLeave={() => setHoverInfo(null)}
                           onPointerLeave={() => setHoverInfo(null)}
                           onClick={(e) => handleAppointmentClick(e, a)}
                           onContextMenu={(e) => e.preventDefault()}
-                          className="absolute rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
+                          className="absolute z-[2] rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
                           style={{
                             top,
                             height: h - 2,
