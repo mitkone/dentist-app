@@ -40,7 +40,7 @@ function weekDateKeysFrom(anchor) {
   for (let i = 0; i < 7; i++) {
     const dt = new Date(mon);
     dt.setDate(mon.getDate() + i);
-    keys.push(dt.toLocaleDateString('en-CA'));
+    keys.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`);
   }
   return keys;
 }
@@ -77,11 +77,13 @@ export default function ResourceCalendar({
   selectedDentistIds = [],
   onDentistToggle,
   doctorAvailableSlots = {},
+  doctorDayLocations = {},
   onDentistNameClick,
   canManageVacation = true,
   appointmentTypes = [],
   canMoveAppointment = false,
   viewMode = 'day',
+  onOpenFreeSlotsForDate,
 }) {
   const getTypeDisplay = (type) =>
     appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -230,11 +232,11 @@ export default function ResourceCalendar({
     );
   };
 
-  const getAppointmentsForWeekDay = (dayKey) =>
+  const getAppointmentsForWeekDay = (dayKey, dentistId) =>
     appointments.filter(
       (a) =>
         a.date === dayKey &&
-        dentists.some((dent) => dent.id === a.dentistId) &&
+        a.dentistId === dentistId &&
         patientMatchesSearch(a)
     );
 
@@ -245,8 +247,9 @@ export default function ResourceCalendar({
     if (!patientSearch.trim()) return true;
     const name = (a.patientId && patients.find((p) => p.id === a.patientId)?.name) || a.patientName || '';
     const phone = a.patientId ? patients.find((p) => p.id === a.patientId)?.phone : '';
-    const q = patientSearch.toLowerCase();
-    return name.toLowerCase().includes(q) || (phone && phone.includes(q));
+    const qTokens = patientSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const haystack = `${name} ${phone || ''}`.toLowerCase();
+    return qTokens.every((token) => haystack.includes(token));
   };
 
   const getAppointmentsForColumn = (dentistId) => {
@@ -459,7 +462,21 @@ export default function ResourceCalendar({
                     key={dayKey}
                     className="flex-1 min-w-[72px] sm:min-w-[100px] border-r border-slate-200 last:border-r-0 py-2 px-1 text-center"
                   >
-                    <div className="text-[11px] sm:text-xs font-semibold text-slate-900 leading-tight">{label}</div>
+                    <button
+                      type="button"
+                      className="w-full text-[11px] sm:text-xs font-semibold text-slate-900 leading-tight hover:text-emerald-700"
+                      onClick={() => {
+                        if (primaryDentistId && onOpenFreeSlotsForDate) onOpenFreeSlotsForDate(primaryDentistId, dayKey);
+                      }}
+                      title="Свободни часове за този ден"
+                    >
+                      {label}
+                    </button>
+                    {primaryDentistId && (
+                      <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                        {doctorDayLocations[`${primaryDentistId}_${dayKey}`] || '—'}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -469,7 +486,7 @@ export default function ResourceCalendar({
           <div
             ref={gridScrollRef}
             className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable' }}
           >
             <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
               <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[1]">
@@ -486,7 +503,7 @@ export default function ResourceCalendar({
 
               {weekDateKeys.map((dayKey) => {
                 const vacation = primaryDentistId ? isOnVacation(primaryDentistId, dayKey) : false;
-                const dayApps = getAppointmentsForWeekDay(dayKey).map((x) => ({ ...x }));
+                const dayApps = primaryDentistId ? getAppointmentsForWeekDay(dayKey, primaryDentistId).map((x) => ({ ...x })) : [];
                 const laidOut = assignAppointmentLanes(dayApps);
                 return (
                   <div
@@ -712,7 +729,7 @@ export default function ResourceCalendar({
         <div
           ref={gridScrollRef}
           className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable' }}
           onTouchStart={(e) => {
             if (e.touches.length === 2) {
               const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);

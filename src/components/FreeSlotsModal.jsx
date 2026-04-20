@@ -13,8 +13,10 @@ function parseDateStr(s) {
 }
 
 export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date: initialDate, workingHours, onSave, supabase }) {
+  const LOCATION_OPTIONS = ['', 'Дружба', 'Нови Искър'];
   const [dentist, setDentist] = useState(initialDentist ?? dentists[0]);
   const [date, setDate] = useState(initialDate ?? new Date());
+  const [location, setLocation] = useState('');
   const [slots, setSlots] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
@@ -37,19 +39,21 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
     setSlots(s);
     if (!supabase) {
       setSelected(new Set(s));
+      setLocation('');
       setLoading(false);
       return;
     }
     setLoading(true);
     supabase
       .from('doctor_available_slots')
-      .select('slots')
+      .select('slots, location')
       .eq('dentist_id', dentist.id)
       .eq('date', dateStr)
       .maybeSingle()
       .then(({ data, error }) => {
         setLoading(false);
         if (error) return;
+        setLocation(data?.location || '');
         if (data?.slots?.length) {
           setSelected(new Set(data.slots));
         } else {
@@ -76,9 +80,18 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
     if (!supabase || !dentist) return;
     setSaving(true);
     const slotsArr = Array.from(selected).sort();
-    const { error } = await supabase
+    let { error } = await supabase
       .from('doctor_available_slots')
-      .upsert({ dentist_id: dentist.id, date: dateStr, slots: slotsArr, updated_at: new Date().toISOString() }, { onConflict: 'dentist_id,date' });
+      .upsert(
+        { dentist_id: dentist.id, date: dateStr, slots: slotsArr, location: location || null, updated_at: new Date().toISOString() },
+        { onConflict: 'dentist_id,date' }
+      );
+    if (error && String(error.message || '').includes('location')) {
+      // Backward compatibility if DB column isn't migrated yet.
+      ({ error } = await supabase
+        .from('doctor_available_slots')
+        .upsert({ dentist_id: dentist.id, date: dateStr, slots: slotsArr, updated_at: new Date().toISOString() }, { onConflict: 'dentist_id,date' }));
+    }
     setSaving(false);
     if (!error) {
       onSave?.();
@@ -118,6 +131,20 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
                 onChange={(e) => setDate(parseDateStr(e.target.value) ?? date)}
                 className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm [color-scheme:light]"
               />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-slate-500">Кабинет:</label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm"
+              >
+                {LOCATION_OPTIONS.map((opt) => (
+                  <option key={opt || 'none'} value={opt}>
+                    {opt || 'Без локация'}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900">

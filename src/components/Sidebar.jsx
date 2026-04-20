@@ -14,15 +14,20 @@ export default function Sidebar({ dentists,
   showDentistsFilter = true,
 }) {
   const q = (patientSearch || '').trim().toLowerCase();
+  const qTokens = q.split(/\s+/).filter(Boolean);
   const filteredPatients = q
     ? patients.filter(
-        (p) =>
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.phone || '').includes(q) ||
-          (p.notes || '').toLowerCase().includes(q) ||
-          (p.address || '').toLowerCase().includes(q) ||
-          (p.egn || '').includes(q) ||
-          (p.email || '').toLowerCase().includes(q)
+        (p) => {
+          const haystack = [
+            p.name || '',
+            p.phone || '',
+            p.notes || '',
+            p.address || '',
+            p.egn || '',
+            p.email || '',
+          ].join(' ').toLowerCase();
+          return qTokens.every((token) => haystack.includes(token));
+        }
       )
     : [];
   const allSelected = dentists.length > 0 && dentists.every((d) => selectedDentistIds.includes(d.id));

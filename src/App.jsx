@@ -46,6 +46,17 @@ function getDurationMinutes(start, end) {
   return (eh - sh) * 60 + (em - sm);
 }
 
+function getWeekBounds(d) {
+  const start = new Date(d);
+  const day = start.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + diff);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start: dateKey(start), end: dateKey(end) };
+}
+
 export default function App() {
   const [dentists, setDentists] = useState(initialDentists);
   const [selectedDentistIds, setSelectedDentistIds] = useState(() => initialDentists.map((d) => d.id));
@@ -74,9 +85,11 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
   const [doctorAvailableSlots, setDoctorAvailableSlots] = useState({});
+  const [doctorDayLocations, setDoctorDayLocations] = useState({});
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
+  const [freeSlotsInitialDate, setFreeSlotsInitialDate] = useState(null);
   const [scheduleNotifications, setScheduleNotifications] = useState([]);
   const [scheduleNotificationsOpen, setScheduleNotificationsOpen] = useState(false);
   const [scheduleNotificationsSeen, setScheduleNotificationsSeen] = useState(true);
@@ -308,8 +321,14 @@ export default function App() {
           setAppointments(list);
         }
       } catch (err) {
-        setAppointmentsError(err?.message || 'Грешка при зареждане');
-        setAppointments([]);
+        const msg = err?.message || '';
+        // На мобилни браузъри понякога заявката се abort-ва при фон/фокус смяна.
+        if (err?.name === 'AbortError' || msg.toLowerCase().includes('aborted')) {
+          setAppointmentsError(null);
+        } else {
+          setAppointmentsError(msg || 'Грешка при зареждане');
+          setAppointments([]);
+        }
       }
       setAppointmentsLoading(false);
     }
@@ -455,18 +474,39 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return;
     const dateStr = dateKey(currentDate);
+    const week = getWeekBounds(currentDate);
+    const rangeStart = calendarView === 'week' ? week.start : dateStr;
+    const rangeEnd = calendarView === 'week' ? week.end : dateStr;
     (async () => {
-      const { data } = await supabase
+      let data = null;
+      let error = null;
+      ({ data, error } = await supabase
         .from('doctor_available_slots')
-        .select('dentist_id, slots')
-        .eq('date', dateStr);
+        .select('dentist_id, date, slots, location')
+        .gte('date', rangeStart)
+        .lte('date', rangeEnd));
+      if (error) {
+        // Backward compatibility if location column/migration is not applied.
+        ({ data } = await supabase
+          .from('doctor_available_slots')
+          .select('dentist_id, date, slots')
+          .gte('date', rangeStart)
+          .lte('date', rangeEnd));
+      }
       if (data) {
-        const map = {};
-        data.forEach((r) => { map[`${r.dentist_id}_${dateStr}`] = new Set(r.slots || []); });
-        setDoctorAvailableSlots(map);
+        const slotsMap = {};
+        const locationMap = {};
+        data.forEach((r) => {
+          const d = typeof r.date === 'string' ? r.date : dateKey(new Date(r.date));
+          const k = `${r.dentist_id}_${d}`;
+          slotsMap[k] = new Set(r.slots || []);
+          locationMap[k] = r.location || '';
+        });
+        setDoctorAvailableSlots(slotsMap);
+        setDoctorDayLocations(locationMap);
       }
     })().catch(() => {});
-  }, [currentDate, supabase, slotsRefreshKey]);
+  }, [currentDate, supabase, slotsRefreshKey, calendarView]);
 
   const addDentist = useCallback(({ name, specialty, color }) => {
     const id = `d-${Date.now()}`;
@@ -1216,10 +1256,19 @@ export default function App() {
   selectedDentistIds={effectiveSelectedDentistIds}
   onDentistToggle={onDentistToggle}
   doctorAvailableSlots={doctorAvailableSlots}
+  doctorDayLocations={doctorDayLocations}
   onDentistNameClick={(d) => setDentistProfileModal(d)}
   canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
   appointmentTypes={appointmentTypes}
   viewMode={calendarView}
+  onOpenFreeSlotsForDate={(dentistId, dayKey) => {
+    const d = dentists.find((x) => x.id === dentistId) || null;
+    if (!d || !dayKey) return;
+    const [y, m, day] = dayKey.split('-').map(Number);
+    setFreeSlotsInitialDentist(d);
+    setFreeSlotsInitialDate(new Date(y, m - 1, day));
+    setFreeSlotsOpen(true);
+  }}
 />
             )}
           </div>
@@ -1313,10 +1362,10 @@ export default function App() {
 
       <FreeSlotsModal
         open={freeSlotsOpen}
-        onClose={() => { setFreeSlotsOpen(false); setFreeSlotsInitialDentist(null); }}
+        onClose={() => { setFreeSlotsOpen(false); setFreeSlotsInitialDentist(null); setFreeSlotsInitialDate(null); }}
         dentist={freeSlotsInitialDentist}
         dentists={filteredDentists}
-        date={currentDate}
+        date={freeSlotsInitialDate || currentDate}
         workingHours={workingHours}
         onSave={refreshDoctorSlots}
         supabase={supabase}
@@ -1327,7 +1376,12 @@ export default function App() {
         onClose={() => setDentistProfileModal(null)}
         dentist={typeof dentistProfileModal === 'object' ? dentistProfileModal : dentists.find((d) => d.id === dentistProfileModal)}
         onOpenVacation={(id) => { setDentistProfileModal(null); openVacationForDentist(id); }}
-        onOpenFreeSlots={(d) => { setDentistProfileModal(null); setFreeSlotsInitialDentist(d); setFreeSlotsOpen(true); }}
+        onOpenFreeSlots={(d) => {
+          setDentistProfileModal(null);
+          setFreeSlotsInitialDentist(d);
+          setFreeSlotsInitialDate(currentDate);
+          setFreeSlotsOpen(true);
+        }}
         canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
         canManageFreeSlots
       />
