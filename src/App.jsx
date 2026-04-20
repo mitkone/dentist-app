@@ -810,8 +810,12 @@ export default function App() {
 
   const toggleDentistSchedule = useCallback((dentistId) => {
     if (!dentistId) return;
-    onDentistToggle(dentistId);
-  }, [onDentistToggle]);
+    const myId = permissions.myDentistId;
+    setSelectedDentistIds((prev) => {
+      if (myId && dentistId === myId) return prev;
+      return prev.includes(dentistId) ? prev.filter((x) => x !== dentistId) : [...prev, dentistId];
+    });
+  }, [permissions.myDentistId]);
 
   const clearDentistScheduleFocus = useCallback(() => {
     const myId = permissions.myDentistId;

@@ -607,6 +607,17 @@ export default function ResourceCalendar({
                           }}
                           onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                           onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                          onPointerOver={(e) => {
+                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            setHoverInfo({
+                              x: e.clientX,
+                              y: e.clientY,
+                              dentist: dn,
+                              type: getTypeDisplay(a.type),
+                              time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
+                              location: a.location || '',
+                            });
+                          }}
                           onMouseLeave={() => setHoverInfo(null)}
                           onPointerLeave={() => setHoverInfo(null)}
                           onClick={(e) => handleAppointmentClick(e, a)}
@@ -896,6 +907,16 @@ export default function ResourceCalendar({
                         }}
                         onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                         onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                        onPointerOver={(e) => {
+                          setHoverInfo({
+                            x: e.clientX,
+                            y: e.clientY,
+                            dentist: d.name || '—',
+                            type: getTypeDisplay(a.type),
+                            time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
+                            location: a.location || '',
+                          });
+                        }}
                         onMouseLeave={() => setHoverInfo(null)}
                         onPointerLeave={() => setHoverInfo(null)}
                         onPointerDown={canMoveAppointment ? (e) => handlePointerDown(e, a, d.color) : undefined}
