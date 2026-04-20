@@ -451,12 +451,10 @@ export default function ResourceCalendar({
       className="fixed z-[9998] pointer-events-none px-2.5 py-2 rounded-lg border border-slate-200 bg-white shadow-xl text-xs text-slate-700 max-w-[260px]"
       style={{ left: hoverInfo.x + 10, top: hoverInfo.y + 12 }}
     >
-      <div className="font-semibold text-slate-900">{hoverInfo.patient || 'Пациент'}</div>
-      <div className="text-slate-600 mt-0.5">{hoverInfo.type || 'Преглед'}</div>
-      <div className="mt-1 text-slate-500">Лекар: <span className="text-slate-700">{hoverInfo.dentist || '—'}</span></div>
+      <div className="text-slate-500">Лекар: <span className="text-slate-700">{hoverInfo.dentist || '—'}</span></div>
+      <div className="text-slate-500">Преглед: <span className="text-slate-700">{hoverInfo.type || '—'}</span></div>
       <div className="text-slate-500">Час: <span className="text-slate-700">{hoverInfo.time || '—'}</span></div>
-      {hoverInfo.location && <div className="text-slate-500">Кабинет: <span className="text-slate-700">{hoverInfo.location}</span></div>}
-      {hoverInfo.notes && <div className="text-slate-500 mt-1 truncate">Бележка: <span className="text-slate-700">{hoverInfo.notes}</span></div>}
+      <div className="text-slate-500">Кабинет: <span className="text-slate-700">{hoverInfo.location || '—'}</span></div>
     </div>,
     document.body
   ) : null;
@@ -596,21 +594,33 @@ export default function ResourceCalendar({
                       return (
                         <div
                           key={a.id}
+                          title={`Лекар: ${(dentists.find((x) => x.id === a.dentistId)?.name || '—')} | Преглед: ${getTypeDisplay(a.type) || '—'} | Час: ${a.start}${a.end ? ` - ${a.end}` : ''} | Кабинет: ${a.location || '—'}`}
                           onMouseEnter={(e) => {
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
                               y: e.clientY,
                               dentist: dn,
-                              patient: getPatientDisplayName(a),
                               type: getTypeDisplay(a.type),
                               time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
                               location: a.location || '',
-                              notes: a.notes || '',
+                            });
+                          }}
+                          onPointerEnter={(e) => {
+                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            setHoverInfo({
+                              x: e.clientX,
+                              y: e.clientY,
+                              dentist: dn,
+                              type: getTypeDisplay(a.type),
+                              time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
+                              location: a.location || '',
                             });
                           }}
                           onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                          onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                           onMouseLeave={() => setHoverInfo(null)}
+                          onPointerLeave={() => setHoverInfo(null)}
                           onClick={(e) => handleAppointmentClick(e, a)}
                           onContextMenu={(e) => e.preventDefault()}
                           className="absolute rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
@@ -876,20 +886,31 @@ export default function ResourceCalendar({
                     return (
                       <div
                         key={a.id}
+                        title={`Лекар: ${d.name || '—'} | Преглед: ${getTypeDisplay(a.type) || '—'} | Час: ${a.start}${a.end ? ` - ${a.end}` : ''} | Кабинет: ${a.location || '—'}`}
                         onMouseEnter={(e) => {
                           setHoverInfo({
                             x: e.clientX,
                             y: e.clientY,
                             dentist: d.name || '—',
-                            patient: getPatientDisplayName(a),
                             type: getTypeDisplay(a.type),
                             time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
                             location: a.location || '',
-                            notes: a.notes || '',
+                          });
+                        }}
+                        onPointerEnter={(e) => {
+                          setHoverInfo({
+                            x: e.clientX,
+                            y: e.clientY,
+                            dentist: d.name || '—',
+                            type: getTypeDisplay(a.type),
+                            time: `${a.start}${a.end ? ` - ${a.end}` : ''}`,
+                            location: a.location || '',
                           });
                         }}
                         onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                        onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
                         onMouseLeave={() => setHoverInfo(null)}
+                        onPointerLeave={() => setHoverInfo(null)}
                         onPointerDown={canMoveAppointment ? (e) => handlePointerDown(e, a, d.color) : undefined}
                         onClick={!canMoveAppointment ? (e) => handleAppointmentClick(e, a) : undefined}
                         onContextMenu={(e) => e.preventDefault()}

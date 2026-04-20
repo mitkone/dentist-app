@@ -813,6 +813,15 @@ export default function App() {
     setSelectedDentistIds([dentistId]);
   }, []);
 
+  const clearDentistScheduleFocus = useCallback(() => {
+    const myId = permissions.myDentistId;
+    if (myId && !permissions.canBookAnyDentist) {
+      setSelectedDentistIds([myId]);
+      return;
+    }
+    setSelectedDentistIds(dentists.map((d) => d.id));
+  }, [dentists, permissions.myDentistId, permissions.canBookAnyDentist]);
+
   const onSlotClick = useCallback((dentistId, slot, bookingDate) => {
     setModal({ open: true, dentistId, slot, bookingDate: bookingDate ?? null });
   }, []);
@@ -1221,6 +1230,7 @@ export default function App() {
   showDentistsFilter={false}
   onOpenDentistSchedule={openDentistSchedule}
   activeDentistId={effectiveSelectedDentistIds[0] ?? null}
+  onClearDentistSchedule={clearDentistScheduleFocus}
 />
 
         <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-slate-50 min-h-0">

@@ -14,6 +14,7 @@ export default function Sidebar({ dentists,
   showDentistsFilter = true,
   onOpenDentistSchedule,
   activeDentistId,
+  onClearDentistSchedule,
 }) {
   const q = (patientSearch || '').trim().toLowerCase();
   const qTokens = q.split(/\s+/).filter(Boolean);
@@ -223,11 +224,22 @@ export default function Sidebar({ dentists,
 
         {dentists.length > 0 && onOpenDentistSchedule && (
           <div className="mt-4 pt-3 border-t border-slate-200">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarDays className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm font-medium text-slate-700">Бърз достъп до график</span>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-medium text-slate-700">Бърз достъп до график</span>
+              </div>
+              {onClearDentistSchedule && (
+                <button
+                  type="button"
+                  onClick={onClearDentistSchedule}
+                  className="text-xs text-slate-500 hover:text-emerald-700 px-1.5 py-1 rounded hover:bg-slate-100"
+                >
+                  Покажи всички
+                </button>
+              )}
             </div>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto scroll-thin pr-1">
+            <div className="grid grid-cols-1 gap-1.5 pr-1">
               {dentists.map((d) => {
                 const isActive = activeDentistId === d.id;
                 return (
