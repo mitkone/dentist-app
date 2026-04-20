@@ -15,7 +15,7 @@ function useIsMobile() {
     update();
     mql.addEventListener('change', update);
     return () => mql.removeEventListener('change', update);
-  }, [viewMode]);
+  }, []);
   return isMobile;
 }
 
