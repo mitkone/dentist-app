@@ -446,7 +446,7 @@ export default function ResourceCalendar({
         )
       : null;
 
-  const hoverTooltip = hoverInfo ? createPortal(
+  const hoverTooltip = !isMobile && hoverInfo ? createPortal(
     <div
       className="fixed z-[9998] pointer-events-none px-2.5 py-2 rounded-lg border border-slate-200 bg-white shadow-xl text-xs text-slate-700 max-w-[260px]"
       style={{ left: hoverInfo.x + 10, top: hoverInfo.y + 12 }}
@@ -584,6 +584,7 @@ export default function ResourceCalendar({
                         <div
                           key={a.id}
                           onMouseEnter={(e) => {
+                            if (isMobile) return;
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
@@ -595,6 +596,7 @@ export default function ResourceCalendar({
                             });
                           }}
                           onPointerEnter={(e) => {
+                            if (isMobile) return;
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
@@ -605,9 +607,16 @@ export default function ResourceCalendar({
                               location: a.location || '',
                             });
                           }}
-                          onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
-                          onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                          onMouseMove={(e) => {
+                            if (isMobile) return;
+                            setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h));
+                          }}
+                          onPointerMove={(e) => {
+                            if (isMobile) return;
+                            setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h));
+                          }}
                           onPointerOver={(e) => {
+                            if (isMobile) return;
                             const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
@@ -618,8 +627,8 @@ export default function ResourceCalendar({
                               location: a.location || '',
                             });
                           }}
-                          onMouseLeave={() => setHoverInfo(null)}
-                          onPointerLeave={() => setHoverInfo(null)}
+                          onMouseLeave={() => { if (!isMobile) setHoverInfo(null); }}
+                          onPointerLeave={() => { if (!isMobile) setHoverInfo(null); }}
                           onClick={(e) => handleAppointmentClick(e, a)}
                           onContextMenu={(e) => e.preventDefault()}
                           className="absolute z-[2] rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
@@ -887,6 +896,7 @@ export default function ResourceCalendar({
                       <div
                         key={a.id}
                         onMouseEnter={(e) => {
+                          if (isMobile) return;
                           setHoverInfo({
                             x: e.clientX,
                             y: e.clientY,
@@ -897,6 +907,7 @@ export default function ResourceCalendar({
                           });
                         }}
                         onPointerEnter={(e) => {
+                          if (isMobile) return;
                           setHoverInfo({
                             x: e.clientX,
                             y: e.clientY,
@@ -906,9 +917,16 @@ export default function ResourceCalendar({
                             location: a.location || '',
                           });
                         }}
-                        onMouseMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
-                        onPointerMove={(e) => setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                        onMouseMove={(e) => {
+                          if (isMobile) return;
+                          setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h));
+                        }}
+                        onPointerMove={(e) => {
+                          if (isMobile) return;
+                          setHoverInfo((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h));
+                        }}
                         onPointerOver={(e) => {
+                          if (isMobile) return;
                           setHoverInfo({
                             x: e.clientX,
                             y: e.clientY,
@@ -918,8 +936,8 @@ export default function ResourceCalendar({
                             location: a.location || '',
                           });
                         }}
-                        onMouseLeave={() => setHoverInfo(null)}
-                        onPointerLeave={() => setHoverInfo(null)}
+                        onMouseLeave={() => { if (!isMobile) setHoverInfo(null); }}
+                        onPointerLeave={() => { if (!isMobile) setHoverInfo(null); }}
                         onPointerDown={canMoveAppointment ? (e) => handlePointerDown(e, a, d.color) : undefined}
                         onClick={!canMoveAppointment ? (e) => handleAppointmentClick(e, a) : undefined}
                         onContextMenu={(e) => e.preventDefault()}
