@@ -13,7 +13,7 @@ export default function Sidebar({ dentists,
   onOpenVacation,
   showDentistsFilter = true,
   onOpenDentistSchedule,
-  activeDentistId,
+  activeDentistIds = [],
   onClearDentistSchedule,
 }) {
   const q = (patientSearch || '').trim().toLowerCase();
@@ -241,7 +241,7 @@ export default function Sidebar({ dentists,
             </div>
             <div className="grid grid-cols-1 gap-1.5 pr-1">
               {dentists.map((d) => {
-                const isActive = activeDentistId === d.id;
+                const isActive = activeDentistIds.includes(d.id);
                 return (
                   <button
                     key={d.id}
@@ -252,7 +252,7 @@ export default function Sidebar({ dentists,
                         ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
-                    title={`Отвори графика на ${d.name}`}
+                    title={`${isActive ? 'Скрий' : 'Покажи'} графика на ${d.name}`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
                     <span className="truncate text-sm">{d.name}</span>

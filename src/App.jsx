@@ -117,6 +117,7 @@ export default function App() {
       ? selectedDentistIds
       : [permissions.myDentistId, ...selectedDentistIds.filter((id) => id !== permissions.myDentistId)]
     : selectedDentistIds;
+  const visibleDentistIds = effectiveSelectedDentistIds.length > 0 ? effectiveSelectedDentistIds : dentists.map((d) => d.id);
 
   const dentistViewInitialized = useRef(false);
   useEffect(() => {
@@ -278,7 +279,7 @@ export default function App() {
     return best;
   })();
 
-  const filteredDentists = dentists.filter((d) => effectiveSelectedDentistIds.includes(d.id));
+  const filteredDentists = dentists.filter((d) => visibleDentistIds.includes(d.id));
   const todayKeyStr = dateKey(currentDate);
   const appointmentsToday = appointments.filter((a) => a.date === todayKeyStr).length;
   const adminStats = {
@@ -807,11 +808,10 @@ export default function App() {
     });
   }, [permissions.myDentistId]);
 
-  const openDentistSchedule = useCallback((dentistId) => {
+  const toggleDentistSchedule = useCallback((dentistId) => {
     if (!dentistId) return;
-    setCalendarView('day');
-    setSelectedDentistIds([dentistId]);
-  }, []);
+    onDentistToggle(dentistId);
+  }, [onDentistToggle]);
 
   const clearDentistScheduleFocus = useCallback(() => {
     const myId = permissions.myDentistId;
@@ -1228,8 +1228,8 @@ export default function App() {
   onOpenPatientDetail={setPatientDetailId}
   onOpenVacation={openVacationForDentist}
   showDentistsFilter={false}
-  onOpenDentistSchedule={openDentistSchedule}
-  activeDentistId={effectiveSelectedDentistIds[0] ?? null}
+  onOpenDentistSchedule={toggleDentistSchedule}
+  activeDentistIds={visibleDentistIds}
   onClearDentistSchedule={clearDentistScheduleFocus}
 />
 
