@@ -21,6 +21,7 @@ import AuthModal from './components/AuthModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
 import FreeSlotsModal from './components/FreeSlotsModal';
 import DentistProfileModal from './components/DentistProfileModal';
+import DoctorDayLocationModal from './components/DoctorDayLocationModal';
 import LandingAuth, { getAdminSession, setAdminSession, getAdminPin } from './components/LandingAuth';
 import QuickBookBar from './components/QuickBookBar';
 import { getPermissions } from './lib/permissions';
@@ -88,6 +89,7 @@ export default function App() {
   const [doctorDayLocations, setDoctorDayLocations] = useState({});
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [dentistProfileModal, setDentistProfileModal] = useState(null);
+  const [dayLocationModal, setDayLocationModal] = useState({ open: false, dentist: null });
   const [freeSlotsInitialDentist, setFreeSlotsInitialDentist] = useState(null);
   const [freeSlotsInitialDate, setFreeSlotsInitialDate] = useState(null);
   const [scheduleNotifications, setScheduleNotifications] = useState([]);
@@ -130,6 +132,27 @@ export default function App() {
   }, [permissions.myDentistId, adminSession, dentists]);
 
   const refreshDoctorSlots = useCallback(() => setSlotsRefreshKey((k) => k + 1), []);
+
+  const saveDoctorDayLocation = useCallback(async (dentistId, dayKeyStr, location) => {
+    if (!supabase || !dentistId || !dayKeyStr || !location) return false;
+    const key = `${dentistId}_${dayKeyStr}`;
+    const existingSlots = doctorAvailableSlots[key] ? Array.from(doctorAvailableSlots[key]) : getSlots(workingHours);
+    const { error } = await supabase
+      .from('doctor_available_slots')
+      .upsert(
+        {
+          dentist_id: dentistId,
+          date: dayKeyStr,
+          slots: existingSlots,
+          location,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'dentist_id,date' }
+      );
+    if (error) return false;
+    setDoctorDayLocations((prev) => ({ ...prev, [key]: location }));
+    return true;
+  }, [supabase, doctorAvailableSlots, workingHours]);
 
 
   const logWithActor = useCallback(
@@ -1426,8 +1449,21 @@ export default function App() {
           setFreeSlotsInitialDate(currentDate);
           setFreeSlotsOpen(true);
         }}
+        onOpenDayLocation={(d) => {
+          setDentistProfileModal(null);
+          setDayLocationModal({ open: true, dentist: d });
+        }}
         canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
         canManageFreeSlots
+        canManageDayLocation
+      />
+      <DoctorDayLocationModal
+        open={dayLocationModal.open}
+        onClose={() => setDayLocationModal({ open: false, dentist: null })}
+        dentist={dayLocationModal.dentist}
+        initialDate={currentDate}
+        initialLocation={dayLocationModal.dentist ? (doctorDayLocations[`${dayLocationModal.dentist.id}_${dateKey(currentDate)}`] || 'Дружба') : 'Дружба'}
+        onSave={saveDoctorDayLocation}
       />
 
       <AdminPanel

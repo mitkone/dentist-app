@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown, CalendarDays } from 'lucide-react';
+import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown } from 'lucide-react';
 export default function Sidebar({ dentists,
   selectedDentistIds,
   onDentistToggle,
@@ -12,8 +12,6 @@ export default function Sidebar({ dentists,
   onOpenPatientDetail,
   onOpenVacation,
   showDentistsFilter = true,
-  activeDentistIds = [],
-  onClearDentistSchedule,
 }) {
   const q = (patientSearch || '').trim().toLowerCase();
   const qTokens = q.split(/\s+/).filter(Boolean);
@@ -221,43 +219,6 @@ export default function Sidebar({ dentists,
           </p>
         )}
 
-        {dentists.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-200 hidden md:block">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-medium text-slate-700">Ляв панел: по-чист вариант</span>
-              </div>
-              {onClearDentistSchedule && (
-                <button
-                  type="button"
-                  onClick={onClearDentistSchedule}
-                  className="text-xs text-slate-500 hover:text-emerald-700 px-1.5 py-1 rounded hover:bg-slate-100"
-                >
-                  Изчисти филтъра
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 gap-1.5 pr-1">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
-                Изборът на лекари вече е само от горното меню <span className="font-medium text-slate-800">„Лекари“</span>, за да няма дублиране.
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                <p className="text-xs font-medium text-slate-700 mb-1">Идея за това място:</p>
-                <ul className="text-xs text-slate-600 space-y-1">
-                  <li>• Днес: брой пациенти и свободни слотове</li>
-                  <li>• Бърз бутон: „Нов пациент“</li>
-                  <li>• Напомняния за отпуски/блокирани дни</li>
-                </ul>
-              </div>
-              {activeDentistIds.length > 0 && (
-                <div className="rounded-lg border border-emerald-300/70 bg-emerald-50 p-2 text-xs text-emerald-800">
-                  Активни филтри: {activeDentistIds.length}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );

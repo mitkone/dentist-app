@@ -496,7 +496,7 @@ export default function ResourceCalendar({
                     </button>
                     {singleSelectedDentistId && (
                       <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                        {doctorDayLocations[`${singleSelectedDentistId}_${dayKey}`] || '—'}
+                        {doctorDayLocations[`${singleSelectedDentistId}_${dayKey}`] || 'Дружба'}
                       </div>
                     )}
                   </div>

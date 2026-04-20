@@ -1,4 +1,4 @@
-import { X, CalendarOff, Calendar } from 'lucide-react';
+import { X, CalendarOff, Calendar, MapPin } from 'lucide-react';
 
 export default function DentistProfileModal({
   open,
@@ -6,8 +6,10 @@ export default function DentistProfileModal({
   dentist,
   onOpenVacation,
   onOpenFreeSlots,
+  onOpenDayLocation,
   canManageVacation,
   canManageFreeSlots,
+  canManageDayLocation,
 }) {
   if (!open || !dentist) return null;
 
@@ -56,6 +58,16 @@ export default function DentistProfileModal({
             >
               <Calendar className="w-5 h-5 text-emerald-400" />
               <span>Свободни часове</span>
+            </button>
+          )}
+          {(canManageDayLocation !== false) && onOpenDayLocation && (
+            <button
+              type="button"
+              onClick={() => { onClose(); onOpenDayLocation(dentist); }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
+            >
+              <MapPin className="w-5 h-5 text-cyan-500" />
+              <span>Кабинет по ден</span>
             </button>
           )}
         </div>
