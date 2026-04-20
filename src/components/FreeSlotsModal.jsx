@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar } from 'lucide-react';
-import { getSlots } from '../data/mockData';
+import { getSlots, APPOINTMENT_LOCATION_OPTIONS } from '../data/mockData';
 
 function toDateStr(d) {
   return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
@@ -13,12 +13,15 @@ function parseDateStr(s) {
 }
 
 export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date: initialDate, workingHours, onSave, supabase }) {
+  const LOCATION_OPTIONS = APPOINTMENT_LOCATION_OPTIONS;
   const [dentist, setDentist] = useState(initialDentist ?? dentists[0]);
   const [date, setDate] = useState(initialDate ?? new Date());
+  const [location, setLocation] = useState(LOCATION_OPTIONS[0]);
   const [slots, setSlots] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
 
   useEffect(() => {
     if (initialDate) setDate(initialDate);
@@ -37,19 +40,21 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
     setSlots(s);
     if (!supabase) {
       setSelected(new Set(s));
+      setLocation(LOCATION_OPTIONS[0]);
       setLoading(false);
       return;
     }
     setLoading(true);
     supabase
       .from('doctor_available_slots')
-      .select('slots')
+      .select('slots, location')
       .eq('dentist_id', dentist.id)
       .eq('date', dateStr)
       .maybeSingle()
       .then(({ data, error }) => {
         setLoading(false);
         if (error) return;
+        setLocation(data?.location || LOCATION_OPTIONS[0]);
         if (data?.slots?.length) {
           setSelected(new Set(data.slots));
         } else {
@@ -79,14 +84,38 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
     let { error } = await supabase
       .from('doctor_available_slots')
       .upsert(
-        { dentist_id: dentist.id, date: dateStr, slots: slotsArr, updated_at: new Date().toISOString() },
+        { dentist_id: dentist.id, date: dateStr, slots: slotsArr, location, updated_at: new Date().toISOString() },
         { onConflict: 'dentist_id,date' }
       );
+    if (error && String(error.message || '').includes('location')) {
+      ({ error } = await supabase
+        .from('doctor_available_slots')
+        .upsert({ dentist_id: dentist.id, date: dateStr, slots: slotsArr, updated_at: new Date().toISOString() }, { onConflict: 'dentist_id,date' }));
+    }
     setSaving(false);
     if (!error) {
       onSave?.();
       onClose();
     }
+  };
+
+  const handleSaveLocationOnly = async () => {
+    if (!supabase || !dentist) return;
+    setSavingLocation(true);
+    const slotsArr = Array.from(selected).sort();
+    let { error } = await supabase
+      .from('doctor_available_slots')
+      .upsert(
+        { dentist_id: dentist.id, date: dateStr, slots: slotsArr, location, updated_at: new Date().toISOString() },
+        { onConflict: 'dentist_id,date' }
+      );
+    if (error && String(error.message || '').includes('location')) {
+      ({ error } = await supabase
+        .from('doctor_available_slots')
+        .upsert({ dentist_id: dentist.id, date: dateStr, slots: slotsArr, updated_at: new Date().toISOString() }, { onConflict: 'dentist_id,date' }));
+    }
+    setSavingLocation(false);
+    if (!error) onSave?.();
   };
 
   const formatDate = (d) => d?.toLocaleDateString?.('bg-BG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) ?? '';
@@ -121,6 +150,28 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
                 onChange={(e) => setDate(parseDateStr(e.target.value) ?? date)}
                 className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm [color-scheme:light]"
               />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-xs text-slate-500">Кабинет:</label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 text-sm"
+              >
+                {LOCATION_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleSaveLocationOnly}
+                disabled={savingLocation || loading || !supabase}
+                className="px-2.5 py-1.5 text-xs font-medium text-white bg-cyan-600 rounded-lg hover:bg-cyan-500 disabled:opacity-50"
+              >
+                {savingLocation ? '...' : 'Запази'}
+              </button>
             </div>
           </div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-900">
