@@ -237,11 +237,11 @@ export default function ResourceCalendar({
     );
   };
 
-  const getAppointmentsForWeekDay = (dayKey, dentistId) =>
+  const getAppointmentsForWeekDay = (dayKey) =>
     appointments.filter(
       (a) =>
         a.date === dayKey &&
-        a.dentistId === dentistId &&
+        dentists.some((dent) => dent.id === a.dentistId) &&
         patientMatchesSearch(a)
     );
 
@@ -524,7 +524,7 @@ export default function ResourceCalendar({
 
               {weekDateKeys.map((dayKey) => {
                 const vacation = primaryDentistId ? isOnVacation(primaryDentistId, dayKey) : false;
-                const dayApps = primaryDentistId ? getAppointmentsForWeekDay(dayKey, primaryDentistId).map((x) => ({ ...x })) : [];
+                const dayApps = getAppointmentsForWeekDay(dayKey).map((x) => ({ ...x }));
                 const laidOut = assignAppointmentLanes(dayApps);
                 return (
                   <div
@@ -576,6 +576,7 @@ export default function ResourceCalendar({
                       const isNoShow = a.attendance === 'no_show';
                       const isNhif = a.insurance === 'nhif';
                       const hasNotes = Boolean(a.notes?.trim());
+                      const locationLabel = a.location || null;
                       return (
                         <div
                           key={a.id}
@@ -604,6 +605,11 @@ export default function ResourceCalendar({
                             {getTypeDisplay(a.type)}
                           </span>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                            {locationLabel && (
+                              <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-white/85 text-slate-900 tracking-wide">
+                                {locationLabel}
+                              </span>
+                            )}
                             {isNhif && (
                               <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-emerald-500 text-slate-900 tracking-wide">
                                 НЗОК
@@ -835,6 +841,7 @@ export default function ResourceCalendar({
                     const isNoShow = a.attendance === 'no_show';
                     const isNhif = a.insurance === 'nhif';
                     const hasNotes = Boolean(a.notes?.trim());
+                    const locationLabel = a.location || null;
                     return (
                       <div
                         key={a.id}
@@ -864,6 +871,11 @@ export default function ResourceCalendar({
                           {getTypeDisplay(a.type)}
                         </span>
                         <div className="flex items-center gap-1 mt-0.5">
+                          {locationLabel && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/85 text-slate-900 tracking-wide">
+                              {locationLabel}
+                            </span>
+                          )}
                           {isNhif && (
                             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-900 tracking-wide">
                               НЗОК
