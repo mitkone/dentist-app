@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown } from 'lucide-react';
+import { Search, Stethoscope, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown, CalendarDays } from 'lucide-react';
 export default function Sidebar({ dentists,
   selectedDentistIds,
   onDentistToggle,
@@ -12,6 +12,8 @@ export default function Sidebar({ dentists,
   onOpenPatientDetail,
   onOpenVacation,
   showDentistsFilter = true,
+  onOpenDentistSchedule,
+  activeDentistId,
 }) {
   const q = (patientSearch || '').trim().toLowerCase();
   const qTokens = q.split(/\s+/).filter(Boolean);
@@ -217,6 +219,36 @@ export default function Sidebar({ dentists,
             <Stethoscope className="w-3.5 h-3.5" />
             Търсете в базата и кликнете за данни и бележки
           </p>
+        )}
+
+        {dentists.length > 0 && onOpenDentistSchedule && (
+          <div className="mt-4 pt-3 border-t border-slate-200">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium text-slate-700">Бърз достъп до график</span>
+            </div>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto scroll-thin pr-1">
+              {dentists.map((d) => {
+                const isActive = activeDentistId === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => onOpenDentistSchedule(d.id)}
+                    className={`w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
+                      isActive
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                    title={`Отвори графика на ${d.name}`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="truncate text-sm">{d.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </aside>
