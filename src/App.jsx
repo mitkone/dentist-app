@@ -852,7 +852,7 @@ export default function App() {
   }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', appointmentDate }) => {
+    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', location = 'Нови Искър', appointmentDate }) => {
       const date = appointmentDate || dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
       let patient = patientId ? patients.find((p) => p.id === patientId) : null;
@@ -888,6 +888,7 @@ export default function App() {
             end,
             type,
             insurance,
+            location,
             notes: notes || '',
           },
         ]);
@@ -902,13 +903,19 @@ export default function App() {
           end_time: toSupabaseTime(date, end),
           status: type,
           insurance,
+          location,
         };
         payload.notes = notes?.trim() || null;
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('appointments')
           .insert(payload)
           .select()
           .single();
+        if (error && String(error.message || '').includes('location')) {
+          const payloadLegacy = { ...payload };
+          delete payloadLegacy.location;
+          ({ data, error } = await supabase.from('appointments').insert(payloadLegacy).select().single());
+        }
 
         if (error) {
           console.error('Failed to create appointment:', error);
@@ -917,6 +924,7 @@ export default function App() {
         const mapped = rowToAppointment(data);
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
+          mapped.location = location;
           setAppointments((prev) => [...prev, mapped]);
           logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentist_id: mapped.dentistId, dentistId: mapped.dentistId, type, start } });
         }

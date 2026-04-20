@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { X } from 'lucide-react';
-import { appointmentTypeLabel, OTHER_APPOINTMENT_TYPE_KEY } from '../data/mockData';
+import { appointmentTypeLabel, OTHER_APPOINTMENT_TYPE_KEY, APPOINTMENT_LOCATION_OPTIONS } from '../data/mockData';
 import { withOtherOption, resolveTypeForSave } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
@@ -40,6 +40,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   const [notes, setNotes] = useState('');
   const [typeKey, setTypeKey] = useState('');
   const [customTypeText, setCustomTypeText] = useState('');
+  const [location, setLocation] = useState(APPOINTMENT_LOCATION_OPTIONS[0]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionRef = useRef(null);
   const q = (patientInput || '').trim().toLowerCase();
@@ -63,6 +64,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
       setPatientPhone('');
       setNotes('');
       setCustomTypeText('');
+      setLocation(APPOINTMENT_LOCATION_OPTIONS[0]);
       setEndTime(addMinutesToTime(slot, 30));
       const first = typeOptions[0]?.key;
       setTypeKey(first || '');
@@ -104,6 +106,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
       durationMinutes,
       insurance,
       notes: notes.trim(),
+      location,
       appointmentDate: bookingDate || undefined,
     });
     onClose();
@@ -251,6 +254,25 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               rows={2}
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
             />
+          </div>
+
+          <div>
+            <label htmlFor="appointment-location" className="block text-sm font-medium text-slate-800 mb-1">
+              Кабинет
+            </label>
+            <select
+              id="appointment-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+              required
+            >
+              {APPOINTMENT_LOCATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
