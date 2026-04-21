@@ -1539,6 +1539,9 @@ export default function App() {
         onReorderAppointmentType={reorderAppointmentType}
         dentists={dentists}
         patients={patients}
+        appointments={appointments}
+        onOpenAddDentist={() => setAddDentistOpen(true)}
+        onDeleteDentist={deleteDentist}
         getAdminPin={getAdminPin}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -57,6 +57,9 @@ export default function AdminPanel({
   onReorderAppointmentType,
   dentists = [],
   patients = [],
+  appointments = [],
+  onOpenAddDentist,
+  onDeleteDentist,
   getAdminPin,
 }) {
   const [systemCheck, setSystemCheck] = useState(null);
@@ -140,6 +143,21 @@ export default function AdminPanel({
   };
 
   const roleLabel = { admin: 'Админ', dentist: 'Стоматолог', receptionist: 'Регистратор' };
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayAppointments = useMemo(
+    () => appointments.filter((a) => a.date === todayKey),
+    [appointments, todayKey]
+  );
+  const todayNoShow = todayAppointments.filter((a) => a.attendance === 'no_show').length;
+  const todayPending = todayAppointments.filter((a) => (a.attendance || 'pending') === 'pending').length;
+  const busiestToday = useMemo(() => {
+    const counts = new Map();
+    todayAppointments.forEach((a) => counts.set(a.dentistId, (counts.get(a.dentistId) || 0) + 1));
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length) return null;
+    const [dentistId, count] = sorted[0];
+    return { name: dentists.find((d) => d.id === dentistId)?.name || dentistId, count };
+  }, [todayAppointments, dentists]);
 
   if (!open) return null;
 
@@ -214,7 +232,63 @@ export default function AdminPanel({
           </div>
         )}
 
+        <div className="grid grid-cols-3 gap-2 p-4 border-b border-slate-200 shrink-0">
+          <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
+            <span className="text-xl font-bold text-slate-900 block">{todayPending}</span>
+            <span className="text-xs text-slate-500">Чакат статус</span>
+          </div>
+          <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
+            <span className="text-xl font-bold text-red-600 block">{todayNoShow}</span>
+            <span className="text-xs text-slate-500">Не дойде днес</span>
+          </div>
+          <div className="rounded-lg bg-slate-100 border border-slate-200 p-3 text-center">
+            <span className="text-xs text-slate-500 block mb-1">Най-натоварен</span>
+            <span className="text-sm font-semibold text-slate-900 block truncate">
+              {busiestToday ? busiestToday.name : '—'}
+            </span>
+            <span className="text-xs text-slate-500">
+              {busiestToday ? `${busiestToday.count} часа` : 'няма часове'}
+            </span>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto scroll-thin min-h-0">
+          <div className="p-4 border-b border-slate-200">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4 text-emerald-400" />
+                Лекари
+              </h3>
+              {onOpenAddDentist && (
+                <button
+                  type="button"
+                  onClick={onOpenAddDentist}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Добави лекар
+                </button>
+              )}
+            </div>
+            <ul className="space-y-1.5">
+              {dentists.map((d) => (
+                <li key={d.id} className="flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-slate-100 border border-slate-200">
+                  <span className="text-sm text-slate-800 truncate">{d.name}</span>
+                  {onDeleteDentist && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteDentist(d.id)}
+                      className="p-1.5 rounded text-slate-500 hover:text-red-500 hover:bg-slate-200"
+                      title="Премахни лекар"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {onSaveWorkingHours && (
             <div className="p-4 border-b border-slate-200">
               <h3 className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-2">
