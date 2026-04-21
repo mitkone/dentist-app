@@ -58,6 +58,29 @@ function getWeekBounds(d) {
   return { start: dateKey(start), end: dateKey(end) };
 }
 
+function readWorkingHoursCache() {
+  try {
+    const raw = localStorage.getItem('clinic_working_hours_v1');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const start = Number(parsed?.start);
+    const end = Number(parsed?.end);
+    if (!Number.isInteger(start) || !Number.isInteger(end)) return null;
+    if (start < 0 || end > 24 || end <= start) return null;
+    return { start, end };
+  } catch {
+    return null;
+  }
+}
+
+function writeWorkingHoursCache(value) {
+  try {
+    localStorage.setItem('clinic_working_hours_v1', JSON.stringify(value));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export default function App() {
   const [dentists, setDentists] = useState(initialDentists);
   const [selectedDentistIds, setSelectedDentistIds] = useState(() => initialDentists.map((d) => d.id));
@@ -81,7 +104,7 @@ export default function App() {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
   const [activityLogLoading, setActivityLogLoading] = useState(false);
-  const [workingHours, setWorkingHours] = useState({ start: 7, end: 19 });
+  const [workingHours, setWorkingHours] = useState(() => readWorkingHoursCache() || { start: 7, end: 19 });
   const [appointmentTypes, setAppointmentTypes] = useState([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [freeSlotsOpen, setFreeSlotsOpen] = useState(false);
@@ -471,10 +494,14 @@ export default function App() {
         const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
         const start = parseInt(map.working_hours_start, 10);
         const end = parseInt(map.working_hours_end, 10);
-        if (!Number.isNaN(start) && !Number.isNaN(end)) setWorkingHours({ start, end });
+        if (!Number.isNaN(start) && !Number.isNaN(end)) {
+          const next = { start, end };
+          setWorkingHours(next);
+          writeWorkingHoursCache(next);
+        }
       }
     })();
-  }, []);
+  }, [supabase, isAuthenticated]);
 
   const fetchAppointmentTypesAndSpecialties = useCallback(async () => {
     if (!supabase) return;
@@ -556,7 +583,9 @@ export default function App() {
     async (start, end) => {
       if (!supabase) return;
       await supabase.from('clinic_settings').upsert([{ key: 'working_hours_start', value: String(start) }, { key: 'working_hours_end', value: String(end) }], { onConflict: 'key' });
-      setWorkingHours({ start, end });
+      const next = { start, end };
+      setWorkingHours(next);
+      writeWorkingHoursCache(next);
     },
     []
   );
