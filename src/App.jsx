@@ -13,6 +13,7 @@ import AddAppointmentModal from './components/AddAppointmentModal';
 import AddDentistModal from './components/AddDentistModal';
 import AddPatientModal from './components/AddPatientModal';
 import PatientDetailModal from './components/PatientDetailModal';
+import PatientDatabaseModal from './components/PatientDatabaseModal';
 import EditAppointmentModal from './components/EditAppointmentModal';
 import AddVacationModal from './components/AddVacationModal';
 import AdminPanel from './components/AdminPanel';
@@ -96,6 +97,7 @@ export default function App() {
   const [addDentistOpen, setAddDentistOpen] = useState(false);
   const [addPatientOpen, setAddPatientOpen] = useState(false);
   const [patientDetailId, setPatientDetailId] = useState(null);
+  const [patientDbOpen, setPatientDbOpen] = useState(false);
   const [editAppointment, setEditAppointment] = useState(null);
   const [doctorVacations, setDoctorVacations] = useState([]);
   const [vacationModal, setVacationModal] = useState({ open: false, dentistId: null });
@@ -1288,6 +1290,7 @@ export default function App() {
   onAddDentist={permissions.canEditDentists ? () => setAddDentistOpen(true) : undefined}
   onAddPatient={() => setAddPatientOpen(true)}
   onOpenPatientDetail={setPatientDetailId}
+  onOpenPatientDatabase={() => setPatientDbOpen(true)}
   onOpenVacation={openVacationForDentist}
   showDentistsFilter={false}
   onOpenDentistSchedule={toggleDentistSchedule}
@@ -1411,6 +1414,17 @@ export default function App() {
         onDeleteFile={deletePatientFile}
         canUseFiles={Boolean(supabase)}
         appointmentTypes={appointmentTypes}
+      />
+      <PatientDatabaseModal
+        open={patientDbOpen}
+        onClose={() => setPatientDbOpen(false)}
+        patients={patients}
+        appointments={appointments}
+        appointmentTypes={appointmentTypes}
+        onOpenPatient={(id) => {
+          setPatientDbOpen(false);
+          setPatientDetailId(id);
+        }}
       />
 
       <EditAppointmentModal

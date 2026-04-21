@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, UserPlus, Plus, Trash2, Phone, Mail, CalendarOff, ChevronDown } from 'lucide-react';
+import { Search, Filter, UserPlus, Plus, Trash2, CalendarOff, ChevronDown, Database } from 'lucide-react';
 export default function Sidebar({ dentists,
   selectedDentistIds,
   onDentistToggle,
@@ -10,25 +10,10 @@ export default function Sidebar({ dentists,
   onAddDentist,
   onAddPatient,
   onOpenPatientDetail,
+  onOpenPatientDatabase,
   onOpenVacation,
   showDentistsFilter = true,
 }) {
-  const q = (patientSearch || '').trim().toLowerCase();
-  const qTokens = q.split(/\s+/).filter(Boolean);
-  const filteredPatients = patients.filter(
-    (p) => {
-      if (!q) return true;
-      const haystack = [
-        p.name || '',
-        p.phone || '',
-        p.notes || '',
-        p.address || '',
-        p.egn || '',
-        p.email || '',
-      ].join(' ').toLowerCase();
-      return qTokens.every((token) => haystack.includes(token));
-    }
-  );
   const allSelected = dentists.length > 0 && dentists.every((d) => selectedDentistIds.includes(d.id));
   const noneSelected = dentists.every((d) => !selectedDentistIds.includes(d.id));
   const handleToggleAll = () => {
@@ -178,37 +163,14 @@ export default function Sidebar({ dentists,
             className="w-full pl-9 pr-3 py-2 text-sm bg-slate-100 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none"
           />
         </div>
-        <div className="mt-2 max-h-64 overflow-y-auto scroll-thin space-y-1 rounded-lg border border-slate-200 bg-slate-50 shadow-lg">
-          {filteredPatients.length === 0 ? (
-            <p className="text-xs text-slate-500 py-2 px-2">Няма намерени пациенти</p>
-          ) : (
-            filteredPatients.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onOpenPatientDetail?.(p.id)}
-                className="w-full text-left p-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200/80 hover:border-slate-300 transition-colors"
-              >
-                <span className="text-sm font-medium text-slate-900 block truncate">{p.name}</span>
-                {p.phone && (
-                  <span className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                    <Phone className="w-3 h-3 shrink-0" />
-                    {p.phone}
-                  </span>
-                )}
-                {p.email && (
-                  <span className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                    <Mail className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{p.email}</span>
-                  </span>
-                )}
-                {p.notes && (
-                  <span className="text-xs text-slate-500 block truncate mt-0.5">{p.notes}</span>
-                )}
-              </button>
-            ))
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={onOpenPatientDatabase}
+          className="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-slate-100 text-slate-800 text-sm font-medium hover:bg-slate-200"
+        >
+          <Database className="w-4 h-4" />
+          Отвори база пациенти
+        </button>
 
       </div>
     </aside>
