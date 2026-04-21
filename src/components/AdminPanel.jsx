@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -29,15 +29,6 @@ function formatWhen(isoStr) {
   return d.toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function toDateOnly(value) {
-  if (!value) return '';
-  return String(value).slice(0, 10);
-}
-
-function toCurrency(value) {
-  return Number(value || 0).toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 const CHECKS = [
   { key: 'appointments', label: 'Часове', table: 'appointments', column: 'id' },
   { key: 'patients', label: 'Пациенти', table: 'patients', column: 'id' },
@@ -66,7 +57,6 @@ export default function AdminPanel({
   onReorderAppointmentType,
   dentists = [],
   patients = [],
-  appointments = [],
   getAdminPin,
 }) {
   const [systemCheck, setSystemCheck] = useState(null);
@@ -77,10 +67,6 @@ export default function AdminPanel({
   const [profiles, setProfiles] = useState([]);
   const [systemCheckOpen, setSystemCheckOpen] = useState(false);
   const [expandedLogId, setExpandedLogId] = useState(null);
-  const [reportDoctorId, setReportDoctorId] = useState('all');
-  const [reportFrom, setReportFrom] = useState(() => toDateOnly(new Date()));
-  const [reportTo, setReportTo] = useState(() => toDateOnly(new Date()));
-  const [interventionPrices, setInterventionPrices] = useState({});
 
   useEffect(() => {
     setHoursStart(workingHours.start);
@@ -91,23 +77,6 @@ export default function AdminPanel({
     if (open && onRefresh) onRefresh();
   }, [open, onRefresh]);
 
-  useEffect(() => {
-    if (!open) return;
-    try {
-      const raw = localStorage.getItem('admin_intervention_prices_v1');
-      if (raw) setInterventionPrices(JSON.parse(raw));
-    } catch {
-      setInterventionPrices({});
-    }
-  }, [open]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('admin_intervention_prices_v1', JSON.stringify(interventionPrices));
-    } catch {
-      // ignore storage write errors
-    }
-  }, [interventionPrices]);
 
   useEffect(() => {
     if (!open || !supabase) {
@@ -171,35 +140,6 @@ export default function AdminPanel({
   };
 
   const roleLabel = { admin: 'Админ', dentist: 'Стоматолог', receptionist: 'Регистратор' };
-
-  const report = useMemo(() => {
-    const from = reportFrom || '0000-01-01';
-    const to = reportTo || '9999-12-31';
-    const filtered = appointments.filter((a) => {
-      if (!a?.date) return false;
-      if (reportDoctorId !== 'all' && a.dentistId !== reportDoctorId) return false;
-      return a.date >= from && a.date <= to;
-    });
-    const patientsSet = new Set(filtered.map((a) => a.patientId).filter(Boolean));
-    const byType = new Map();
-    for (const a of filtered) {
-      const key = (a.type || 'Неуточнено').trim();
-      byType.set(key, (byType.get(key) || 0) + 1);
-    }
-    const breakdown = Array.from(byType.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => {
-        const price = Number(interventionPrices[type] || 0);
-        return { type, count, price, revenue: count * price };
-      });
-    const totalRevenue = breakdown.reduce((sum, row) => sum + row.revenue, 0);
-    return {
-      appointmentsCount: filtered.length,
-      patientsCount: patientsSet.size,
-      breakdown,
-      totalRevenue,
-    };
-  }, [appointments, reportDoctorId, reportFrom, reportTo, interventionPrices]);
 
   if (!open) return null;
 
@@ -273,75 +213,6 @@ export default function AdminPanel({
             </div>
           </div>
         )}
-
-        <div className="p-4 border-b border-slate-200">
-          <h3 className="text-sm font-medium text-slate-700 mb-2">Работен отчет по лекар</h3>
-          <div className="grid grid-cols-1 gap-2 mb-3">
-            <select
-              value={reportDoctorId}
-              onChange={(e) => setReportDoctorId(e.target.value)}
-              className="px-2 py-1.5 bg-slate-100 border border-slate-300 rounded text-sm text-slate-900"
-            >
-              <option value="all">Всички лекари</option>
-              {dentists.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={reportFrom}
-                onChange={(e) => setReportFrom(e.target.value)}
-                className="flex-1 px-2 py-1.5 bg-slate-100 border border-slate-300 rounded text-sm text-slate-900 [color-scheme:light]"
-              />
-              <span className="text-xs text-slate-500">до</span>
-              <input
-                type="date"
-                value={reportTo}
-                onChange={(e) => setReportTo(e.target.value)}
-                className="flex-1 px-2 py-1.5 bg-slate-100 border border-slate-300 rounded text-sm text-slate-900 [color-scheme:light]"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="rounded-lg bg-slate-100 border border-slate-200 p-2">
-              <div className="text-xs text-slate-500">Пациенти</div>
-              <div className="text-lg font-semibold text-slate-900">{report.patientsCount}</div>
-            </div>
-            <div className="rounded-lg bg-slate-100 border border-slate-200 p-2">
-              <div className="text-xs text-slate-500">Интервенции/часове</div>
-              <div className="text-lg font-semibold text-slate-900">{report.appointmentsCount}</div>
-            </div>
-          </div>
-          <div className="space-y-1.5 max-h-52 overflow-y-auto scroll-thin pr-1">
-            {report.breakdown.length === 0 && (
-              <p className="text-xs text-slate-500">Няма данни за този период.</p>
-            )}
-            {report.breakdown.map((row) => (
-              <div key={row.type} className="rounded-lg bg-slate-100 border border-slate-200 p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-800 truncate">{row.type}</span>
-                  <span className="text-xs text-slate-500">брой: {row.count}</span>
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={interventionPrices[row.type] ?? ''}
-                    onChange={(e) => setInterventionPrices((prev) => ({ ...prev, [row.type]: e.target.value }))}
-                    placeholder="цена"
-                    className="w-24 px-2 py-1 text-xs bg-white border border-slate-300 rounded text-slate-900"
-                  />
-                  <span className="text-xs text-slate-500">оборот: {toCurrency(row.revenue)} лв.</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 text-sm font-semibold text-emerald-700">
-            Общ оборот: {toCurrency(report.totalRevenue)} лв.
-          </div>
-        </div>
 
         <div className="flex-1 overflow-y-auto scroll-thin min-h-0">
           {onSaveWorkingHours && (

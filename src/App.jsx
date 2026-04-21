@@ -1520,7 +1520,6 @@ export default function App() {
         onReorderAppointmentType={reorderAppointmentType}
         dentists={dentists}
         patients={patients}
-        appointments={appointments}
         getAdminPin={getAdminPin}
       />
     </div>
