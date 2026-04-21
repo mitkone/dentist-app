@@ -10,7 +10,8 @@ function toDateStr(d) {
 }
 
 export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFreeSlotsForDate, onBook, canUse, currentDate }) {
-  const [selectedDentistId, setSelectedDentistId] = useState(dentists[0]?.id ?? '');
+  const ANY_DENTIST_KEY = '__any_dentist__';
+  const [selectedDentistId, setSelectedDentistId] = useState(ANY_DENTIST_KEY);
   const [selectedDate, setSelectedDate] = useState(() => toDateStr(currentDate));
   const [showTimePicker, setShowTimePicker] = useState(false);
   const pickerRef = useRef(null);
@@ -18,6 +19,11 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
   useEffect(() => {
     if (currentDate) setSelectedDate(toDateStr(currentDate));
   }, [currentDate]);
+
+  useEffect(() => {
+    if (selectedDentistId === ANY_DENTIST_KEY) return;
+    if (!dentists.some((d) => d.id === selectedDentistId)) setSelectedDentistId(ANY_DENTIST_KEY);
+  }, [dentists, selectedDentistId]);
 
   useEffect(() => {
     const onDocClick = (e) => {
@@ -30,8 +36,17 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
   if (!canUse || !dentists.length || !onBook) return null;
 
   const dentist = dentists.find((d) => d.id === selectedDentistId);
-  const firstSlot = findFirstFreeForDate?.(selectedDentistId, selectedDate);
-  const allSlots = findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? [];
+  const inAnyMode = selectedDentistId === ANY_DENTIST_KEY;
+  const firstSlot = inAnyMode
+    ? dentists
+        .map((d) => {
+          const slot = findFirstFreeForDate?.(d.id, selectedDate);
+          return slot ? { ...slot, dentistId: d.id, dentistName: d.name } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] ?? null
+    : (findFirstFreeForDate?.(selectedDentistId, selectedDate) ?? null);
+  const allSlots = inAnyMode ? [] : (findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? []);
   const displaySlot = firstSlot;
 
   return (
@@ -45,6 +60,7 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
         onChange={(e) => setSelectedDentistId(e.target.value)}
         className="px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none"
       >
+        <option value={ANY_DENTIST_KEY}>Първи свободен (всички лекари)</option>
         {dentists.map((d) => (
           <option key={d.id} value={d.id}>{d.name}</option>
         ))}
@@ -72,6 +88,7 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
             >
               <Clock className="w-3.5 h-3.5 shrink-0" />
               {displaySlot.date} {displaySlot.time}
+              {displaySlot.dentistName && <span className="text-slate-500">· {displaySlot.dentistName}</span>}
               {allSlots.length > 1 && <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
             </button>
             {showTimePicker && allSlots.length > 1 && (
@@ -94,7 +111,7 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
           </div>
           <button
             type="button"
-            onClick={() => onBook(dentist?.id, displaySlot)}
+            onClick={() => onBook(displaySlot?.dentistId || dentist?.id, displaySlot)}
             className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
           >
             Запиши

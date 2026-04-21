@@ -361,6 +361,7 @@ export default function App() {
   }, [isAuthenticated, appointmentsRefreshKey]);
 
   const myDentistId = permissions.myDentistId;
+  const notificationUserKey = user?.id || user?.email || (myDentistId ? `dentist:${myDentistId}` : 'staff');
 
   const formatNotificationText = useCallback((action, details = {}) => {
     const d = typeof details === 'string' ? (() => { try { return JSON.parse(details); } catch { return {}; } })() : (details || {});
@@ -391,8 +392,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
-    const storageKey = `dentist_notif_last_open_${myDentistId}`;
+    if (!supabase || adminSession || !isAuthenticated) return;
+    const storageKey = `schedule_notif_last_open_${notificationUserKey}`;
     const lastOpen = parseInt(localStorage.getItem(storageKey) || '0', 10);
     const actions = ['appointment_created', 'appointment_updated', 'appointment_deleted', 'appointment_moved', 'vacation_added', 'vacation_deleted'];
     supabase
@@ -412,12 +413,12 @@ export default function App() {
         if (notifs.length > 0) setScheduleNotificationsSeen(false);
         localStorage.setItem(storageKey, String(Date.now()));
       });
-  }, [adminSession, myDentistId, isAuthenticated, formatNotificationText]);
+  }, [adminSession, isAuthenticated, formatNotificationText, notificationUserKey]);
 
   useEffect(() => {
-    if (!supabase || !myDentistId || adminSession || !isAuthenticated) return;
+    if (!supabase || adminSession || !isAuthenticated) return;
     const channel = supabase
-      .channel(`dentist-activity-${myDentistId}-${Date.now()}`)
+      .channel(`schedule-activity-${notificationUserKey}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'activity_log' },
@@ -436,7 +437,7 @@ export default function App() {
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [adminSession, myDentistId, isAuthenticated, formatNotificationText]);
+  }, [adminSession, isAuthenticated, formatNotificationText, notificationUserKey]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -463,7 +464,7 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !isAuthenticated) return;
     (async () => {
       const { data } = await supabase.from('clinic_settings').select('key, value');
       if (data?.length) {
@@ -641,7 +642,7 @@ export default function App() {
     }
   
     fetchVacations();
-  }, [vacationsRefreshKey]);
+  }, [vacationsRefreshKey, isAuthenticated]);
 
   const addPatient = useCallback(
     async ({ name, phone, notes, address, egn, email }) => {
@@ -1150,7 +1151,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {permissions.myDentistId && (
+            {!adminSession && isAuthenticated && (
               <div ref={scheduleNotificationsRef} className="relative">
                 <button
                   type="button"

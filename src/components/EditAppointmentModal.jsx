@@ -106,7 +106,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       patientId: matchedPatient?.id || undefined,
       type: resolveTypeForSave(typeKey, customTypeText, typeOptions),
       notes: notes.trim() || '',
-      attendance: isPast ? attendance : undefined,
+      attendance,
       insurance,
       location,
     });
@@ -310,9 +310,11 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
             />
           </div>
 
-          {isPast && (
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-2">Пациентът</label>
+          <div>
+            <label className="block text-sm font-medium text-slate-800 mb-2">Пациентът</label>
+            {!isPast && (
+              <p className="text-xs text-slate-500 mb-2">Може да зададете статуса предварително и да го промените по-късно.</p>
+            )}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -334,7 +336,7 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                       : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
-                  Не се яви
+                  Не дойде
                 </button>
                 <button
                   type="button"
@@ -349,7 +351,6 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
                 </button>
               </div>
             </div>
-          )}
 
           <div className="flex gap-2 pt-2">
             <button
