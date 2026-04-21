@@ -230,7 +230,7 @@ export default function App() {
       const result = [];
 
       for (const slot of slots) {
-        if (availableSet && availableSet.size > 0 && !availableSet.has(slot)) continue;
+        if (availableSet && !availableSet.has(slot)) continue;
         const [h, min] = slot.split(':').map(Number);
         const slotDateTime = new Date(y, m - 1, d, h, min);
         if (isToday && slotDateTime < new Date()) continue;
@@ -279,7 +279,7 @@ export default function App() {
         const availableSet = doctorAvailableSlots[key];
 
         for (const slot of slots) {
-          if (availableSet && availableSet.size > 0 && !availableSet.has(slot)) continue;
+          if (availableSet && !availableSet.has(slot)) continue;
           const [h, m] = slot.split(':').map(Number);
           const slotDateTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
           if (slotDateTime < new Date()) continue;
