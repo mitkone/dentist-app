@@ -9,6 +9,18 @@ function toDateStr(d) {
   return `${y}-${m}-${day}`;
 }
 
+function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return toDateStr(dt);
+}
+
+function formatShortDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' });
+}
+
 export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFreeSlotsForDate, onBook, canUse, currentDate }) {
   const ANY_DENTIST_KEY = '__any_dentist__';
   const [selectedDentistId, setSelectedDentistId] = useState(ANY_DENTIST_KEY);
@@ -59,6 +71,14 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
         .slice(0, 30)
     : (findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? []);
   const displaySlot = firstSlot;
+  const freeDates = [];
+  for (let i = 0; i < 45 && freeDates.length < 7; i += 1) {
+    const dStr = addDays(selectedDate, i);
+    const slot = inAnyMode
+      ? dentists.some((d) => Boolean(findFirstFreeForDate?.(d.id, dStr)))
+      : Boolean(findFirstFreeForDate?.(selectedDentistId, dStr));
+    if (slot) freeDates.push(dStr);
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-slate-100/90 border border-slate-200">
@@ -85,6 +105,25 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
           className="px-2 py-1.5 bg-slate-100 border border-slate-300 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500/40 outline-none [color-scheme:light]"
         />
       </div>
+      {freeDates.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {freeDates.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setSelectedDate(d)}
+              className={`px-2 py-1 rounded text-xs border ${
+                selectedDate === d
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+              }`}
+              title="Дата със свободен час"
+            >
+              {formatShortDate(d)}
+            </button>
+          ))}
+        </div>
+      )}
       {displaySlot && (
         <>
           <div ref={pickerRef} className="relative">
