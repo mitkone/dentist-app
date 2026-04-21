@@ -46,7 +46,18 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
         .filter(Boolean)
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] ?? null
     : (findFirstFreeForDate?.(selectedDentistId, selectedDate) ?? null);
-  const allSlots = inAnyMode ? [] : (findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? []);
+  const allSlots = inAnyMode
+    ? dentists
+        .flatMap((d) =>
+          (findAllFreeSlotsForDate?.(d.id, selectedDate) ?? []).map((s) => ({
+            ...s,
+            dentistId: d.id,
+            dentistName: d.name,
+          }))
+        )
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+        .slice(0, 30)
+    : (findAllFreeSlotsForDate?.(selectedDentistId, selectedDate) ?? []);
   const displaySlot = firstSlot;
 
   return (
@@ -92,18 +103,18 @@ export default function QuickBookBar({ dentists, findFirstFreeForDate, findAllFr
               {allSlots.length > 1 && <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
             </button>
             {showTimePicker && allSlots.length > 1 && (
-              <div className="absolute top-full left-0 mt-1 py-1 bg-slate-100 border border-slate-300 rounded-lg shadow-xl z-50 max-h-40 overflow-y-auto min-w-[120px]">
+              <div className="absolute top-full left-0 mt-1 py-1 bg-slate-100 border border-slate-300 rounded-lg shadow-xl z-50 max-h-52 overflow-y-auto min-w-[200px]">
                 {allSlots.map((s) => (
                   <button
-                    key={s.time}
+                    key={`${s.dentistId || dentist?.id || 'd'}-${s.date}-${s.time}`}
                     type="button"
                     onClick={() => {
-                      onBook(dentist?.id, s);
+                      onBook(s.dentistId || dentist?.id, s);
                       setShowTimePicker(false);
                     }}
                     className="block w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-slate-200 focus:bg-slate-200"
                   >
-                    {s.time}
+                    {inAnyMode ? `${s.time} · ${s.dentistName}` : s.time}
                   </button>
                 ))}
               </div>
