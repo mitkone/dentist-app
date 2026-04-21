@@ -527,11 +527,15 @@ export default function App() {
   }, [adminOpen, fetchAppointmentTypesAndSpecialties]);
 
   useEffect(() => {
-    if (!supabase) return;
-    const dateStr = dateKey(currentDate);
-    const week = getWeekBounds(currentDate);
-    const rangeStart = calendarView === 'week' ? week.start : dateStr;
-    const rangeEnd = calendarView === 'week' ? week.end : dateStr;
+    if (!supabase || !isAuthenticated) return;
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date();
+    to.setDate(to.getDate() + 120);
+    to.setHours(23, 59, 59, 999);
+    const rangeStart = dateKey(from);
+    const rangeEnd = dateKey(to);
     (async () => {
       let data = null;
       let error = null;
@@ -561,7 +565,7 @@ export default function App() {
         setDoctorDayLocations(locationMap);
       }
     })().catch(() => {});
-  }, [currentDate, supabase, slotsRefreshKey, calendarView]);
+  }, [supabase, slotsRefreshKey, isAuthenticated]);
 
   const addDentist = useCallback(({ name, specialty, color }) => {
     const id = `d-${Date.now()}`;
@@ -1480,6 +1484,7 @@ export default function App() {
         workingHours={workingHours}
         onSave={refreshDoctorSlots}
         supabase={supabase}
+        doctorVacations={doctorVacations}
       />
 
       <DentistProfileModal

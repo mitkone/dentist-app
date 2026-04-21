@@ -12,7 +12,7 @@ function parseDateStr(s) {
   return new Date(y, m - 1, d);
 }
 
-export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date: initialDate, workingHours, onSave, supabase }) {
+export default function FreeSlotsModal({ open, onClose, dentist: initialDentist, dentists = [], date: initialDate, workingHours, onSave, supabase, doctorVacations = [] }) {
   const LOCATION_OPTIONS = APPOINTMENT_LOCATION_OPTIONS;
   const [dentist, setDentist] = useState(initialDentist ?? dentists[0]);
   const [date, setDate] = useState(initialDate ?? new Date());
@@ -28,6 +28,9 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
   }, [initialDate, open]);
 
   const dateStr = toDateStr(date);
+  const isOnVacationDay = Boolean(
+    dentist?.id && dateStr && doctorVacations.some((v) => v.dentist_id === dentist.id && v.start_date <= dateStr && v.end_date >= dateStr)
+  );
 
   useEffect(() => {
     if (!initialDentist && dentists.length) setDentist(dentists[0]);
@@ -38,6 +41,11 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
     if (!open || !dentist) return;
     const s = getSlots(workingHours);
     setSlots(s);
+    if (isOnVacationDay) {
+      setSelected(new Set());
+      setLoading(false);
+      return;
+    }
     if (!supabase) {
       setSelected(new Set(s));
       setLocation(LOCATION_OPTIONS[0]);
@@ -61,7 +69,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
           setSelected(new Set(s));
         }
       });
-  }, [open, dentist?.id, dateStr, workingHours, supabase]);
+  }, [open, dentist?.id, dateStr, workingHours, supabase, isOnVacationDay]);
 
   if (!open) return null;
 
@@ -79,6 +87,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
 
   const handleSave = async () => {
     if (!supabase || !dentist) return;
+    if (isOnVacationDay) return;
     setSaving(true);
     const slotsArr = Array.from(selected).sort();
     let { error } = await supabase
@@ -101,6 +110,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
 
   const handleSaveLocationOnly = async () => {
     if (!supabase || !dentist) return;
+    if (isOnVacationDay) return;
     setSavingLocation(true);
     const slotsArr = Array.from(selected).sort();
     let { error } = await supabase
@@ -184,11 +194,16 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
             <p className="text-slate-500 py-8">Зареждане...</p>
           ) : (
             <>
+              {isOnVacationDay && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                  Лекарят е в отпуск за тази дата. Няма свободни часове за записване.
+                </p>
+              )}
               <div className="flex gap-2 mb-4">
-                <button type="button" onClick={selectAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200">
+                <button type="button" disabled={isOnVacationDay} onClick={selectAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
                   Избери всички
                 </button>
-                <button type="button" onClick={clearAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200">
+                <button type="button" disabled={isOnVacationDay} onClick={clearAll} className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
                   Изчисти
                 </button>
               </div>
@@ -197,6 +212,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
                   <button
                     key={slot}
                     type="button"
+                    disabled={isOnVacationDay}
                     onClick={() => toggle(slot)}
                     className={`py-2 px-2 rounded-lg text-sm font-medium transition-colors ${
                       selected.has(slot)
@@ -218,7 +234,7 @@ export default function FreeSlotsModal({ open, onClose, dentist: initialDentist,
             <button type="button" onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-slate-800 bg-slate-200 rounded-lg hover:bg-slate-300">
               Отказ
             </button>
-            <button type="button" onClick={handleSave} disabled={saving || loading || !supabase} className="flex-1 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 disabled:opacity-50">
+            <button type="button" onClick={handleSave} disabled={saving || loading || !supabase || isOnVacationDay} className="flex-1 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 disabled:opacity-50">
               {saving ? 'Запазване...' : 'Запази'}
             </button>
           </div>
