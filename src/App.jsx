@@ -89,6 +89,21 @@ function compareAppointmentsByDateTime(a, b) {
 /** След INSERT GET понякога кратко не връща реда (read‑lag); държим локалния му клон докато не се появи в отговора. */
 const APPOINTMENT_PRESERVE_UNTIL_VISIBLE_MS = 600000;
 
+/**
+ * PostgREST/Supabase по подразбиране връща до ~1000 реда на заявка.
+ * Преди това зареждахме с order(start_time asc) → първите 1000 най-стари реда;
+ * всички по-нови (бъдещи) часове липсваха след F5, макар да стояха в state по време на сесията.
+ */
+const APPOINTMENTS_PAGE_SIZE = 1000;
+function appointmentsFetchWindowIsoBounds() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 18, 1, 0, 0, 0, 0);
+  const end = new Date(now);
+  end.setMonth(end.getMonth() + 36);
+  end.setHours(23, 59, 59, 999);
+  return { startIso: start.toISOString(), endIso: end.toISOString() };
+}
+
 function mergeFetchedAppointmentsPreserveRecent(fromServerMapped, prev) {
   const byId = new Map();
   fromServerMapped.forEach((a) => byId.set(String(a.id), a));
@@ -479,10 +494,30 @@ export default function App() {
         return;
       }
       try {
-        const { data, error } = await supabase
-          .from('appointments')
-          .select('*')
-          .order('start_time', { ascending: true });
+        await supabase.auth.getSession();
+        const { startIso, endIso } = appointmentsFetchWindowIsoBounds();
+        const rows = [];
+        let rangeFrom = 0;
+        let error = null;
+        while (appointmentsFetchGenerationRef.current === fetchGen) {
+          const { data, error: pageError } = await supabase
+            .from('appointments')
+            .select('*')
+            .gte('start_time', startIso)
+            .lte('start_time', endIso)
+            .order('start_time', { ascending: true })
+            .range(rangeFrom, rangeFrom + APPOINTMENTS_PAGE_SIZE - 1);
+          if (appointmentsFetchGenerationRef.current !== fetchGen) return;
+          if (pageError) {
+            error = pageError;
+            break;
+          }
+          const chunk = data || [];
+          rows.push(...chunk);
+          if (chunk.length < APPOINTMENTS_PAGE_SIZE) break;
+          rangeFrom += APPOINTMENTS_PAGE_SIZE;
+        }
+
         if (appointmentsFetchGenerationRef.current !== fetchGen) return;
 
         if (error) {
@@ -495,7 +530,7 @@ export default function App() {
           setAppointments([]);
         } else {
           const dentalNow = dentistsRef.current;
-          const list = (data || []).map((row) => rowToAppointment(row, dentalNow)).filter(Boolean);
+          const list = rows.map((row) => rowToAppointment(row, dentalNow)).filter(Boolean);
           setAppointments((prev) => mergeFetchedAppointmentsPreserveRecent(list, prev));
           appointmentsHadInitialHydrateRef.current = true;
         }
