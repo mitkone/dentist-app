@@ -86,6 +86,31 @@ function compareAppointmentsByDateTime(a, b) {
   return (a.start || '').localeCompare(b.start || '');
 }
 
+/** След INSERT GET понякога кратко не връща реда (read‑lag); държим локалния му клон докато не се появи в отговора. */
+const APPOINTMENT_PRESERVE_UNTIL_VISIBLE_MS = 180000;
+
+function mergeFetchedAppointmentsPreserveRecent(fromServerMapped, prev) {
+  const byId = new Map();
+  fromServerMapped.forEach((a) => byId.set(String(a.id), a));
+  const now = Date.now();
+  for (const p of prev) {
+    const id = String(p.id);
+    if (byId.has(id)) continue;
+    if (!p._preserveUntilFetched || typeof p._preserveAtMs !== 'number') continue;
+    if (now - p._preserveAtMs > APPOINTMENT_PRESERVE_UNTIL_VISIBLE_MS) continue;
+    byId.set(id, p);
+  }
+  return Array.from(byId.values()).sort(compareAppointmentsByDateTime);
+}
+
+function stripAppointmentClientMeta(appt) {
+  if (!appt || typeof appt !== 'object') return appt;
+  const { _preserveUntilFetched, _preserveAtMs, ...rest } = appt;
+  void _preserveUntilFetched;
+  void _preserveAtMs;
+  return rest;
+}
+
 function mapPatientFromRow(row) {
   if (!row) return null;
   const dn = row.dentist_notes;
@@ -471,7 +496,7 @@ export default function App() {
         } else {
           const dentalNow = dentistsRef.current;
           const list = (data || []).map((row) => rowToAppointment(row, dentalNow)).filter(Boolean);
-          setAppointments(list);
+          setAppointments((prev) => mergeFetchedAppointmentsPreserveRecent(list, prev));
           appointmentsHadInitialHydrateRef.current = true;
         }
       } catch (err) {
@@ -634,13 +659,19 @@ export default function App() {
           if (!mname && ename) merged = { ...merged, patientName: existing.patientName };
         }
 
+        merged = stripAppointmentClientMeta({ ...merged });
+
         const next = [...prev.filter((a) => String(a.id) !== String(row.id)), merged];
         next.sort(compareAppointmentsByDateTime);
         return next;
       });
 
       if (needLaterRefetch.yes) {
-        queueMicrotask(() => setAppointmentsRefreshKey((k) => k + 1));
+        /*
+         Малко закъснение: да има време onAdd да сложи записа локално + _preserve маркери,
+         преди GET който иначе често връща snapshot без новия ред при read‑lag.
+         */
+        window.setTimeout(() => setAppointmentsRefreshKey((k) => k + 1), 450);
       }
     };
     ch
@@ -1235,6 +1266,8 @@ export default function App() {
           if (notes?.trim()) mapped.notes = notes.trim();
           mapped.location = location;
           if (resolvedPatientId) mapped.patientId = resolvedPatientId;
+          mapped._preserveUntilFetched = true;
+          mapped._preserveAtMs = Date.now();
           setAppointments((prev) => [...prev, mapped]);
           logWithActor({
             action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED,
