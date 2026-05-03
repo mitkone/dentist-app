@@ -65,6 +65,40 @@ function normalizeCalendarDateKey(ds) {
   return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
 }
 
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+/** Минути от полунощ → "HH:mm" за HUD. */
+function formatTotalMinutesClock(totalMin) {
+  const h = Math.floor(totalMin / 60) % 24;
+  const m = Math.round(totalMin % 60);
+  return `${pad2(h)}:${pad2(m)}`;
+}
+
+function minuteAtYInTimeline(yPx, timelineHeightPx, workingHours) {
+  const rangeMin = Math.max(1, (workingHours.end - workingHours.start) * 60);
+  const startM = workingHours.start * 60;
+  const frac = timelineHeightPx > 0 ? Math.min(1, Math.max(0, yPx / timelineHeightPx)) : 0;
+  const raw = startM + frac * rangeMin;
+  return Math.round(Math.min(startM + rangeMin - 1, Math.max(startM, raw)));
+}
+
+function slotStampForMinute(targetMin, slots) {
+  let best = slots[0] ?? '—';
+  let bestDist = Infinity;
+  const t = targetMin;
+  for (const s of slots) {
+    const m = minutesFromTimeStr(s);
+    const dist = Math.abs(m - t);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = s;
+    }
+  }
+  return best;
+}
+
 function assignAppointmentLanes(apps) {
   const sorted = [...apps].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
   const laneEnds = [];
@@ -146,7 +180,10 @@ export default function ResourceCalendar({
   const [zoom, setZoom] = useState(1);
   const [hoverInfo, setHoverInfo] = useState(null);
   const lastPinchDist = useRef(null);
+  const pointerHudRaf = useRef(null);
   const effectiveSlotHeight = SLOT_HEIGHT * zoom;
+  /** Лекар + час под курсора (фиксиран етикет, не се губи при вертикален скрол). */
+  const [gridPointerContext, setGridPointerContext] = useState(null);
 
   useEffect(() => {
     const grid = gridScrollRef.current;
@@ -352,7 +389,91 @@ export default function ResourceCalendar({
     return (minutes / slotMinutes) * effectiveSlotHeight;
   };
 
-  let timelineMinHeightPx = slots.length * effectiveSlotHeight;
+  const timelineHeightPx = slots.length * effectiveSlotHeight;
+
+  const updatePointerHudFromMouse = useCallback(
+    (clientX, clientY) => {
+      if (typeof document.elementsFromPoint !== 'function') return;
+      const grid = gridScrollRef.current;
+      if (!grid || dragStateRef.current || isMobile) return;
+
+      let col = null;
+      const stack = document.elementsFromPoint(clientX, clientY);
+      for (const el of stack) {
+        const c = el?.closest?.('[data-timeline-column]');
+        if (c && grid.contains(c)) {
+          col = c;
+          break;
+        }
+      }
+
+      if (!col) {
+        setGridPointerContext(null);
+        return;
+      }
+
+      const dentistId = col.getAttribute('data-timeline-dentist-id') || '';
+      const dayKeyRaw = col.getAttribute('data-timeline-day');
+      const dnAttr = col.getAttribute('data-timeline-dentist-name');
+      const fromList = dentists.find((x) => String(x.id) === String(dentistId));
+      const dentistName = fromList?.name || (dnAttr && dnAttr.trim()) || '—';
+      const dayKey = dayKeyRaw || dateStr;
+
+      let dayLabel = '';
+      try {
+        const parts = String(dayKey).trim().split('-').map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
+          const [y, mo, da] = parts;
+          dayLabel = new Date(y, mo - 1, da).toLocaleDateString('bg-BG', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+          });
+        }
+      } catch {
+        dayLabel = '';
+      }
+
+      const rect = col.getBoundingClientRect();
+      const y = clientY - rect.top;
+      const minsTotal = minuteAtYInTimeline(y, timelineHeightPx, workingHours);
+      const hourFine = formatTotalMinutesClock(minsTotal);
+      const snappedSlot = slotStampForMinute(minsTotal, slots);
+
+      setGridPointerContext({
+        dentistName,
+        dentistId,
+        dayKey,
+        dayLabel,
+        hourFine,
+        snappedSlot,
+      });
+    },
+    [dateStr, dentists, isMobile, slots, timelineHeightPx, workingHours]
+  );
+
+  const schedulePointerHudSync = useCallback(
+    (e) => {
+      if (pointerHudRaf.current != null) cancelAnimationFrame(pointerHudRaf.current);
+      pointerHudRaf.current = requestAnimationFrame(() => {
+        pointerHudRaf.current = null;
+        updatePointerHudFromMouse(e.clientX, e.clientY);
+      });
+    },
+    [updatePointerHudFromMouse]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (pointerHudRaf.current != null) cancelAnimationFrame(pointerHudRaf.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (dragState) setGridPointerContext(null);
+  }, [dragState]);
+
+  let timelineMinHeightPx = timelineHeightPx;
   const dentistIdsInView = dentists.map((d) => d.id);
   const dentistIdsInViewSet = new Set(dentistIdsInView);
   if (dentistIdsInView.length > 0) {
@@ -533,6 +654,38 @@ export default function ResourceCalendar({
     document.body
   ) : null;
 
+  const slotBookHint =
+    gridPointerContext?.hourFine && gridPointerContext?.snappedSlot
+      ? minutesFromTimeStr(gridPointerContext.hourFine) === minutesFromTimeStr(gridPointerContext.snappedSlot)
+      : false;
+
+  const pointerHud =
+    !isMobile && gridPointerContext && !dragState
+      ? createPortal(
+          <div
+            className="fixed z-[9996] pointer-events-none left-1/2 -translate-x-1/2 bottom-6 max-w-[min(96vw,28rem)] w-auto"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="rounded-2xl border border-emerald-500/35 bg-slate-900 px-5 py-3 shadow-2xl ring-1 ring-white/10 text-center select-none">
+              <div className="text-[11px] uppercase tracking-wide text-emerald-300/90 font-semibold">Под курсора</div>
+              <div className="mt-1 text-base font-semibold text-white">{gridPointerContext.dentistName}</div>
+              <div className="mt-0.5 text-sm text-emerald-100/95">
+                {gridPointerContext.dayLabel ? `${gridPointerContext.dayLabel} · ` : ''}
+                <span title="Позиция по вертикалата">{gridPointerContext.hourFine}</span>
+              </div>
+              {!slotBookHint && (
+                <div className="mt-2 text-[11px] leading-snug text-white/65 border-t border-white/10 pt-2">
+                  Запис в графика: клетка <span className="text-amber-200 font-medium">{gridPointerContext.snappedSlot}</span>
+                  {' '}(интервал {slotMinutes}&nbsp;мин)
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   if (viewMode === 'week') {
     const selectedInView = dentists.filter((d) => selectedDentistIds.includes(d.id));
     const singleSelectedDentistId = selectedInView.length === 1 ? selectedInView[0].id : null;
@@ -540,14 +693,14 @@ export default function ResourceCalendar({
     const primaryDentistId = singleSelectedDentistId;
     return (
       <>
-        <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shrink-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white/95 backdrop-blur-sm sticky top-0 z-30 shrink-0 shadow-sm overflow-hidden">
             <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3">
               <Clock className="w-4 h-4 text-slate-500" />
             </div>
             <div
               ref={headerScrollRef}
-              className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain"
+              className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain bg-white/95"
               style={{ scrollbarGutter: 'stable' }}
             >
               {weekDateKeys.map((dayKey) => {
@@ -583,9 +736,15 @@ export default function ResourceCalendar({
             ref={gridScrollRef}
             className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
             style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable' }}
+            onMouseMove={(e) => schedulePointerHudSync(e)}
+            onMouseLeave={() => {
+              if (pointerHudRaf.current != null) cancelAnimationFrame(pointerHudRaf.current);
+              pointerHudRaf.current = null;
+              if (!isMobile) setGridPointerContext(null);
+            }}
           >
             <div className="flex relative min-w-0" style={{ minHeight: timelineMinHeightPx }}>
-              <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[1]">
+              <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[2] shadow-[4px_0_14px_-6px_rgba(15,23,42,0.18)]">
                 {slots.map((slot) => (
                   <div
                     key={slot}
@@ -611,6 +770,10 @@ export default function ResourceCalendar({
                 return (
                   <div
                     key={dayKey}
+                    data-timeline-column
+                    data-timeline-day={normalizeCalendarDateKey(dayKey)}
+                    data-timeline-dentist-id={singleSelectedDentistId ?? ''}
+                    data-timeline-dentist-name={(selectedInView.length === 1 ? selectedInView[0]?.name : '') ?? ''}
                     className={`flex-1 min-w-[72px] sm:min-w-[100px] relative border-r border-slate-200 last:border-r-0 ${
                       vacation ? 'bg-red-50' : 'bg-slate-50'
                     }`}
@@ -768,13 +931,14 @@ export default function ResourceCalendar({
           </div>
         </div>
         {hoverTooltip}
+        {pointerHud}
       </>
     );
   }
 
   return (
     <>
-      <div className="flex-1 flex flex-col min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm">
         {isMobile && listForMobile.length > 0 && (
           <div ref={mobileDentistsRef} className="relative px-3 py-2 border-b border-slate-200 bg-slate-100/80 flex flex-col gap-2">
             {onDentistToggle ? (
@@ -864,11 +1028,11 @@ export default function ResourceCalendar({
             )}
           </div>
         )}
-        <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shrink-0 overflow-hidden">
-          <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3">
+        <div ref={headerRowRef} className="flex border-b border-slate-200 bg-white/95 backdrop-blur-sm sticky top-0 z-30 shrink-0 shadow-sm overflow-hidden">
+          <div className="w-16 shrink-0 flex items-center justify-center border-r border-slate-200 py-3 bg-white/95">
             <Clock className="w-4 h-4 text-slate-500" />
           </div>
-          <div ref={headerScrollRef} className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain" style={{ scrollbarGutter: 'stable' }}>
+          <div ref={headerScrollRef} className="flex-1 flex min-w-0 overflow-x-auto overflow-y-hidden scroll-thin overscroll-x-contain bg-white/95" style={{ scrollbarGutter: 'stable' }}>
           {dentistsToShow.map((d) => (
             <div
               key={d.id}
@@ -915,6 +1079,12 @@ export default function ResourceCalendar({
             if (e.touches.length < 2) lastPinchDist.current = null;
           }}
           onTouchCancel={() => { lastPinchDist.current = null; }}
+          onMouseMove={(e) => schedulePointerHudSync(e)}
+          onMouseLeave={() => {
+            if (pointerHudRaf.current != null) cancelAnimationFrame(pointerHudRaf.current);
+            pointerHudRaf.current = null;
+            if (!isMobile) setGridPointerContext(null);
+          }}
         >
           <div className="flex relative min-w-0" style={{ minHeight: timelineMinHeightPx }}>
             {showNowLine && (
@@ -924,7 +1094,7 @@ export default function ResourceCalendar({
                 aria-hidden
               />
             )}
-            <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[1]">
+            <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[2] shadow-[4px_0_14px_-6px_rgba(15,23,42,0.18)]">
               {slots.map((slot) => (
                 <div
                   key={slot}
@@ -941,6 +1111,10 @@ export default function ResourceCalendar({
               return (
                 <div
                   key={d.id}
+                  data-timeline-column
+                  data-timeline-dentist-id={d.id}
+                  data-timeline-day={normalizeCalendarDateKey(dateStr)}
+                  data-timeline-dentist-name={d.name}
                   className={`flex-1 min-w-[140px] sm:min-w-[160px] relative border-r border-slate-200 last:border-r-0 ${
                     vacation ? 'bg-red-50' : 'bg-slate-50'
                   }`}
@@ -1091,6 +1265,7 @@ export default function ResourceCalendar({
       </div>
       {dragOverlay}
       {hoverTooltip}
+      {pointerHud}
     </>
   );
 }
