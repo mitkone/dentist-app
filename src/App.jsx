@@ -444,7 +444,7 @@ export default function App() {
           );
           setAppointments([]);
         } else {
-          const list = (data || []).map(rowToAppointment).filter(Boolean);
+          const list = (data || []).map((row) => rowToAppointment(row, dentists)).filter(Boolean);
           setAppointments(list);
         }
       } catch (err) {
@@ -460,7 +460,7 @@ export default function App() {
       setAppointmentsLoading(false);
     }
     fetchAppointments();
-  }, [isAuthenticated, appointmentsRefreshKey]);
+  }, [isAuthenticated, appointmentsRefreshKey, dentists]);
 
   const myDentistId = permissions.myDentistId;
   const notificationUserKey = user?.id || user?.email || (myDentistId ? `dentist:${myDentistId}` : 'staff');
@@ -546,7 +546,7 @@ export default function App() {
     if (!supabase || !isAuthenticated) return;
     const ch = supabase.channel(`appointments-live-${notificationUserKey}`);
     const mergeUpsert = (row) => {
-      const mapped = rowToAppointment(row);
+      const mapped = rowToAppointment(row, dentists);
       if (!mapped) return;
       setAppointments((prev) => {
         const next = [...prev.filter((a) => a.id !== mapped.id), mapped];
@@ -570,7 +570,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [supabase, isAuthenticated, notificationUserKey]);
+  }, [supabase, isAuthenticated, notificationUserKey, dentists]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -1122,7 +1122,7 @@ export default function App() {
           const human = error.message || error.details || error.hint || JSON.stringify(error);
           return { ok: false, error: human };
         }
-        const mapped = rowToAppointment(data);
+        const mapped = rowToAppointment(data, dentists);
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           mapped.location = location;
@@ -1141,7 +1141,7 @@ export default function App() {
         return { ok: false, error: err?.message || String(err) };
       }
     },
-    [currentDate, patients]
+    [currentDate, patients, dentists]
   );
 
   const goPrevDay = () => {
