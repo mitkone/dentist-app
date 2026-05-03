@@ -27,6 +27,13 @@ import DoctorDayLocationModal from './components/DoctorDayLocationModal';
 import LandingAuth, { getAdminSession, setAdminSession, getAdminPin } from './components/LandingAuth';
 import QuickBookBar from './components/QuickBookBar';
 import AdminDoctorMessageModal from './components/AdminDoctorMessageModal';
+import MessagingChatPanel from './components/MessagingChatPanel';
+import {
+  STAFF_DM_INBOX_DENTIST_ID,
+  countUnreadForDentist,
+  countUnreadForStaff,
+  threadDoctorId,
+} from './lib/doctorMessaging';
 import { getPermissions } from './lib/permissions';
 
 function dateKey(d) {
@@ -240,6 +247,7 @@ export default function App() {
   const [scheduleNotificationsSeen, setScheduleNotificationsSeen] = useState(true);
   const scheduleNotificationsRef = useRef(null);
   const [doctorInboxMessages, setDoctorInboxMessages] = useState([]);
+  const [staffDmMessages, setStaffDmMessages] = useState([]);
   const [adminDoctorMessageOpen, setAdminDoctorMessageOpen] = useState(false);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
   const [vacationsRefreshKey, setVacationsRefreshKey] = useState(0);
@@ -571,36 +579,89 @@ export default function App() {
   const myDentistId = permissions.myDentistId;
   const notificationUserKey = user?.id || user?.email || (myDentistId ? `dentist:${myDentistId}` : 'staff');
 
-  const unreadDoctorMessages = doctorInboxMessages.filter((m) => !m.read_at).length;
+  const unreadDmForBell = adminSession
+    ? 0
+    : myDentistId
+      ? countUnreadForDentist(doctorInboxMessages, myDentistId)
+      : permissions.canBookAnyDentist
+        ? countUnreadForStaff(staffDmMessages)
+        : 0;
   const scheduleBellUnread = scheduleNotifications.length > 0 && !scheduleNotificationsSeen;
-  const inboxBellCount = unreadDoctorMessages + (scheduleBellUnread ? scheduleNotifications.length : 0);
-  const showInboxBellBadge = unreadDoctorMessages > 0 || scheduleBellUnread;
+  const inboxBellCount = unreadDmForBell + (scheduleBellUnread ? scheduleNotifications.length : 0);
+  const showInboxBellBadge = unreadDmForBell > 0 || scheduleBellUnread;
 
   const fetchDoctorInbox = useCallback(async () => {
     if (!supabase || !myDentistId) return;
+    const esc = String(myDentistId);
     const { data, error } = await supabase
       .from('admin_doctor_messages')
       .select('*')
-      .eq('to_dentist_id', myDentistId)
-      .order('created_at', { ascending: false })
-      .limit(80);
+      .or(`to_dentist_id.eq.${esc},from_dentist_id.eq.${esc}`)
+      .order('created_at', { ascending: true })
+      .limit(500);
     if (!error && data) setDoctorInboxMessages(data);
   }, [supabase, myDentistId]);
 
-  const markDoctorInboxReadOpen = useCallback(async () => {
-    if (!supabase || !myDentistId) return;
-    const nowIso = new Date().toISOString();
-    const { error } = await supabase
+  const fetchStaffDmMessages = useCallback(async () => {
+    if (!supabase) return;
+    const S = STAFF_DM_INBOX_DENTIST_ID;
+    const { data, error } = await supabase
       .from('admin_doctor_messages')
-      .update({ read_at: nowIso })
-      .eq('to_dentist_id', myDentistId)
-      .is('read_at', null);
-    if (!error) {
-      setDoctorInboxMessages((prev) =>
-        prev.map((m) => (m.read_at ? m : { ...m, read_at: nowIso }))
-      );
-    }
-  }, [supabase, myDentistId]);
+      .select('*')
+      .or(`to_dentist_id.eq.${S},and(from_dentist_id.is.null,to_dentist_id.neq.${S})`)
+      .order('created_at', { ascending: true })
+      .limit(800);
+    if (!error && data) setStaffDmMessages(data);
+  }, [supabase]);
+
+  const markDmThreadRead = useCallback(
+    async (threadId) => {
+      if (!supabase || !threadId) return;
+      const nowIso = new Date().toISOString();
+      if (myDentistId) {
+        const { error } = await supabase
+          .from('admin_doctor_messages')
+          .update({ read_at: nowIso })
+          .eq('thread_id', threadId)
+          .eq('to_dentist_id', myDentistId)
+          .is('from_dentist_id', null)
+          .is('read_at', null);
+        if (!error) {
+          setDoctorInboxMessages((prev) =>
+            prev.map((m) =>
+              m.thread_id === threadId &&
+              m.to_dentist_id === myDentistId &&
+              !m.from_dentist_id &&
+              !m.read_at
+                ? { ...m, read_at: nowIso }
+                : m
+            )
+          );
+        }
+      } else if (permissions.canBookAnyDentist && !adminSession) {
+        const { error } = await supabase
+          .from('admin_doctor_messages')
+          .update({ read_at: nowIso })
+          .eq('thread_id', threadId)
+          .eq('to_dentist_id', STAFF_DM_INBOX_DENTIST_ID)
+          .not('from_dentist_id', 'is', null)
+          .is('read_at', null);
+        if (!error) {
+          setStaffDmMessages((prev) =>
+            prev.map((m) =>
+              m.thread_id === threadId &&
+              m.to_dentist_id === STAFF_DM_INBOX_DENTIST_ID &&
+              m.from_dentist_id &&
+              !m.read_at
+                ? { ...m, read_at: nowIso }
+                : m
+            )
+          );
+        }
+      }
+    },
+    [supabase, myDentistId, permissions.canBookAnyDentist, adminSession]
+  );
 
   useEffect(() => {
     if (!supabase || adminSession || !isAuthenticated || !myDentistId) return;
@@ -608,37 +669,166 @@ export default function App() {
   }, [supabase, adminSession, isAuthenticated, myDentistId, fetchDoctorInbox]);
 
   useEffect(() => {
+    if (!supabase || adminSession || !isAuthenticated || myDentistId) return;
+    if (!permissions.canBookAnyDentist) return;
+    fetchStaffDmMessages();
+  }, [
+    supabase,
+    adminSession,
+    isAuthenticated,
+    myDentistId,
+    permissions.canBookAnyDentist,
+    fetchStaffDmMessages,
+  ]);
+
+  useEffect(() => {
     if (!supabase || adminSession || !isAuthenticated || !myDentistId) return;
-    const filt = `to_dentist_id=eq.${myDentistId}`;
+    const id = String(myDentistId);
+    const merge = (row) => {
+      if (!row?.id) return;
+      if (row.to_dentist_id !== id && String(row.from_dentist_id ?? '') !== id) return;
+      setDoctorInboxMessages((prev) => {
+        if (prev.some((x) => x.id === row.id)) return prev;
+        return [...prev, row].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      });
+    };
     const ch = supabase
       .channel(`admin-doctor-msgs-${notificationUserKey}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'admin_doctor_messages', filter: filt },
-        (payload) => {
-          const row = payload?.new;
-          if (!row?.id) return;
-          setDoctorInboxMessages((prev) => [row, ...prev.filter((x) => x.id !== row.id)]);
-        }
+        { event: 'INSERT', schema: 'public', table: 'admin_doctor_messages', filter: `to_dentist_id=eq.${id}` },
+        (payload) => merge(payload?.new)
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_doctor_messages', filter: `from_dentist_id=eq.${id}` },
+        (payload) => merge(payload?.new)
       )
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [supabase, adminSession, isAuthenticated, myDentistId, notificationUserKey]);
 
+  useEffect(() => {
+    if (!supabase || adminSession || !isAuthenticated || myDentistId) return;
+    if (!permissions.canBookAnyDentist) return;
+    const S = STAFF_DM_INBOX_DENTIST_ID;
+    const ch = supabase
+      .channel(`staff-dm-${notificationUserKey}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_doctor_messages' },
+        (payload) => {
+          const row = payload?.new;
+          if (!row?.id) return;
+          const forStaff =
+            row.to_dentist_id === S || (!row.from_dentist_id && row.to_dentist_id && row.to_dentist_id !== S);
+          if (!forStaff) return;
+          setStaffDmMessages((prev) => {
+            if (prev.some((x) => x.id === row.id)) return prev;
+            return [...prev, row].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          });
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [supabase, adminSession, isAuthenticated, myDentistId, notificationUserKey, permissions.canBookAnyDentist]);
+
   const sendAdminDoctorMessage = useCallback(
     async ({ toDentistId, body: text }) => {
       if (!supabase) throw new Error('Supabase не е конфигуриран');
+      const thread_id = crypto.randomUUID();
       const from_label = adminSession
         ? 'Админ'
         : (profile?.full_name || user?.email?.split('@')[0] || user?.email || 'Регистратура');
-      const { error } = await supabase.from('admin_doctor_messages').insert({
+      const rowPayload = {
+        thread_id,
         to_dentist_id: toDentistId,
         body: text,
         from_label,
-      });
+        from_dentist_id: null,
+      };
+      const { data, error } = await supabase.from('admin_doctor_messages').insert(rowPayload).select('*').maybeSingle();
       if (error) throw new Error(error.message || String(error));
+      if (data && !adminSession && !permissions.myDentistId && permissions.canBookAnyDentist) {
+        setStaffDmMessages((prev) => {
+          if (prev.some((x) => x.id === data.id)) return prev;
+          return [...prev, data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        });
+      }
     },
-    [supabase, adminSession, profile, user]
+    [supabase, adminSession, profile, user, permissions.myDentistId, permissions.canBookAnyDentist]
+  );
+
+  const replyToDmThread = useCallback(
+    async ({ threadId, body: text }) => {
+      if (!supabase) throw new Error('Supabase не е конфигуриран');
+      const trimmed = String(text ?? '').trim();
+      if (!trimmed || !threadId) return;
+
+      const from_label_staff = adminSession
+        ? 'Админ'
+        : (profile?.full_name || user?.email?.split('@')[0] || user?.email || 'Регистратура');
+
+      if (myDentistId && !adminSession) {
+        const dentistLabel =
+          dentistsRef.current?.find((d) => String(d.id) === String(myDentistId))?.name?.trim?.() ||
+          profile?.full_name ||
+          '';
+        const { data, error } = await supabase
+          .from('admin_doctor_messages')
+          .insert({
+            thread_id: threadId,
+            to_dentist_id: STAFF_DM_INBOX_DENTIST_ID,
+            from_dentist_id: myDentistId,
+            body: trimmed,
+            from_label: dentistLabel || null,
+          })
+          .select('*')
+          .maybeSingle();
+        if (error) throw new Error(error.message || String(error));
+        if (data) {
+          setDoctorInboxMessages((prev) => {
+            if (prev.some((x) => x.id === data.id)) return prev;
+            return [...prev, data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          });
+        }
+        return;
+      }
+
+      if (!permissions.canBookAnyDentist) {
+        throw new Error('Нямате права за отговор.');
+      }
+
+      const docId = threadDoctorId(staffDmMessages.filter((m) => m.thread_id === threadId));
+      if (!docId) throw new Error('Не е намерен лекар за този разговор.');
+      const { data, error } = await supabase
+        .from('admin_doctor_messages')
+        .insert({
+          thread_id: threadId,
+          to_dentist_id: docId,
+          body: trimmed,
+          from_label: from_label_staff,
+          from_dentist_id: null,
+        })
+        .select('*')
+        .maybeSingle();
+      if (error) throw new Error(error.message || String(error));
+      if (data) {
+        setStaffDmMessages((prev) => {
+          if (prev.some((x) => x.id === data.id)) return prev;
+          return [...prev, data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        });
+      }
+    },
+    [
+      supabase,
+      myDentistId,
+      adminSession,
+      profile,
+      user,
+      permissions.canBookAnyDentist,
+      staffDmMessages,
+    ]
   );
 
   const formatNotificationText = useCallback((action, details = {}) => {
@@ -1629,10 +1819,7 @@ export default function App() {
                     e.stopPropagation();
                     setScheduleNotificationsOpen((wasOpen) => {
                       const willOpen = !wasOpen;
-                      if (willOpen) {
-                        if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
-                        if (myDentistId) void markDoctorInboxReadOpen();
-                      }
+                      if (willOpen && scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
                       return willOpen;
                     });
                   }}
@@ -1647,42 +1834,51 @@ export default function App() {
                   )}
                 </button>
                 {scheduleNotificationsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-[min(92vw,22rem)] max-h-[min(70vh,24rem)] overflow-y-auto bg-slate-100 border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
+                  <div className="absolute right-0 top-full mt-1 w-[min(96vw,26rem)] max-h-[min(92vh,42rem)] overflow-hidden bg-slate-100 border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
                     {myDentistId ? (
                       <>
-                        <div className="px-3 py-2 border-b border-slate-200 bg-emerald-50/80">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Съобщения от регистратура</span>
+                        <div className="px-3 py-2 border-b border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50 shrink-0">
+                          <span className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+                            Чат · регистратура и лекар
+                          </span>
+                          <p className="text-[11px] text-emerald-800/85 mt-0.5">Можете да отговорите директно по нишка.</p>
                         </div>
-                        <div className="divide-y divide-slate-200/80">
-                          {doctorInboxMessages.length === 0 ? (
-                            <p className="p-3 text-sm text-slate-500">Няма съобщения</p>
-                          ) : (
-                            doctorInboxMessages.map((m) => (
-                              <div
-                                key={m.id}
-                                className={`px-3 py-2.5 text-sm ${!m.read_at ? 'bg-emerald-100/50' : 'bg-transparent'}`}
-                              >
-                                <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-2 gap-y-0.5">
-                                  <span>
-                                    {new Date(m.created_at).toLocaleString('bg-BG', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </span>
-                                  {m.from_label && <span className="font-medium text-slate-600">от {m.from_label}</span>}
-                                </div>
-                                <p className="mt-1 text-slate-900 whitespace-pre-wrap leading-snug">{m.body}</p>
-                              </div>
-                            ))
-                          )}
+                        <MessagingChatPanel
+                          messages={doctorInboxMessages}
+                          perspective="dentist"
+                          myDentistId={myDentistId}
+                          dentists={dentists}
+                          onSendReply={replyToDmThread}
+                          onMarkThreadRead={markDmThreadRead}
+                          embedded
+                        />
+                      </>
+                    ) : permissions.canBookAnyDentist ? (
+                      <>
+                        <div className="px-3 py-2 border-b border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50 shrink-0">
+                          <span className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+                            Чат с лекари
+                          </span>
+                          <p className="text-[11px] text-emerald-800/85 mt-0.5">
+                            Изберете разговор и отговорете; новото съобщение е и от иконата с балонче.
+                          </p>
                         </div>
+                        <MessagingChatPanel
+                          messages={staffDmMessages}
+                          perspective="staff"
+                          myDentistId={null}
+                          dentists={dentists}
+                          onSendReply={replyToDmThread}
+                          onMarkThreadRead={markDmThreadRead}
+                          embedded
+                        />
                       </>
                     ) : (
-                      <p className="p-3 text-xs text-slate-500 border-b border-slate-200">Съобщения към профилите на лекарите са само при вход като „лекар в графика“.</p>
+                      <p className="p-3 text-xs text-slate-500 border-b border-slate-200 shrink-0">
+                        Вътрешният чат е наличен за регистратура или профилите на лекарите в графика.
+                      </p>
                     )}
-                    <div className="p-2 border-b border-slate-200 flex items-center justify-between bg-slate-100">
+                    <div className="p-2 border-b border-slate-200 flex items-center justify-between bg-slate-100 shrink-0">
                       <span className="text-sm font-medium text-slate-800">Промени в графика</span>
                       {scheduleNotifications.length > 0 && (
                         <button
@@ -1697,7 +1893,7 @@ export default function App() {
                         </button>
                       )}
                     </div>
-                    <div className="flex-1 overflow-y-auto min-h-[3rem]">
+                    <div className="flex-1 min-h-0 overflow-y-auto">
                       {scheduleNotifications.length === 0 ? (
                         <p className="p-3 text-sm text-slate-500">Няма записи за промени по графика</p>
                       ) : (

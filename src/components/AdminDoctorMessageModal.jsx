@@ -61,7 +61,7 @@ export default function AdminDoctorMessageModal({
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <p className="text-xs text-slate-600">
-            Всеки влезъл потребител може да изпрати бележка до избран лекар; получателят я вижда под камбанката (секция „Съобщения от регистратура“).
+            Създава нов разговор до избрания лекар. Той го вижда под камбанката и двамата може да си отговаряте в една нишка.
           </p>
           <div>
             <label className="block text-sm font-medium text-slate-800 mb-1">Лекар</label>
