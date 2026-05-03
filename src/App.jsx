@@ -205,6 +205,8 @@ export default function App() {
   dentistsRef.current = dentists;
   /** Игнорира се остарял отговор от паралелни GET заявки към appointments (гонка → „изчезващ“ час). */
   const appointmentsFetchGenerationRef = useRef(0);
+  /** След първо успешно зареждане повторни GET (Realtime refetch) не скриват графика с цял екран „Зареждане“. */
+  const appointmentsHadInitialHydrateRef = useRef(false);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -436,11 +438,15 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      appointmentsHadInitialHydrateRef.current = false;
+      return;
+    }
     const fetchGen = ++appointmentsFetchGenerationRef.current;
+    const showFullScreenLoading = !appointmentsHadInitialHydrateRef.current;
 
     async function fetchAppointments() {
-      setAppointmentsLoading(true);
+      if (showFullScreenLoading) setAppointmentsLoading(true);
       setAppointmentsError(null);
       if (!supabase) {
         if (appointmentsFetchGenerationRef.current === fetchGen) setAppointments([]);
@@ -466,6 +472,7 @@ export default function App() {
           const dentalNow = dentistsRef.current;
           const list = (data || []).map((row) => rowToAppointment(row, dentalNow)).filter(Boolean);
           setAppointments(list);
+          appointmentsHadInitialHydrateRef.current = true;
         }
       } catch (err) {
         if (appointmentsFetchGenerationRef.current !== fetchGen) return;
@@ -582,20 +589,59 @@ export default function App() {
     if (!supabase || !isAuthenticated) return;
     const ch = supabase.channel(`appointments-live-${notificationUserKey}`);
     const mergeUpsert = (row) => {
-      if (!row) return;
-      const mapped = rowToAppointment(row, dentistsRef.current);
-      if (!mapped) {
-        if (row.id != null) {
-          /* Realtime понякога носи частичен ред или временно невалиден payload — синхронен refetch замества целия списък. */
-          setAppointmentsRefreshKey((k) => k + 1);
-        }
-        return;
-      }
+      if (!row || row.id == null) return;
+
+      const needLaterRefetch = { yes: false };
+
       setAppointments((prev) => {
-        const next = [...prev.filter((a) => a.id !== mapped.id), mapped];
+        const existing = prev.find((a) => String(a.id) === String(row.id));
+        const fromRealtime = rowToAppointment(row, dentistsRef.current);
+
+        if (!fromRealtime) {
+          /*
+           * Частичен realtime payload без start/end или dentist — не затривай вече показания час от insert.
+           * Refetch само ако записът още не е хидратиран локално.
+           */
+          if (existing) return prev;
+          needLaterRefetch.yes = true;
+          return prev;
+        }
+
+        let merged = { ...fromRealtime };
+        if (existing) {
+          const mid = String(merged.dentistId ?? '').trim();
+          const eid = String(existing.dentistId ?? '').trim();
+          if (!mid && eid) merged = { ...merged, dentistId: existing.dentistId };
+
+          const mdoc = String(merged._doctorLabel ?? '').trim();
+          const edoc = String(existing._doctorLabel ?? '').trim();
+          if (!mdoc && edoc) merged = { ...merged, _doctorLabel: existing._doctorLabel };
+
+          if (!merged.date && existing.date) merged = { ...merged, date: existing.date };
+
+          const hasTimes = !!(merged.start && merged.end);
+          if (!hasTimes && existing.start && existing.end) {
+            merged = {
+              ...merged,
+              date: merged.date || existing.date,
+              start: merged.start || existing.start,
+              end: merged.end || existing.end,
+            };
+          }
+
+          const mname = String(merged.patientName ?? '').trim();
+          const ename = String(existing.patientName ?? '').trim();
+          if (!mname && ename) merged = { ...merged, patientName: existing.patientName };
+        }
+
+        const next = [...prev.filter((a) => String(a.id) !== String(row.id)), merged];
         next.sort(compareAppointmentsByDateTime);
         return next;
       });
+
+      if (needLaterRefetch.yes) {
+        queueMicrotask(() => setAppointmentsRefreshKey((k) => k + 1));
+      }
     };
     ch
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload) => {
