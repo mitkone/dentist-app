@@ -49,6 +49,12 @@ function getDurationMinutes(start, end) {
   return (eh - sh) * 60 + (em - sm);
 }
 
+function compareAppointmentsByDateTime(a, b) {
+  const dc = (a.date || '').localeCompare(b.date || '');
+  if (dc !== 0) return dc;
+  return (a.start || '').localeCompare(b.start || '');
+}
+
 function mapPatientFromRow(row) {
   if (!row) return null;
   const dn = row.dentist_notes;
@@ -494,7 +500,8 @@ export default function App() {
           let d = row.details ?? row.raw?.details ?? {};
           if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
           if (['vacation_added', 'vacation_deleted'].includes(action)) setVacationsRefreshKey((k) => k + 1);
-          else setAppointmentsRefreshKey((k) => k + 1);
+          /* Часовете се синхронизират през realtime по таблица appointments —
+           * пълен refetch тук понякога връща още без новия ред и „изчезва“ локално. */
           const text = formatNotificationText(action, d);
           setScheduleNotifications((prev) => [...prev, { id: row.id || crypto.randomUUID(), text, createdAt: Date.now() }]);
           setScheduleNotificationsSeen(false);
@@ -503,6 +510,36 @@ export default function App() {
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [adminSession, isAuthenticated, formatNotificationText, notificationUserKey]);
+
+  useEffect(() => {
+    if (!supabase || !isAuthenticated) return;
+    const ch = supabase.channel(`appointments-live-${notificationUserKey}`);
+    const mergeUpsert = (row) => {
+      const mapped = rowToAppointment(row);
+      if (!mapped) return;
+      setAppointments((prev) => {
+        const next = [...prev.filter((a) => a.id !== mapped.id), mapped];
+        next.sort(compareAppointmentsByDateTime);
+        return next;
+      });
+    };
+    ch
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload) => {
+        mergeUpsert(payload.new);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload) => {
+        mergeUpsert(payload.new);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'appointments' }, (payload) => {
+        const id = payload.old?.id;
+        if (id == null) return;
+        setAppointments((prev) => prev.filter((a) => a.id !== id));
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [supabase, isAuthenticated, notificationUserKey]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
