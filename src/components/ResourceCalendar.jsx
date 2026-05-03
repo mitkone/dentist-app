@@ -45,6 +45,11 @@ function weekDateKeysFrom(anchor) {
   return keys;
 }
 
+/** Локален YYYY-MM-DD (не UTC), за да съвпада с дата на часовете в графика. */
+function calendarDateKeyFromDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function assignAppointmentLanes(apps) {
   const sorted = [...apps].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
   const laneEnds = [];
@@ -214,7 +219,7 @@ export default function ResourceCalendar({
     return () => document.removeEventListener('click', onDocClick, true);
   }, [mobileDentistsOpen]);
 
-  const dateStr = currentDateKey ?? currentDate.toISOString().slice(0, 10);
+  const dateStr = currentDateKey ?? calendarDateKeyFromDate(currentDate);
 
   const weekDateKeys = useMemo(
     () => (viewMode === 'week' ? weekDateKeysFrom(currentDate) : []),
@@ -292,7 +297,7 @@ export default function ResourceCalendar({
 
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const isToday = (currentDateKey ?? currentDate.toISOString().slice(0, 10)) === todayKey;
+  const isToday = (currentDateKey ?? calendarDateKeyFromDate(currentDate)) === todayKey;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const rangeStart = workingHours.start * 60;
   const rangeEnd = workingHours.end * 60;
@@ -307,6 +312,24 @@ export default function ResourceCalendar({
     const minutes = (eh - sh) * 60 + (em - sm);
     return (minutes / slotMinutes) * effectiveSlotHeight;
   };
+
+  let timelineMinHeightPx = slots.length * effectiveSlotHeight;
+  const dentistIdsInView = dentists.map((d) => d.id);
+  const dentistIdsInViewSet = new Set(dentistIdsInView);
+  if (dentistIdsInView.length > 0) {
+    for (const a of appointments) {
+      const dayOk =
+        viewMode === 'week' ? weekDateKeys.includes(a.date) : a.date === dateStr;
+      if (!dayOk) continue;
+      if (!dentistIdsInViewSet.has(a.dentistId)) continue;
+      if (!patientMatchesSearch(a)) continue;
+      const bottomPx = timeToOffset(a.start) + durationHeight(a.start, a.end);
+      timelineMinHeightPx = Math.max(
+        timelineMinHeightPx,
+        bottomPx + Math.max(12, Math.min(effectiveSlotHeight * 0.45, 32))
+      );
+    }
+  }
 
   const handleSlotClick = useCallback(
     (dentistId, slot, e, slotDateKey) => {
@@ -520,7 +543,7 @@ export default function ResourceCalendar({
             className="flex-1 overflow-auto scroll-thin min-h-0 touch-manipulation"
             style={{ WebkitOverflowScrolling: 'touch', scrollbarGutter: 'stable' }}
           >
-            <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
+            <div className="flex relative min-w-0" style={{ minHeight: timelineMinHeightPx }}>
               <div className="w-16 shrink-0 border-r border-slate-200 bg-white sticky left-0 z-[1]">
                 {slots.map((slot) => (
                   <div
@@ -845,7 +868,7 @@ export default function ResourceCalendar({
           }}
           onTouchCancel={() => { lastPinchDist.current = null; }}
         >
-          <div className="flex relative min-w-0" style={{ minHeight: slots.length * effectiveSlotHeight }}>
+          <div className="flex relative min-w-0" style={{ minHeight: timelineMinHeightPx }}>
             {showNowLine && (
               <div
                 className="absolute left-0 right-0 h-0.5 bg-emerald-400 z-10 pointer-events-none"
