@@ -10,6 +10,7 @@ function normalizeDoctorMatchKey(s) {
     .replace(/\u2010|\u2011|\u2212|\u002d/g, '-')
     .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ')
+    .replace(/^dr\.?\s+/i, 'д-р ')
     .replace(/^д-р\.?\s+/i, 'д-р ');
 }
 
@@ -83,6 +84,23 @@ function resolveDentistIdFromRow(row, dentists = []) {
   return found?.id ?? '';
 }
 
+/**
+ * Колона в графиката по id; ако записът няма валиден dentistId но има етикет на лекар (legacy import), мачва по име.
+ */
+export function effectiveDentistId(appointment, dentists = []) {
+  const cur = String(appointment?.dentistId ?? '').trim();
+  if (cur && dentists.some((d) => String(d.id) === cur)) return cur;
+
+  const label = appointment?._doctorLabel ?? appointment?.doctorLabel ?? '';
+  const trimmed = String(label).trim();
+  if (trimmed && dentists.length) {
+    const fromLabel = resolveDentistIdFromRow({ dentist_id: null, doctor: trimmed }, dentists);
+    if (fromLabel) return fromLabel;
+  }
+
+  return cur;
+}
+
 function inferTypeAndInsuranceFromRow(row) {
   const at = row?.appointment_type ?? row?.appointmentType ?? row?.intervention ?? row?.vizit_type ?? '';
   const stRaw = row?.status;
@@ -117,13 +135,96 @@ function isoDateTimeToLocalParts(isoMs) {
   return { dateKey: `${y}-${m}-${day}`, hhmm: `${hh}:${mm}` };
 }
 
+function parseLooseTimeToMs(value) {
+  if (value == null || value === '') return null;
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) return d.getTime();
+  return null;
+}
+
+/** Редове от стари/външни БД: отделна дата + час, или липсващ end_time. */
+function pickStartEndMsFromRow(row) {
+  const startCandidates = [
+    row.start_time,
+    row.start,
+    row.slot_start,
+    row.slotStart,
+    row.startTime,
+    row.begin_time,
+  ];
+  let startMs = null;
+  for (const c of startCandidates) {
+    const t = parseLooseTimeToMs(c);
+    if (t != null) {
+      startMs = t;
+      break;
+    }
+  }
+
+  const dayCol =
+    row.appointment_date ?? row.appointmentDate ?? row.calendar_date ?? row.visit_date ?? row.day_date ?? null;
+  const timeOnly =
+    row.time ??
+    row.start_slot ??
+    row.slot_time ??
+    row.hour ??
+    (typeof row.start_time === 'string' && /^\d{1,2}:\d{2}/.test(row.start_time.trim()) ? row.start_time : null);
+
+  if (startMs == null && dayCol != null && timeOnly != null) {
+    const dm = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dayCol).trim());
+    const tm = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(timeOnly).trim());
+    if (dm && tm) {
+      const y = Number(dm[1]);
+      const mo = Number(dm[2]);
+      const da = Number(dm[3]);
+      const hh = Number(tm[1]);
+      const mm = Number(tm[2]);
+      if (
+        [y, mo, da, hh, mm].every(Number.isFinite) &&
+        mo >= 1 &&
+        mo <= 12 &&
+        da >= 1 &&
+        da <= 31
+      ) {
+        startMs = new Date(y, mo - 1, da, hh, mm, 0, 0).getTime();
+      }
+    }
+  }
+
+  const endCandidates = [row.end_time, row.end, row.slot_end, row.slotEnd, row.endTime, row.finish_time];
+  let endMs = null;
+  for (const c of endCandidates) {
+    const t = parseLooseTimeToMs(c);
+    if (t != null) {
+      endMs = t;
+      break;
+    }
+  }
+
+  const dur = row.duration_minutes ?? row.durationMinutes ?? row.slot_duration;
+  const durN = dur != null ? Number(dur) : NaN;
+
+  if (startMs != null && endMs == null) {
+    if (Number.isFinite(durN) && durN > 0 && durN <= 24 * 60) {
+      endMs = startMs + durN * 60 * 1000;
+    } else {
+      endMs = startMs + 30 * 60 * 1000;
+    }
+  }
+
+  if (startMs != null && endMs != null && endMs < startMs) {
+    endMs = startMs + 30 * 60 * 1000;
+  }
+
+  return { startMs, endMs };
+}
+
 export function rowToAppointment(row, dentists = []) {
   if (!row || row.id == null) return null;
-  const startDate = new Date(row.start_time);
-  const endDate = new Date(row.end_time);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
-  const startParts = isoDateTimeToLocalParts(startDate.getTime());
-  const endParts = isoDateTimeToLocalParts(endDate.getTime());
+  const { startMs, endMs } = pickStartEndMsFromRow(row);
+  if (startMs == null || endMs == null) return null;
+  const startParts = isoDateTimeToLocalParts(startMs);
+  const endParts = isoDateTimeToLocalParts(endMs);
   if (!startParts || !endParts) return null;
   const date = startParts.dateKey;
   const start = startParts.hhmm;

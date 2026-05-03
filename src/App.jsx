@@ -1103,6 +1103,7 @@ export default function App() {
       }
 
       try {
+        const dentistLabel = dentists.find((d) => d.id === dentistId)?.name;
         const payload = {
           patient_name: patientName.trim(),
           dentist_id: dentistId,
@@ -1113,6 +1114,7 @@ export default function App() {
           location,
           notes: notes?.trim() ? notes.trim() : null,
         };
+        if (dentistLabel) payload.doctor = dentistLabel;
         if (resolvedPatientId) payload.patient_id = resolvedPatientId;
 
         const { data, error } = await insertAppointmentWithFallbacks(supabase, payload);
@@ -1204,6 +1206,7 @@ export default function App() {
       )
     );
     if (supabase) {
+      const dentistLabel = dentists.find((d) => d.id === dentistId)?.name;
       const payload = {
         dentist_id: dentistId,
         patient_name: patientName ?? '',
@@ -1211,6 +1214,7 @@ export default function App() {
         end_time: toSupabaseTime(date, end),
         status: type,
       };
+      if (dentistLabel) payload.doctor = dentistLabel;
       if (notes !== undefined) payload.notes = notes;
       if (attendance !== undefined) payload.attendance = attendance;
       if (insurance !== undefined) payload.insurance = insurance;
@@ -1224,6 +1228,10 @@ export default function App() {
             const payloadLegacy = { ...payload };
             delete payloadLegacy.location;
             supabase.from('appointments').update(payloadLegacy).eq('id', appointmentId);
+          } else if (error && String(error.message || '').includes('doctor')) {
+            const payloadLegacy = { ...payload };
+            delete payloadLegacy.doctor;
+            supabase.from('appointments').update(payloadLegacy).eq('id', appointmentId);
           } else if (error) {
             console.error('Failed to update appointment:', error);
           } else {
@@ -1232,7 +1240,7 @@ export default function App() {
         });
     }
     setEditAppointment(null);
-  }, [appointments]);
+  }, [appointments, dentists]);
 
   const fetchActivityLog = useCallback(async () => {
     if (!supabase) return;

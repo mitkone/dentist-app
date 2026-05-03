@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, ChevronDown, Stethoscope, StickyNote } from 'lucide-react';
 import { getSlots, appointmentTypeLabel, HOURS as DEFAULT_HOURS, SLOT_MINUTES } from '../data/mockData';
+import { effectiveDentistId } from '../lib/appointments';
 
 const SLOT_HEIGHT = 40;
 const DRAG_THRESHOLD = 5;
@@ -97,6 +98,12 @@ export default function ResourceCalendar({
   viewMode = 'day',
   onOpenFreeSlotsForDate,
 }) {
+  const dentistPoolForId = useMemo(
+    () => (allDentists && allDentists.length > 0 ? allDentists : dentists),
+    [allDentists, dentists]
+  );
+  const columnDentistId = useCallback((a) => effectiveDentistId(a, dentistPoolForId), [dentistPoolForId]);
+
   const getTypeDisplay = (type) =>
     appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
   const slots = useMemo(() => getSlots(workingHours), [workingHours]);
@@ -254,7 +261,7 @@ export default function ResourceCalendar({
     appointments.filter(
       (a) =>
         normalizeCalendarDateKey(a.date) === normalizeCalendarDateKey(dayKey) &&
-        String(a.dentistId ?? '').trim() === String(dentistId ?? '').trim() &&
+        columnDentistId(a) === String(dentistId ?? '').trim() &&
         patientMatchesSearch(a)
     );
 
@@ -285,7 +292,7 @@ export default function ResourceCalendar({
     const day = normalizeCalendarDateKey(dateStr);
     return appointments.filter(
       (a) =>
-        String(a.dentistId ?? '').trim() === did &&
+        columnDentistId(a) === did &&
         normalizeCalendarDateKey(a.date) === day &&
         patientMatchesSearch(a)
     );
@@ -331,8 +338,8 @@ export default function ResourceCalendar({
       const dayOk =
         viewMode === 'week' ? weekDateKeys.some((k) => normalizeCalendarDateKey(k) === adate) : adate === normalizeCalendarDateKey(dateStr);
       if (!dayOk) continue;
-      const apDid = String(a.dentistId ?? '').trim();
-      if (!dentistIdsInViewSet.has(apDid)) continue;
+      const apDid = columnDentistId(a);
+      if (!apDid || !dentistIdsInViewSet.has(apDid)) continue;
       if (!patientMatchesSearch(a)) continue;
       const bottomPx = timeToOffset(a.start) + durationHeight(a.start, a.end);
       timelineMinHeightPx = Math.max(
@@ -573,7 +580,7 @@ export default function ResourceCalendar({
                   .filter(
                     (a) =>
                       normalizeCalendarDateKey(a.date) === normalizeCalendarDateKey(dayKey) &&
-                      weekDentistIds.includes(String(a.dentistId ?? '').trim()) &&
+                      weekDentistIds.includes(columnDentistId(a)) &&
                       patientMatchesSearch(a)
                   )
                   .map((x) => ({ ...x }));
@@ -616,7 +623,7 @@ export default function ResourceCalendar({
                     })}
 
                     {laidOut.map((a) => {
-                      const dent = dentists.find((dent) => dent.id === a.dentistId) || dentistsToShow[0];
+                      const dent = dentists.find((dent) => dent.id === columnDentistId(a)) || dentistsToShow[0];
                       const col = dent?.color || '#64748b';
                       const top = timeToOffset(a.start);
                       const rawH = durationHeight(a.start, a.end);
@@ -637,7 +644,7 @@ export default function ResourceCalendar({
                           key={a.id}
                           onMouseEnter={(e) => {
                             if (isMobile) return;
-                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            const dn = dentists.find((x) => x.id === columnDentistId(a))?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
                               y: e.clientY,
@@ -649,7 +656,7 @@ export default function ResourceCalendar({
                           }}
                           onPointerEnter={(e) => {
                             if (isMobile) return;
-                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            const dn = dentists.find((x) => x.id === columnDentistId(a))?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
                               y: e.clientY,
@@ -669,7 +676,7 @@ export default function ResourceCalendar({
                           }}
                           onPointerOver={(e) => {
                             if (isMobile) return;
-                            const dn = dentists.find((x) => x.id === a.dentistId)?.name || '—';
+                            const dn = dentists.find((x) => x.id === columnDentistId(a))?.name || '—';
                             setHoverInfo({
                               x: e.clientX,
                               y: e.clientY,

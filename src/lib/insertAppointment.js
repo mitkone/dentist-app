@@ -3,6 +3,18 @@
  */
 export async function insertAppointmentWithFallbacks(supabase, fullPayload) {
   const msg = (e) => (e && (e.message || e.details || String(e))) || '';
+  const minimalCore = {
+    patient_name: fullPayload.patient_name,
+    dentist_id: fullPayload.dentist_id,
+    start_time: fullPayload.start_time,
+    end_time: fullPayload.end_time,
+    status: fullPayload.status ?? 'scheduled',
+  };
+  const withDoctorMinimal =
+    fullPayload.doctor && String(fullPayload.doctor).trim()
+      ? { ...minimalCore, doctor: String(fullPayload.doctor).trim() }
+      : null;
+
   const variants = [
     fullPayload,
     withoutKeys(fullPayload, ['patient_id']),
@@ -12,13 +24,8 @@ export async function insertAppointmentWithFallbacks(supabase, fullPayload) {
     withoutKeys(fullPayload, ['location', 'insurance', 'patient_id']),
     withoutKeys(fullPayload, ['location', 'insurance', 'notes']),
     withoutKeys(fullPayload, ['location', 'insurance', 'notes', 'patient_id']),
-    {
-      patient_name: fullPayload.patient_name,
-      dentist_id: fullPayload.dentist_id,
-      start_time: fullPayload.start_time,
-      end_time: fullPayload.end_time,
-      status: fullPayload.status ?? 'scheduled',
-    },
+    ...(withDoctorMinimal ? [withDoctorMinimal] : []),
+    minimalCore,
   ];
 
   let lastError = null;
