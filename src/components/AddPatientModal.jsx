@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 export default function AddPatientModal({ open, onClose, onAdd }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [address, setAddress] = useState('');
   const [egn, setEgn] = useState('');
@@ -18,6 +19,7 @@ export default function AddPatientModal({ open, onClose, onAdd }) {
     onAdd({
       name: trimmedName,
       phone: phone.trim(),
+      parentPhone: parentPhone.trim(),
       notes: notes.trim(),
       address: address.trim(),
       egn: egn.trim(),
@@ -25,6 +27,7 @@ export default function AddPatientModal({ open, onClose, onAdd }) {
     });
     setName('');
     setPhone('');
+    setParentPhone('');
     setNotes('');
     setAddress('');
     setEgn('');
@@ -35,6 +38,7 @@ export default function AddPatientModal({ open, onClose, onAdd }) {
   const handleClose = () => {
     setName('');
     setPhone('');
+    setParentPhone('');
     setNotes('');
     setAddress('');
     setEgn('');
@@ -81,6 +85,20 @@ export default function AddPatientModal({ open, onClose, onAdd }) {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              placeholder="+359 ..."
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="patient-parent-phone" className="block text-sm font-medium text-slate-800 mb-1">
+              Телефон на родител
+            </label>
+            <input
+              id="patient-parent-phone"
+              type="tel"
+              value={parentPhone}
+              onChange={(e) => setParentPhone(e.target.value)}
               placeholder="+359 ..."
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />

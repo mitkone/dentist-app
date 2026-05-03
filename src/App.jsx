@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { rowToAppointment, toSupabaseTime } from './lib/appointments';
+import { insertAppointmentWithFallbacks } from './lib/insertAppointment';
 import { logActivity, ACTIVITY_ACTIONS } from './lib/activityLog';
 import Sidebar from './components/Sidebar';
 import CalendarHeader from './components/CalendarHeader';
@@ -46,6 +47,45 @@ function getDurationMinutes(start, end) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   return (eh - sh) * 60 + (em - sm);
+}
+
+function mapPatientFromRow(row) {
+  if (!row) return null;
+  const dn = row.dentist_notes;
+  return {
+    id: row.id,
+    name: row.name ?? '',
+    phone: row.phone ?? '',
+    notes: row.notes ?? '',
+    address: row.address ?? '',
+    egn: row.egn ?? '',
+    email: row.email ?? '',
+    parentPhone: row.parent_phone ?? '',
+    isBlacklisted: Boolean(row.is_blacklisted),
+    unreliablePatient: Boolean(row.unreliable_patient),
+    dentistNotes: dn && typeof dn === 'object' && !Array.isArray(dn) ? { ...dn } : {},
+  };
+}
+
+function patientUpdatesToDb(updates) {
+  const db = { ...updates };
+  if ('parentPhone' in db) {
+    db.parent_phone = db.parentPhone?.trim() ? db.parentPhone.trim() : null;
+    delete db.parentPhone;
+  }
+  if ('isBlacklisted' in db) {
+    db.is_blacklisted = Boolean(db.isBlacklisted);
+    delete db.isBlacklisted;
+  }
+  if ('unreliablePatient' in db) {
+    db.unreliable_patient = Boolean(db.unreliablePatient);
+    delete db.unreliablePatient;
+  }
+  if ('dentistNotes' in db) {
+    db.dentist_notes = db.dentistNotes;
+    delete db.dentistNotes;
+  }
+  return db;
 }
 
 function getWeekBounds(d) {
@@ -471,17 +511,7 @@ export default function App() {
       setPatientsLoading(true);
       const { data, error } = await supabase.from('patients').select('*').order('name');
       if (!error && data && data.length >= 0) {
-        setPatients(
-          data.map((row) => ({
-            id: row.id,
-            name: row.name ?? '',
-            phone: row.phone ?? '',
-            notes: row.notes ?? '',
-            address: row.address ?? '',
-            egn: row.egn ?? '',
-            email: row.email ?? '',
-          }))
-        );
+        setPatients(data.map((row) => mapPatientFromRow(row)));
       }
       setPatientsLoading(false);
     }
@@ -680,7 +710,7 @@ export default function App() {
   }, [vacationsRefreshKey, isAuthenticated]);
 
   const addPatient = useCallback(
-    async ({ name, phone, notes, address, egn, email }) => {
+    async ({ name, phone, notes, address, egn, email, parentPhone }) => {
       const payload = {
         name,
         phone: phone || null,
@@ -688,22 +718,12 @@ export default function App() {
         address: address || null,
         egn: egn || null,
         email: email || null,
+        parent_phone: parentPhone?.trim() || null,
       };
       if (supabase) {
         const { data, error } = await supabase.from('patients').insert(payload).select().single();
         if (!error && data) {
-          setPatients((prev) => [
-            ...prev,
-            {
-              id: data.id,
-              name: data.name,
-              phone: data.phone ?? '',
-              notes: data.notes ?? '',
-              address: data.address ?? '',
-              egn: data.egn ?? '',
-              email: data.email ?? '',
-            },
-          ]);
+          setPatients((prev) => [...prev, mapPatientFromRow(data)]);
           logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: data.id, details: { name: data.name } });
           // отвори веднага профила с хронологията
           setPatientDetailId(data.id);
@@ -712,7 +732,19 @@ export default function App() {
         const localId = `p-${Date.now()}`;
         setPatients((prev) => [
           ...prev,
-          { id: localId, name, phone: phone ?? '', notes: notes ?? '', address: address ?? '', egn: egn ?? '', email: email ?? '' },
+          {
+            id: localId,
+            name,
+            phone: phone ?? '',
+            notes: notes ?? '',
+            address: address ?? '',
+            egn: egn ?? '',
+            email: email ?? '',
+            parentPhone: parentPhone?.trim() ?? '',
+            isBlacklisted: false,
+            unreliablePatient: false,
+            dentistNotes: {},
+          },
         ]);
         setPatientDetailId(localId);
       }
@@ -768,15 +800,17 @@ export default function App() {
 
   const updatePatient = useCallback((id, updates) => {
     setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
-    if (supabase)
+    if (supabase) {
+      const dbPatch = patientUpdatesToDb(updates);
       supabase
         .from('patients')
-        .update(updates)
+        .update(dbPatch)
         .eq('id', id)
         .then(({ error }) => {
           if (error) console.error('Failed to update patient:', error);
           else logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_UPDATED, entity_type: 'patient', entity_id: id, details: updates });
         });
+    }
   }, []);
 
   const deletePatient = useCallback(
@@ -935,29 +969,50 @@ export default function App() {
   }, [permissions, appointments]);
 
   const onAddAppointment = useCallback(
-    async ({ dentistId, patientId, patientName: providedName, patientPhone: providedPhone, start, end: endParam, type, durationMinutes, insurance = 'private', notes = '', location = 'Дружба', appointmentDate }) => {
+    async ({
+      dentistId,
+      patientId,
+      patientName: providedName,
+      patientPhone: providedPhone,
+      start,
+      end: endParam,
+      type,
+      durationMinutes,
+      insurance = 'private',
+      notes = '',
+      location = 'Дружба',
+      appointmentDate,
+    }) => {
       const date = appointmentDate || dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
-      let patient = patientId ? patients.find((p) => p.id === patientId) : null;
-      let patientName = ((providedName && providedName.trim()) || patient?.name) ?? '';
-      const phone = providedPhone?.trim() || patient?.phone || null;
+      let resolvedPatient = patientId ? patients.find((p) => p.id === patientId) : null;
+      let patientName = ((providedName && providedName.trim()) || resolvedPatient?.name) ?? '';
+      const phone = providedPhone?.trim() || resolvedPatient?.phone || null;
 
-      // Ако има име но няма избран пациент – създай пациента в БД
+      const nameNorm = patientName.trim().toLowerCase();
       if (supabase && patientName && !patientId) {
-        const existing = patients.find((p) => (p.name || '').trim().toLowerCase() === patientName.trim().toLowerCase());
-        if (!existing) {
+        const existing = patients.find((p) => (p.name || '').trim().toLowerCase() === nameNorm);
+        if (existing) {
+          resolvedPatient = existing;
+        } else {
           const { data: newPatient, error: insErr } = await supabase
             .from('patients')
             .insert({ name: patientName.trim(), phone, notes: null, address: null, egn: null, email: null })
             .select()
             .single();
           if (!insErr && newPatient) {
-            patient = { id: newPatient.id, name: newPatient.name, phone: newPatient.phone ?? '', notes: '', address: '', egn: '', email: '' };
-            setPatients((prev) => [...prev, patient]);
+            resolvedPatient = mapPatientFromRow(newPatient);
+            setPatients((prev) => [...prev, resolvedPatient]);
             logWithActor({ action: ACTIVITY_ACTIONS.PATIENT_ADDED, entity_type: 'patient', entity_id: newPatient.id, details: { name: newPatient.name } });
           }
         }
       }
+
+      if (!patientName.trim()) {
+        return { ok: false, error: 'Въведете име на пациент.' };
+      }
+
+      const resolvedPatientId = patientId ?? resolvedPatient?.id ?? null;
 
       if (!supabase) {
         setAppointments((prev) => [
@@ -965,6 +1020,7 @@ export default function App() {
           {
             id: `local-${Date.now()}`,
             dentistId,
+            patientId: resolvedPatientId,
             patientName,
             date,
             start,
@@ -975,44 +1031,46 @@ export default function App() {
             notes: notes || '',
           },
         ]);
-        return;
+        return { ok: true };
       }
 
       try {
         const payload = {
-          patient_name: patientName,
+          patient_name: patientName.trim(),
           dentist_id: dentistId,
           start_time: toSupabaseTime(date, start),
           end_time: toSupabaseTime(date, end),
           status: type,
           insurance,
           location,
+          notes: notes?.trim() ? notes.trim() : null,
         };
-        payload.notes = notes?.trim() || null;
-        let { data, error } = await supabase
-          .from('appointments')
-          .insert(payload)
-          .select()
-          .single();
-        if (error && String(error.message || '').includes('location')) {
-          const payloadLegacy = { ...payload };
-          delete payloadLegacy.location;
-          ({ data, error } = await supabase.from('appointments').insert(payloadLegacy).select().single());
-        }
+        if (resolvedPatientId) payload.patient_id = resolvedPatientId;
+
+        const { data, error } = await insertAppointmentWithFallbacks(supabase, payload);
 
         if (error) {
           console.error('Failed to create appointment:', error);
-          return;
+          const human = error.message || error.details || error.hint || JSON.stringify(error);
+          return { ok: false, error: human };
         }
         const mapped = rowToAppointment(data);
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           mapped.location = location;
+          if (resolvedPatientId) mapped.patientId = resolvedPatientId;
           setAppointments((prev) => [...prev, mapped]);
-          logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED, entity_type: 'appointment', entity_id: mapped.id, details: { date, patientName, dentist_id: mapped.dentistId, dentistId: mapped.dentistId, type, start } });
+          logWithActor({
+            action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED,
+            entity_type: 'appointment',
+            entity_id: mapped.id,
+            details: { date, patientName, dentist_id: mapped.dentistId, dentistId: mapped.dentistId, type, start },
+          });
         }
+        return { ok: true };
       } catch (err) {
         console.error('Failed to create appointment:', err);
+        return { ok: false, error: err?.message || String(err) };
       }
     },
     [currentDate, patients]

@@ -45,7 +45,7 @@ export default function PatientDatabaseModal({
         const pApps = appointments.filter((a) => a.patientId === p.id || (p.name && a.patientName === p.name));
         if (typeFilter !== 'all' && !pApps.some((a) => typeLabel(a.type) === typeFilter)) return false;
         if (!q) return true;
-        const text = [p.name, p.phone, p.email, p.address, p.notes].filter(Boolean).join(' ').toLowerCase();
+        const text = [p.name, p.phone, p.parentPhone, p.email, p.address, p.notes].filter(Boolean).join(' ').toLowerCase();
         return text.includes(q);
       })
       .map((p) => {
@@ -110,7 +110,17 @@ export default function PatientDatabaseModal({
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-slate-200 hover:bg-slate-50 cursor-pointer" onClick={() => onOpenPatient?.(r.id)}>
-                  <td className="px-3 py-2 font-medium text-slate-900">{r.name}</td>
+                  <td className="px-3 py-2 font-medium text-slate-900">
+                    <span className="block">{r.name}</span>
+                    <span className="flex flex-wrap gap-1 mt-1">
+                      {r.isBlacklisted && (
+                        <span className="text-[10px] font-semibold uppercase px-1 rounded bg-slate-900 text-white">ЧС</span>
+                      )}
+                      {r.unreliablePatient && (
+                        <span className="text-[10px] font-semibold px-1 rounded bg-amber-200 text-amber-900">Нередовен</span>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-3 py-2 text-slate-700">{r.city || '—'}</td>
                   <td className="px-3 py-2 text-slate-700">{r.visits}</td>
                   <td className="px-3 py-2 text-slate-700">{r.lastVisit}</td>

@@ -38,6 +38,10 @@ export default function PatientDetailModal({
   const [uploading, setUploading] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const fileInputRef = useRef(null);
+  const [parentPhone, setParentPhone] = useState('');
+  const [isBlacklisted, setIsBlacklisted] = useState(false);
+  const [unreliablePatient, setUnreliablePatient] = useState(false);
+  const [notesByDentist, setNotesByDentist] = useState({});
 
   const attendanceLabel = (a) => (a === 'showed' ? 'Дойде' : a === 'no_show' ? 'Не се яви' : '—');
   const getTypeLabel = (type) => appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -51,6 +55,12 @@ export default function PatientDetailModal({
       setAddress(patient.address ?? '');
       setEgn(patient.egn ?? '');
       setEmail(patient.email ?? '');
+      setParentPhone(patient.parentPhone ?? '');
+      setIsBlacklisted(Boolean(patient.isBlacklisted));
+      setUnreliablePatient(Boolean(patient.unreliablePatient));
+      setNotesByDentist(
+        patient.dentistNotes && typeof patient.dentistNotes === 'object' ? { ...patient.dentistNotes } : {}
+      );
     }
   }, [patient]);
 
@@ -69,13 +79,23 @@ export default function PatientDetailModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const mergedDentistNotes = { ...(patient?.dentistNotes && typeof patient.dentistNotes === 'object' ? patient.dentistNotes : {}) };
+    dentists.forEach((d) => {
+      const v = String(notesByDentist[d.id] || '').trim();
+      if (v) mergedDentistNotes[d.id] = v;
+      else delete mergedDentistNotes[d.id];
+    });
     onSave?.({
       name: name.trim(),
       phone: phone.trim(),
+      parentPhone: parentPhone.trim(),
       notes: notes.trim(),
       address: address.trim(),
       egn: egn.trim(),
       email: email.trim(),
+      isBlacklisted,
+      unreliablePatient,
+      dentistNotes: mergedDentistNotes,
     });
     onClose();
   };
@@ -87,7 +107,21 @@ export default function PatientDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white">
-          <h3 className="text-lg font-semibold text-slate-900">Данни за пациента</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Данни за пациента</h3>
+            {(isBlacklisted || unreliablePatient) && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {isBlacklisted && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                    Черен списък
+                  </span>
+                )}
+                {unreliablePatient && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">Нередовен</span>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             {onDelete && (
               <button
@@ -132,6 +166,20 @@ export default function PatientDetailModal({
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              placeholder="+359 ..."
+              className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-800 mb-1 flex items-center gap-2">
+              <Phone className="w-4 h-4 text-slate-500" />
+              Телефон на родител
+            </label>
+            <input
+              type="tel"
+              value={parentPhone}
+              onChange={(e) => setParentPhone(e.target.value)}
               placeholder="+359 ..."
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
@@ -193,6 +241,52 @@ export default function PatientDetailModal({
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y min-h-[80px]"
             />
           </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+            <span className="text-sm font-medium text-slate-800">Индикатори</span>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-800 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isBlacklisted}
+                onChange={(e) => setIsBlacklisted(e.target.checked)}
+                className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500"
+              />
+              Черен списък
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-800 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={unreliablePatient}
+                onChange={(e) => setUnreliablePatient(e.target.checked)}
+                className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500"
+              />
+              Нередовен пациент (често отменя / не се явява)
+            </label>
+          </div>
+
+          {dentists.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-slate-600 mb-2">Бележки по лекар</h4>
+              <p className="text-xs text-slate-500 mb-3">Отделни бележки за всеки лекар (напр. особености при преглед).</p>
+              <div className="space-y-3 max-h-52 overflow-y-auto scroll-thin pr-1">
+                {dentists.map((d) => (
+                  <div key={d.id}>
+                    <label className="text-xs text-slate-600 flex items-center gap-2 mb-1">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                      {d.name}
+                    </label>
+                    <textarea
+                      value={notesByDentist[d.id] ?? ''}
+                      onChange={(e) => setNotesByDentist((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                      rows={2}
+                      placeholder="Бележка за този лекар..."
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {visitHistory.length > 0 && (
             <div>

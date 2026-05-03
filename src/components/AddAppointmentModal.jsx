@@ -34,6 +34,7 @@ function addMinutesToTime(time, mins) {
 }
 
 export default function AddAppointmentModal({ open, onClose, dentist, slot, dentists, patients, onSubmit, appointmentTypes = [], appointments = [], onOpenPatientProfile, bookingDate = null }) {
+  const [submitError, setSubmitError] = useState('');
   const [patientInput, setPatientInput] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -44,9 +45,13 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionRef = useRef(null);
   const q = (patientInput || '').trim().toLowerCase();
-  const suggestions = q.length >= 1
-    ? patients.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.phone || '').includes(q))
-    : [];
+  const suggestions =
+    q.length >= 1
+      ? patients.filter((p) => {
+          const blob = [p.name, p.phone, p.parentPhone, p.notes].filter(Boolean).join(' ').toLowerCase();
+          return blob.includes(q);
+        })
+      : [];
   const matchedPatient = patients.find((p) => (p.name || '').trim().toLowerCase() === patientInput.trim().toLowerCase());
   const typeOptions = useMemo(
     () =>
@@ -60,6 +65,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
 
   useEffect(() => {
     if (open) {
+      setSubmitError('');
       setPatientInput('');
       setPatientPhone('');
       setNotes('');
@@ -83,8 +89,9 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
     return (eh - sh) * 60 + (em - sm);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitError('');
     const form = e.target;
     const type = resolveTypeForSave(typeKey, customTypeText, typeOptions);
     const insurance = form.insurance?.value || 'private';
@@ -93,22 +100,36 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
     const patientName = name || (matchedPatient?.name ?? '');
     const phone = patientPhone.trim() || (matchedPatient?.phone ?? null);
     const durationMinutes = getDurationFromEnd();
-    if (durationMinutes < 1) return;
+    if (durationMinutes < 1) {
+      setSubmitError('Краят на часа трябва да е след началото.');
+      return;
+    }
     const end = endTime || addMinutesToTime(slot, 30);
-    onSubmit({
-      dentistId: dentist,
-      patientId,
-      patientName,
-      patientPhone: phone || null,
-      start: slot,
-      end,
-      type,
-      durationMinutes,
-      insurance,
-      notes: notes.trim(),
-      location,
-      appointmentDate: bookingDate || undefined,
-    });
+    try {
+      const result = await Promise.resolve(
+        onSubmit({
+          dentistId: dentist,
+          patientId,
+          patientName,
+          patientPhone: phone || null,
+          start: slot,
+          end,
+          type,
+          durationMinutes,
+          insurance,
+          notes: notes.trim(),
+          location,
+          appointmentDate: bookingDate || undefined,
+        })
+      );
+      if (result && result.ok === false) {
+        setSubmitError(typeof result.error === 'string' ? result.error : 'Часът не бе записан. Проверете връзката или правата в Supabase.');
+        return;
+      }
+    } catch (err) {
+      setSubmitError(err?.message || 'Неочаквана грешка при запис.');
+      return;
+    }
     onClose();
   };
 
@@ -301,6 +322,10 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               </label>
             </div>
           </div>
+
+          {submitError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
+          )}
 
           <div className="flex gap-2 pt-2">
             <button

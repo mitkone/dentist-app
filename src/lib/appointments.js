@@ -14,6 +14,7 @@ export function rowToAppointment(row) {
   return {
     id: row.id,
     dentistId: row.dentist_id ?? '',
+    patientId: row.patient_id ?? null,
     patientName: row.patient_name ?? '',
     date,
     start,

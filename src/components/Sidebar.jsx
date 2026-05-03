@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Filter, UserPlus, Plus, Trash2, CalendarOff, ChevronDown, Database } from 'lucide-react';
 export default function Sidebar({ dentists,
   selectedDentistIds,
@@ -31,6 +31,19 @@ export default function Sidebar({ dentists,
   };
   const [dentistsOpen, setDentistsOpen] = useState(false);
   const selectedCount = selectedDentistIds.length;
+  const patientQuery = patientSearch.trim().toLowerCase();
+  const sidebarPatientHits = useMemo(() => {
+    if (patientQuery.length < 1) return [];
+    return patients
+      .filter((p) => {
+        const blob = [p.name, p.phone, p.parentPhone, p.email, p.notes]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return blob.includes(patientQuery);
+      })
+      .slice(0, 12);
+  }, [patients, patientQuery]);
   return (
     <aside className="w-full md:w-72 shrink-0 flex flex-col bg-white border-b md:border-b-0 md:border-r border-slate-200 shadow-sm max-h-[45vh] md:max-h-none z-10 md:z-auto">
       {showDentistsFilter && (
@@ -154,15 +167,46 @@ export default function Sidebar({ dentists,
           </button>
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-[1]" />
           <input
             type="text"
-            placeholder="Име, телефон или бележки..."
+            placeholder="Име, телефон, родител или бележки..."
             value={patientSearch}
             onChange={(e) => onPatientSearch(e.target.value)}
+            autoComplete="off"
             className="w-full pl-9 pr-3 py-2 text-sm bg-slate-100 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none"
           />
+          {sidebarPatientHits.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-0.5 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+              {sidebarPatientHits.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-emerald-50 flex flex-col gap-0.5"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => onOpenPatientDetail?.(p.id)}
+                  >
+                    <span className="font-medium">{p.name}</span>
+                    {(p.phone || p.parentPhone) && (
+                      <span className="text-xs text-slate-500">{p.phone}{p.parentPhone ? ` · родител: ${p.parentPhone}` : ''}</span>
+                    )}
+                    <span className="flex flex-wrap gap-1">
+                      {p.isBlacklisted && (
+                        <span className="text-[10px] font-semibold uppercase px-1 rounded bg-slate-900 text-white">Черен списък</span>
+                      )}
+                      {p.unreliablePatient && (
+                        <span className="text-[10px] font-semibold px-1 rounded bg-amber-200 text-amber-900">Нередовен</span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+        {patientQuery.length >= 1 && sidebarPatientHits.length === 0 && (
+          <p className="mt-1 text-xs text-slate-500">Няма съвпадения в базата — използвайте бутона по-долу за пълен списък.</p>
+        )}
         <button
           type="button"
           onClick={onOpenPatientDatabase}

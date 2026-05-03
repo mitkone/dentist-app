@@ -246,15 +246,25 @@ export default function ResourceCalendar({
         patientMatchesSearch(a)
     );
 
+  const resolvePatientRecord = (a) => {
+    if (a.patientId) return patients.find((p) => p.id === a.patientId) ?? null;
+    const n = (a.patientName || '').trim().toLowerCase();
+    if (!n) return null;
+    return patients.find((p) => (p.name || '').trim().toLowerCase() === n) ?? null;
+  };
+
   const getPatientDisplayName = (a) =>
-    (a.patientId && patients.find((p) => p.id === a.patientId)?.name) || a.patientName || 'Пациент';
+    resolvePatientRecord(a)?.name || a.patientName || 'Пациент';
 
   const patientMatchesSearch = (a) => {
     if (!patientSearch.trim()) return true;
-    const name = (a.patientId && patients.find((p) => p.id === a.patientId)?.name) || a.patientName || '';
-    const phone = a.patientId ? patients.find((p) => p.id === a.patientId)?.phone : '';
+    const pr = resolvePatientRecord(a);
+    const name = pr?.name || a.patientName || '';
+    const phone = pr?.phone || '';
+    const parentPhone = pr?.parentPhone || '';
+    const notes = pr?.notes || '';
     const qTokens = patientSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    const haystack = `${name} ${phone || ''}`.toLowerCase();
+    const haystack = `${name} ${phone} ${parentPhone} ${notes}`.toLowerCase();
     return qTokens.every((token) => haystack.includes(token));
   };
 
@@ -580,6 +590,9 @@ export default function ResourceCalendar({
                       const isNhif = a.insurance === 'nhif';
                       const hasNotes = Boolean(a.notes?.trim());
                       const locationLabel = a.location || null;
+                      const prWeek = resolvePatientRecord(a);
+                      const showBlacklist = Boolean(prWeek?.isBlacklisted);
+                      const showUnreliable = Boolean(prWeek?.unreliablePatient);
                       return (
                         <div
                           key={a.id}
@@ -663,6 +676,12 @@ export default function ResourceCalendar({
                               <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-emerald-500 text-slate-900 tracking-wide">
                                 НЗОК
                               </span>
+                            )}
+                            {showBlacklist && (
+                              <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-slate-900 text-white tracking-wide">ЧС</span>
+                            )}
+                            {showUnreliable && (
+                              <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-amber-200 text-amber-900 tracking-wide">НЕРЕДОВЕН</span>
                             )}
                             {isNoShow && (
                               <span className="text-[8px] font-semibold uppercase tracking-wide drop-shadow-sm">НЕ СЕ ЯВИ</span>
@@ -892,6 +911,9 @@ export default function ResourceCalendar({
                     const isNhif = a.insurance === 'nhif';
                     const hasNotes = Boolean(a.notes?.trim());
                     const locationLabel = a.location || null;
+                    const prDay = resolvePatientRecord(a);
+                    const showBlacklistDay = Boolean(prDay?.isBlacklisted);
+                    const showUnreliableDay = Boolean(prDay?.unreliablePatient);
                     return (
                       <div
                         key={a.id}
@@ -973,6 +995,12 @@ export default function ResourceCalendar({
                             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-900 tracking-wide">
                               НЗОК
                             </span>
+                          )}
+                          {showBlacklistDay && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-900 text-white tracking-wide">ЧС</span>
+                          )}
+                          {showUnreliableDay && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 tracking-wide">НЕРЕДОВЕН</span>
                           )}
                           {isNoShow && (
                             <span className="text-[9px] font-semibold uppercase tracking-wide drop-shadow-sm">
