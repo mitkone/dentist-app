@@ -3,7 +3,7 @@ import { Activity, Bell, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { rowToAppointment, toSupabaseTime } from './lib/appointments';
+import { rowToAppointment, toSupabaseTime, effectiveDentistId } from './lib/appointments';
 import { insertAppointmentWithFallbacks } from './lib/insertAppointment';
 import { logActivity, ACTIVITY_ACTIONS } from './lib/activityLog';
 import Sidebar from './components/Sidebar';
@@ -315,7 +315,12 @@ export default function App() {
         const slotStartMin = timeStrToMinutes(slot);
         const slotEndMin = slotStartMin + 15;
         const hasOverlap = appointments.some((a) => {
-          if (String(a.dentistId ?? '').trim() !== String(dentistId ?? '').trim() || normalizeYmd(a.date) !== normalizeYmd(dateStr)) return false;
+          if (
+            effectiveDentistId(a, dentists) !== String(dentistId ?? '').trim() ||
+            normalizeYmd(a.date) !== normalizeYmd(dateStr)
+          ) {
+            return false;
+          }
           const aStart = timeStrToMinutes(a.start);
           const aEnd = timeStrToMinutes(a.end);
           return !(aEnd <= slotStartMin || aStart >= slotEndMin);
@@ -324,7 +329,7 @@ export default function App() {
       }
       return result;
     },
-    [appointments, doctorVacations, workingHours, doctorAvailableSlots]
+    [appointments, doctorVacations, workingHours, doctorAvailableSlots, dentists]
   );
 
   const findFirstFreeForDate = useCallback(
@@ -365,7 +370,12 @@ export default function App() {
           const slotEndMin = slotStartMin + 15;
 
           const hasOverlap = appointments.some((a) => {
-            if (String(a.dentistId ?? '').trim() !== String(dentistId ?? '').trim() || normalizeYmd(a.date) !== normalizeYmd(dateStr)) return false;
+            if (
+              effectiveDentistId(a, dentists) !== String(dentistId ?? '').trim() ||
+              normalizeYmd(a.date) !== normalizeYmd(dateStr)
+            ) {
+              return false;
+            }
             const aStart = timeStrToMinutes(a.start);
             const aEnd = timeStrToMinutes(a.end);
             return !(aEnd <= slotStartMin || aStart >= slotEndMin);
@@ -379,7 +389,7 @@ export default function App() {
 
       return null;
     },
-    [appointments, doctorVacations, workingHours, doctorAvailableSlots]
+    [appointments, doctorVacations, workingHours, doctorAvailableSlots, dentists]
   );
 
   const nextFreeSummary = (() => {
@@ -1082,6 +1092,23 @@ export default function App() {
 
       const resolvedPatientId = patientId ?? resolvedPatient?.id ?? null;
 
+      const newStartMin = timeStrToMinutes(start);
+      const newEndMin = timeStrToMinutes(end);
+      const overlapsExisting = appointments.some((a) => {
+        if (effectiveDentistId(a, dentists) !== String(dentistId ?? '').trim()) return false;
+        if (normalizeYmd(a.date) !== normalizeYmd(date)) return false;
+        const aS = timeStrToMinutes(a.start);
+        const aE = timeStrToMinutes(a.end);
+        return !(newEndMin <= aS || newStartMin >= aE);
+      });
+      if (overlapsExisting) {
+        return {
+          ok: false,
+          error:
+            'Този час се припокрива с вече записан при същия лекар. Изберете друг интервал или обновете страницата.',
+        };
+      }
+
       if (!supabase) {
         setAppointments((prev) => [
           ...prev,
@@ -1143,7 +1170,7 @@ export default function App() {
         return { ok: false, error: err?.message || String(err) };
       }
     },
-    [currentDate, patients, dentists]
+    [currentDate, patients, dentists, appointments]
   );
 
   const goPrevDay = () => {

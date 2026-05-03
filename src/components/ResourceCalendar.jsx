@@ -26,6 +26,13 @@ function getDurationMinutes(start, end) {
   return (eh - sh) * 60 + (em - sm);
 }
 
+function minutesFromTimeStr(t) {
+  if (!t) return 0;
+  const [h, m] = String(t).trim().split(':').map(Number);
+  if (!Number.isFinite(h)) return 0;
+  return h * 60 + (Number.isFinite(m) ? m : 0);
+}
+
 function mondayOfWeek(d) {
   const x = new Date(d);
   const day = x.getDay();
@@ -103,6 +110,22 @@ export default function ResourceCalendar({
     [allDentists, dentists]
   );
   const columnDentistId = useCallback((a) => effectiveDentistId(a, dentistPoolForId), [dentistPoolForId]);
+
+  const quarterSlotOccupiedByAppointment = useCallback(
+    (dentistId, dayKey, slot) => {
+      const dk = normalizeCalendarDateKey(dayKey);
+      const slotStart = minutesFromTimeStr(slot);
+      const slotEnd = slotStart + (SLOT_MINUTES ?? 15);
+      return appointments.some((a) => {
+        if (columnDentistId(a) !== String(dentistId ?? '').trim()) return false;
+        if (normalizeCalendarDateKey(a.date) !== dk) return false;
+        const aS = minutesFromTimeStr(a.start);
+        const aE = minutesFromTimeStr(a.end);
+        return !(aE <= slotStart || aS >= slotEnd);
+      });
+    },
+    [appointments, columnDentistId]
+  );
 
   const getTypeDisplay = (type) =>
     appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -594,8 +617,10 @@ export default function ResourceCalendar({
                   >
                     {slots.map((slot) => {
                       const available = singleSelectedDentistId ? isSlotAvailable(singleSelectedDentistId, slot, dayKey) : true;
-                      const disabled = vacation || !singleSelectedDentistId || !available;
-                      const isUnavailable = !vacation && !!singleSelectedDentistId && !available;
+                      const occupied =
+                        singleSelectedDentistId && quarterSlotOccupiedByAppointment(singleSelectedDentistId, dayKey, slot);
+                      const disabled = vacation || !singleSelectedDentistId || !available || occupied;
+                      const isUnavailable = !vacation && !!singleSelectedDentistId && (!available || occupied);
                       return (
                         <button
                           key={`${dayKey}-${slot}`}
@@ -690,7 +715,7 @@ export default function ResourceCalendar({
                           onPointerLeave={() => { if (!isMobile) setHoverInfo(null); }}
                           onClick={(e) => handleAppointmentClick(e, a)}
                           onContextMenu={(e) => e.preventDefault()}
-                          className="absolute z-[2] rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
+                          className="absolute z-[3] rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-1 py-0.5 ring-1 ring-black/20"
                           style={{
                             top,
                             height: h - 2,
@@ -922,8 +947,9 @@ export default function ResourceCalendar({
                 >
                   {slots.map((slot) => {
                     const available = isSlotAvailable(d.id, slot);
-                    const disabled = vacation || !available;
-                    const isUnavailable = !vacation && !available;
+                    const occupied = quarterSlotOccupiedByAppointment(d.id, dateStr, slot);
+                    const disabled = vacation || !available || occupied;
+                    const isUnavailable = !vacation && (!available || occupied);
                     return (
                     <button
                       key={slot}
@@ -1009,7 +1035,7 @@ export default function ResourceCalendar({
                         onPointerDown={canMoveAppointment ? (e) => handlePointerDown(e, a, d.color) : undefined}
                         onClick={!canMoveAppointment ? (e) => handleAppointmentClick(e, a) : undefined}
                         onContextMenu={(e) => e.preventDefault()}
-                        className={`absolute left-1 right-1 rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-2 py-1 ring-1 ring-black/20 transition-opacity duration-150 ${
+                        className={`absolute left-1 right-1 z-[3] rounded-lg shadow-lg border border-white/20 overflow-hidden flex flex-col justify-center px-2 py-1 ring-1 ring-black/20 transition-opacity duration-150 ${
                           canMoveAppointment ? 'touch-none select-none' : ''
                         } ${isDragging ? 'opacity-40 pointer-events-none' : ''} ${isNoShow ? 'ring-red-400/70' : ''}`}
                         style={{
