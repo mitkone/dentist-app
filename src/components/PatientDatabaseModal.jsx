@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { X, Search } from 'lucide-react';
 import { appointmentTypeLabel } from '../data/mockData';
+import { countPatientNoShows } from '../lib/patientNoShows';
 
 function patientCity(address = '') {
   const val = String(address || '').trim();
@@ -58,6 +59,7 @@ export default function PatientDatabaseModal({
           visits: pApps.length,
           lastVisit: pApps[0] ? `${pApps[0].date} ${pApps[0].start}` : '—',
           lastType: pApps[0] ? typeLabel(pApps[0].type) : '—',
+          noShowCount: countPatientNoShows(appointments, p.id, p.name),
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'bg'));
@@ -118,6 +120,11 @@ export default function PatientDatabaseModal({
                       )}
                       {r.unreliablePatient && (
                         <span className="text-[10px] font-semibold px-1 rounded bg-amber-200 text-amber-900">Нередовен</span>
+                      )}
+                      {(r.noShowCount ?? 0) > 0 && (
+                        <span className="text-[10px] font-semibold px-1 rounded bg-orange-300 text-orange-950" title="Брой записи „не се яви“ в графика">
+                          Не се явил ×{r.noShowCount}
+                        </span>
                       )}
                     </span>
                   </td>

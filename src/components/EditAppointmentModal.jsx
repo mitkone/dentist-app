@@ -4,6 +4,7 @@ import { appointmentTypeLabel, getSlots, HOURS, OTHER_APPOINTMENT_TYPE_KEY, APPO
 import { withOtherOption, resolveTypeForSave, parseTypeFromAppointment } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
+import { countPatientNoShows } from '../lib/patientNoShows';
 
 const APPOINTMENT_TYPES = [
   { value: 'Checkup', labelKey: 'Checkup' },
@@ -71,6 +72,13 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   );
   const isPast = appointment ? isAppointmentInPast(appointment) : false;
   const matchedPatient = patients.find((p) => p.name.trim().toLowerCase() === patientInput.trim().toLowerCase());
+
+  const noShowRiskCount = useMemo(() => {
+    if (!appointment) return 0;
+    const pid = appointment.patientId || matchedPatient?.id || null;
+    const pname = (patientInput || matchedPatient?.name || appointment.patientName || '').trim();
+    return countPatientNoShows(appointments, pid, pname);
+  }, [appointment, appointments, matchedPatient?.id, patientInput]);
 
   useEffect(() => {
     if (appointment) {
@@ -222,6 +230,12 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
               ))}
             </datalist>
           </div>
+
+          {noShowRiskCount > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 leading-snug">
+              <strong className="font-semibold">История „не се яви“:</strong> {noShowRiskCount}× – обърнете внимание при този пациент.
+            </div>
+          )}
 
           <PatientChronologyBlock
             patientId={matchedPatient?.id}

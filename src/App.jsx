@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, Bell, LogIn, LogOut } from 'lucide-react';
+import { Activity, Bell, LogIn, LogOut, MessageSquare } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -26,6 +26,7 @@ import DentistProfileModal from './components/DentistProfileModal';
 import DoctorDayLocationModal from './components/DoctorDayLocationModal';
 import LandingAuth, { getAdminSession, setAdminSession, getAdminPin } from './components/LandingAuth';
 import QuickBookBar from './components/QuickBookBar';
+import AdminDoctorMessageModal from './components/AdminDoctorMessageModal';
 import { getPermissions } from './lib/permissions';
 
 function dateKey(d) {
@@ -238,6 +239,8 @@ export default function App() {
   const [scheduleNotificationsOpen, setScheduleNotificationsOpen] = useState(false);
   const [scheduleNotificationsSeen, setScheduleNotificationsSeen] = useState(true);
   const scheduleNotificationsRef = useRef(null);
+  const [doctorInboxMessages, setDoctorInboxMessages] = useState([]);
+  const [adminDoctorMessageOpen, setAdminDoctorMessageOpen] = useState(false);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
   const [vacationsRefreshKey, setVacationsRefreshKey] = useState(0);
   /** Винаги актуален списък лекари за async/realtime (без да презакачаме цялото fetch при смяна на референцията на масива). */
@@ -567,6 +570,76 @@ export default function App() {
 
   const myDentistId = permissions.myDentistId;
   const notificationUserKey = user?.id || user?.email || (myDentistId ? `dentist:${myDentistId}` : 'staff');
+
+  const unreadDoctorMessages = doctorInboxMessages.filter((m) => !m.read_at).length;
+  const scheduleBellUnread = scheduleNotifications.length > 0 && !scheduleNotificationsSeen;
+  const inboxBellCount = unreadDoctorMessages + (scheduleBellUnread ? scheduleNotifications.length : 0);
+  const showInboxBellBadge = unreadDoctorMessages > 0 || scheduleBellUnread;
+
+  const fetchDoctorInbox = useCallback(async () => {
+    if (!supabase || !myDentistId) return;
+    const { data, error } = await supabase
+      .from('admin_doctor_messages')
+      .select('*')
+      .eq('to_dentist_id', myDentistId)
+      .order('created_at', { ascending: false })
+      .limit(80);
+    if (!error && data) setDoctorInboxMessages(data);
+  }, [supabase, myDentistId]);
+
+  const markDoctorInboxReadOpen = useCallback(async () => {
+    if (!supabase || !myDentistId) return;
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('admin_doctor_messages')
+      .update({ read_at: nowIso })
+      .eq('to_dentist_id', myDentistId)
+      .is('read_at', null);
+    if (!error) {
+      setDoctorInboxMessages((prev) =>
+        prev.map((m) => (m.read_at ? m : { ...m, read_at: nowIso }))
+      );
+    }
+  }, [supabase, myDentistId]);
+
+  useEffect(() => {
+    if (!supabase || adminSession || !isAuthenticated || !myDentistId) return;
+    fetchDoctorInbox();
+  }, [supabase, adminSession, isAuthenticated, myDentistId, fetchDoctorInbox]);
+
+  useEffect(() => {
+    if (!supabase || adminSession || !isAuthenticated || !myDentistId) return;
+    const filt = `to_dentist_id=eq.${myDentistId}`;
+    const ch = supabase
+      .channel(`admin-doctor-msgs-${notificationUserKey}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_doctor_messages', filter: filt },
+        (payload) => {
+          const row = payload?.new;
+          if (!row?.id) return;
+          setDoctorInboxMessages((prev) => [row, ...prev.filter((x) => x.id !== row.id)]);
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [supabase, adminSession, isAuthenticated, myDentistId, notificationUserKey]);
+
+  const sendAdminDoctorMessage = useCallback(
+    async ({ toDentistId, body: text }) => {
+      if (!supabase) throw new Error('Supabase не е конфигуриран');
+      const from_label = adminSession
+        ? 'Админ'
+        : (profile?.full_name || user?.email?.split('@')[0] || user?.email || 'Регистратура');
+      const { error } = await supabase.from('admin_doctor_messages').insert({
+        to_dentist_id: toDentistId,
+        body: text,
+        from_label,
+      });
+      if (error) throw new Error(error.message || String(error));
+    },
+    [supabase, adminSession, profile, user]
+  );
 
   const formatNotificationText = useCallback((action, details = {}) => {
     const d = typeof details === 'string' ? (() => { try { return JSON.parse(details); } catch { return {}; } })() : (details || {});
@@ -1554,36 +1627,79 @@ export default function App() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setScheduleNotificationsOpen((o) => !o);
-                    if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
+                    setScheduleNotificationsOpen((wasOpen) => {
+                      const willOpen = !wasOpen;
+                      if (willOpen) {
+                        if (scheduleNotifications.length > 0) setScheduleNotificationsSeen(true);
+                        if (myDentistId) void markDoctorInboxReadOpen();
+                      }
+                      return willOpen;
+                    });
                   }}
                   className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                  aria-label="Известия за графика"
+                  aria-label="Известия"
                 >
                   <Bell className="w-5 h-5" />
-                  {scheduleNotifications.length > 0 && !scheduleNotificationsSeen && (
+                  {showInboxBellBadge && (
                     <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-slate-900 bg-emerald-500 rounded-full">
-                      {scheduleNotifications.length > 99 ? '99+' : scheduleNotifications.length}
+                      {inboxBellCount > 99 ? '99+' : inboxBellCount}
                     </span>
                   )}
                 </button>
                 {scheduleNotificationsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-72 max-h-64 overflow-y-auto bg-slate-100 border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
-                    <div className="p-2 border-b border-slate-200 flex items-center justify-between">
+                  <div className="absolute right-0 top-full mt-1 w-[min(92vw,22rem)] max-h-[min(70vh,24rem)] overflow-y-auto bg-slate-100 border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
+                    {myDentistId ? (
+                      <>
+                        <div className="px-3 py-2 border-b border-slate-200 bg-emerald-50/80">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Съобщения от регистратура</span>
+                        </div>
+                        <div className="divide-y divide-slate-200/80">
+                          {doctorInboxMessages.length === 0 ? (
+                            <p className="p-3 text-sm text-slate-500">Няма съобщения</p>
+                          ) : (
+                            doctorInboxMessages.map((m) => (
+                              <div
+                                key={m.id}
+                                className={`px-3 py-2.5 text-sm ${!m.read_at ? 'bg-emerald-100/50' : 'bg-transparent'}`}
+                              >
+                                <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-2 gap-y-0.5">
+                                  <span>
+                                    {new Date(m.created_at).toLocaleString('bg-BG', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                  {m.from_label && <span className="font-medium text-slate-600">от {m.from_label}</span>}
+                                </div>
+                                <p className="mt-1 text-slate-900 whitespace-pre-wrap leading-snug">{m.body}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="p-3 text-xs text-slate-500 border-b border-slate-200">Съобщения към профилите на лекарите са само при вход като „лекар в графика“.</p>
+                    )}
+                    <div className="p-2 border-b border-slate-200 flex items-center justify-between bg-slate-100">
                       <span className="text-sm font-medium text-slate-800">Промени в графика</span>
                       {scheduleNotifications.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => { setScheduleNotifications([]); setScheduleNotificationsSeen(true); }}
+                          onClick={() => {
+                            setScheduleNotifications([]);
+                            setScheduleNotificationsSeen(true);
+                          }}
                           className="text-xs text-emerald-400 hover:text-emerald-700"
                         >
                           Изчисти
                         </button>
                       )}
                     </div>
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto min-h-[3rem]">
                       {scheduleNotifications.length === 0 ? (
-                        <p className="p-3 text-sm text-slate-500">Няма нови известия</p>
+                        <p className="p-3 text-sm text-slate-500">Няма записи за промени по графика</p>
                       ) : (
                         scheduleNotifications.map((n) => (
                           <div key={n.id} className="px-3 py-2 border-b border-slate-200/50 last:border-0 text-sm text-slate-800">
@@ -1595,6 +1711,16 @@ export default function App() {
                   </div>
                 )}
               </div>
+            )}
+            {(permissions.canViewAdmin || adminSession) && supabase && (
+              <button
+                type="button"
+                onClick={() => setAdminDoctorMessageOpen(true)}
+                className="p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                title="Съобщение към лекар"
+              >
+                <MessageSquare className="w-5 h-5" />
+              </button>
             )}
             {supabase && (
               <>
@@ -1780,7 +1906,13 @@ export default function App() {
         onDeleteFile={deletePatientFile}
         canUseFiles={Boolean(supabase)}
         appointmentTypes={appointmentTypes}
-        canManageDoctorDirectedNotes={permissions.canViewAdmin}
+      />
+
+      <AdminDoctorMessageModal
+        open={adminDoctorMessageOpen}
+        onClose={() => setAdminDoctorMessageOpen(false)}
+        dentists={dentists}
+        onSubmit={sendAdminDoctorMessage}
       />
       <PatientDatabaseModal
         open={patientDbOpen}

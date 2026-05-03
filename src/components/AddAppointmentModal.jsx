@@ -4,6 +4,7 @@ import { appointmentTypeLabel, OTHER_APPOINTMENT_TYPE_KEY, APPOINTMENT_LOCATION_
 import { withOtherOption, resolveTypeForSave } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
+import { countPatientNoShows } from '../lib/patientNoShows';
 
 const DEFAULT_APPOINTMENT_TYPES = [
   { value: 'Checkup', labelKey: 'Checkup' },
@@ -53,6 +54,14 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
         })
       : [];
   const matchedPatient = patients.find((p) => (p.name || '').trim().toLowerCase() === patientInput.trim().toLowerCase());
+
+  const noShowRiskCount = useMemo(() => {
+    if (matchedPatient) return countPatientNoShows(appointments, matchedPatient.id, matchedPatient.name);
+    const nameOnly = patientInput.trim();
+    if (!nameOnly || nameOnly.length < 2) return 0;
+    return countPatientNoShows(appointments, null, nameOnly);
+  }, [appointments, matchedPatient?.id, matchedPatient?.name, patientInput]);
+
   const typeOptions = useMemo(
     () =>
       withOtherOption(
@@ -225,6 +234,13 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
               className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
+
+          {noShowRiskCount > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 leading-snug">
+              <strong className="font-semibold">История „не се яви“:</strong>{' '}
+              {noShowRiskCount} пъти по графика – препоръчително потвърждение от пациента.
+            </div>
+          )}
 
           <PatientChronologyBlock
             patientId={matchedPatient?.id}

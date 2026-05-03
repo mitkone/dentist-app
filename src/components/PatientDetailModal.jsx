@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Phone, FileText, MapPin, Mail, CreditCard, CalendarCheck, Paperclip, Upload, Trash2, Stethoscope } from 'lucide-react';
+import { X, Phone, FileText, MapPin, Mail, CreditCard, CalendarCheck, Paperclip, Upload, Trash2, AlertTriangle } from 'lucide-react';
 import { appointmentTypeLabel } from '../data/mockData';
+import { countPatientNoShows } from '../lib/patientNoShows';
 
 function formatDisplayDate(dateStr) {
   if (!dateStr || dateStr.length < 10) return dateStr;
@@ -28,8 +29,6 @@ export default function PatientDetailModal({
   onDeleteFile,
   canUseFiles = false,
   appointmentTypes = [],
-  /** Само администратори: избор на лекар и бележка към него (запис в dentist_notes[dentist_id]). */
-  canManageDoctorDirectedNotes = false,
 }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -43,8 +42,6 @@ export default function PatientDetailModal({
   const [parentPhone, setParentPhone] = useState('');
   const [isBlacklisted, setIsBlacklisted] = useState(false);
   const [unreliablePatient, setUnreliablePatient] = useState(false);
-  const [adminNoteTargetId, setAdminNoteTargetId] = useState('');
-  const [adminNoteText, setAdminNoteText] = useState('');
 
   const attendanceLabel = (a) => (a === 'showed' ? 'Дойде' : a === 'no_show' ? 'Не се яви' : '—');
   const getTypeLabel = (type) => appointmentTypes.find((t) => t.key === type || t.label_bg === type)?.label_bg ?? appointmentTypeLabel(type) ?? type;
@@ -61,24 +58,14 @@ export default function PatientDetailModal({
     setParentPhone(patient.parentPhone ?? '');
     setIsBlacklisted(Boolean(patient.isBlacklisted));
     setUnreliablePatient(Boolean(patient.unreliablePatient));
-    setAdminNoteTargetId('');
-    setAdminNoteText('');
     // Обновяваме полетата само при отваряне / смяна на пациент, не при всяко пре-рендериране от родителя.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- зависимост от patient обект би нулирала редакции при всеки refresh на списъка
   }, [open, patient?.id]);
 
-  useEffect(() => {
-    if (!open || !canManageDoctorDirectedNotes || !patient) return;
-    if (!adminNoteTargetId) {
-      setAdminNoteText('');
-      return;
-    }
-    const cur =
-      patient.dentistNotes && typeof patient.dentistNotes === 'object'
-        ? String(patient.dentistNotes[adminNoteTargetId] ?? '').trimEnd()
-        : '';
-    setAdminNoteText(cur);
-  }, [open, canManageDoctorDirectedNotes, adminNoteTargetId, patient?.id]);
+  const noShowCount = useMemo(
+    () => (patient ? countPatientNoShows(appointments, patient.id, patient.name) : 0),
+    [appointments, patient?.id, patient?.name]
+  );
 
   const visitHistory = useMemo(() => {
     if (!patient?.name || !appointments.length) return [];
@@ -95,7 +82,7 @@ export default function PatientDetailModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const patch = {
+    onSave?.({
       name: name.trim(),
       phone: phone.trim(),
       parentPhone: parentPhone.trim(),
@@ -105,18 +92,7 @@ export default function PatientDetailModal({
       email: email.trim(),
       isBlacklisted,
       unreliablePatient,
-    };
-    if (canManageDoctorDirectedNotes && dentists.length > 0) {
-      const base =
-        patient?.dentistNotes && typeof patient.dentistNotes === 'object' ? { ...patient.dentistNotes } : {};
-      if (adminNoteTargetId) {
-        const trimmed = adminNoteText.trim();
-        if (trimmed) base[adminNoteTargetId] = trimmed;
-        else delete base[adminNoteTargetId];
-      }
-      patch.dentistNotes = base;
-    }
-    onSave?.(patch);
+    });
     onClose();
   };
 
@@ -280,47 +256,22 @@ export default function PatientDetailModal({
                 onChange={(e) => setUnreliablePatient(e.target.checked)}
                 className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500"
               />
-              Нередовен пациент (често отменя / не се явява)
+              Нередовен пациент (ръчен маркер: често отменя / не се явява)
             </label>
           </div>
 
-          {canManageDoctorDirectedNotes && dentists.length > 0 && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-3">
-              <h4 className="text-sm font-medium text-slate-800 flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-emerald-600" />
-                Бележка към лекар
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Изберете лекар и напишете бележка към него по този пациент. Записва се към профила на пациента за избрания лекар.
-                Изчистете текста и запазете, за да премахнете бележката за този лекар.
-              </p>
+          {noShowCount > 0 && (
+            <div
+              className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-950"
+              role="status"
+            >
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" aria-hidden />
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Лекар</label>
-                <select
-                  value={adminNoteTargetId}
-                  onChange={(e) => setAdminNoteTargetId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none"
-                >
-                  <option value="">— изберете лекар —</option>
-                  {dentists.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
+                <p className="font-semibold">История: не се е явявал на час ({noShowCount}×)</p>
+                <p className="text-xs text-amber-900/85 mt-0.5">
+                  Индикаторът се изчислява автоматично от предишни посещения с отметка „не се яви“. Можете свободно да ползвате и ръчния флаг „нередовен“ по-горе.
+                </p>
               </div>
-              {adminNoteTargetId !== '' && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Бележка към избрания лекар</label>
-                  <textarea
-                    value={adminNoteText}
-                    onChange={(e) => setAdminNoteText(e.target.value)}
-                    rows={4}
-                    placeholder="Напр. особености при пациента, указания за следващо посещение…"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 outline-none text-sm resize-y min-h-[88px]"
-                  />
-                </div>
-              )}
             </div>
           )}
 
