@@ -13,6 +13,12 @@ create index if not exists idx_admin_doctor_messages_to_dentist
 
 alter table public.admin_doctor_messages enable row level security;
 
+drop policy if exists "Allow all for anon" on public.admin_doctor_messages;
+create policy "Allow all for anon" on public.admin_doctor_messages
+  for all to anon
+  using (true)
+  with check (true);
+
 drop policy if exists "Allow all for authenticated" on public.admin_doctor_messages;
 create policy "Allow all for authenticated" on public.admin_doctor_messages
   for all to authenticated

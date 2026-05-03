@@ -1712,7 +1712,7 @@ export default function App() {
                 )}
               </div>
             )}
-            {(permissions.canViewAdmin || adminSession) && supabase && (
+            {isAuthenticated && supabase && (
               <button
                 type="button"
                 onClick={() => setAdminDoctorMessageOpen(true)}
