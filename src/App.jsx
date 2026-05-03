@@ -1780,6 +1780,7 @@ export default function App() {
         onDeleteFile={deletePatientFile}
         canUseFiles={Boolean(supabase)}
         appointmentTypes={appointmentTypes}
+        canManageDoctorDirectedNotes={permissions.canViewAdmin}
       />
       <PatientDatabaseModal
         open={patientDbOpen}
