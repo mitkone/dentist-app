@@ -200,6 +200,11 @@ export default function App() {
   const scheduleNotificationsRef = useRef(null);
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0);
   const [vacationsRefreshKey, setVacationsRefreshKey] = useState(0);
+  /** Винаги актуален списък лекари за async/realtime (без да презакачаме цялото fetch при смяна на референцията на масива). */
+  const dentistsRef = useRef(dentists);
+  dentistsRef.current = dentists;
+  /** Игнорира се остарял отговор от паралелни GET заявки към appointments (гонка → „изчезващ“ час). */
+  const appointmentsFetchGenerationRef = useRef(0);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -432,12 +437,14 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    const fetchGen = ++appointmentsFetchGenerationRef.current;
+
     async function fetchAppointments() {
       setAppointmentsLoading(true);
       setAppointmentsError(null);
       if (!supabase) {
-        setAppointments([]);
-        setAppointmentsLoading(false);
+        if (appointmentsFetchGenerationRef.current === fetchGen) setAppointments([]);
+        if (appointmentsFetchGenerationRef.current === fetchGen) setAppointmentsLoading(false);
         return;
       }
       try {
@@ -445,6 +452,8 @@ export default function App() {
           .from('appointments')
           .select('*')
           .order('start_time', { ascending: true });
+        if (appointmentsFetchGenerationRef.current !== fetchGen) return;
+
         if (error) {
           const msg = error.message || '';
           setAppointmentsError(
@@ -454,10 +463,12 @@ export default function App() {
           );
           setAppointments([]);
         } else {
-          const list = (data || []).map((row) => rowToAppointment(row, dentists)).filter(Boolean);
+          const dentalNow = dentistsRef.current;
+          const list = (data || []).map((row) => rowToAppointment(row, dentalNow)).filter(Boolean);
           setAppointments(list);
         }
       } catch (err) {
+        if (appointmentsFetchGenerationRef.current !== fetchGen) return;
         const msg = err?.message || '';
         // На мобилни браузъри понякога заявката се abort-ва при фон/фокус смяна.
         if (err?.name === 'AbortError' || msg.toLowerCase().includes('aborted')) {
@@ -467,10 +478,25 @@ export default function App() {
           setAppointments([]);
         }
       }
-      setAppointmentsLoading(false);
+      if (appointmentsFetchGenerationRef.current === fetchGen) setAppointmentsLoading(false);
     }
     fetchAppointments();
-  }, [isAuthenticated, appointmentsRefreshKey, dentists]);
+  }, [isAuthenticated, appointmentsRefreshKey]);
+
+  /** Смяна на списък лекари (име/id) без нов GET — поправка на dentistId на вече заредени часове (импорт/realtime). */
+  useEffect(() => {
+    setAppointments((prev) => {
+      let changed = false;
+      const next = prev.map((a) => {
+        const nid = effectiveDentistId(a, dentists);
+        const cur = String(a.dentistId ?? '').trim();
+        if (nid === cur) return a;
+        changed = true;
+        return { ...a, dentistId: nid };
+      });
+      return changed ? next : prev;
+    });
+  }, [dentists]);
 
   const myDentistId = permissions.myDentistId;
   const notificationUserKey = user?.id || user?.email || (myDentistId ? `dentist:${myDentistId}` : 'staff');
@@ -556,8 +582,15 @@ export default function App() {
     if (!supabase || !isAuthenticated) return;
     const ch = supabase.channel(`appointments-live-${notificationUserKey}`);
     const mergeUpsert = (row) => {
-      const mapped = rowToAppointment(row, dentists);
-      if (!mapped) return;
+      if (!row) return;
+      const mapped = rowToAppointment(row, dentistsRef.current);
+      if (!mapped) {
+        if (row.id != null) {
+          /* Realtime понякога носи частичен ред или временно невалиден payload — синхронен refetch замества целия списък. */
+          setAppointmentsRefreshKey((k) => k + 1);
+        }
+        return;
+      }
       setAppointments((prev) => {
         const next = [...prev.filter((a) => a.id !== mapped.id), mapped];
         next.sort(compareAppointmentsByDateTime);
@@ -580,7 +613,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [supabase, isAuthenticated, notificationUserKey, dentists]);
+  }, [supabase, isAuthenticated, notificationUserKey]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
