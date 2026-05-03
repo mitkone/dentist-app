@@ -87,7 +87,7 @@ function compareAppointmentsByDateTime(a, b) {
 }
 
 /** След INSERT GET понякога кратко не връща реда (read‑lag); държим локалния му клон докато не се появи в отговора. */
-const APPOINTMENT_PRESERVE_UNTIL_VISIBLE_MS = 180000;
+const APPOINTMENT_PRESERVE_UNTIL_VISIBLE_MS = 600000;
 
 function mergeFetchedAppointmentsPreserveRecent(fromServerMapped, prev) {
   const byId = new Map();
@@ -613,22 +613,43 @@ export default function App() {
   useEffect(() => {
     if (!supabase || !isAuthenticated) return;
     const ch = supabase.channel(`appointments-live-${notificationUserKey}`);
-    const mergeUpsert = (row) => {
+    const hydrateTimers = new Map();
+
+    async function fetchAppointmentRowById(rawId) {
+      const idStr = rawId == null ? '' : String(rawId).trim();
+      if (!idStr) return;
+      const { data, error } = await supabase.from('appointments').select('*').eq('id', idStr).maybeSingle();
+      if (error || !data) {
+        setAppointmentsRefreshKey((k) => k + 1);
+        return;
+      }
+      mergeUpsert(data);
+    }
+
+    function scheduleHydrateAfterPartialRealtime(row) {
+      const idStr = row?.id == null ? '' : String(row.id).trim();
+      if (!idStr) return;
+      const oldT = hydrateTimers.get(idStr);
+      if (oldT) window.clearTimeout(oldT);
+      const tid = window.setTimeout(() => {
+        hydrateTimers.delete(idStr);
+        void fetchAppointmentRowById(idStr);
+      }, 280);
+      hydrateTimers.set(idStr, tid);
+    }
+
+    function mergeUpsert(row) {
       if (!row || row.id == null) return;
 
-      const needLaterRefetch = { yes: false };
+      let partialIdToHydrate = null;
 
       setAppointments((prev) => {
         const existing = prev.find((a) => String(a.id) === String(row.id));
         const fromRealtime = rowToAppointment(row, dentistsRef.current);
 
         if (!fromRealtime) {
-          /*
-           * Частичен realtime payload без start/end или dentist — не затривай вече показания час от insert.
-           * Refetch само ако записът още не е хидратиран локално.
-           */
           if (existing) return prev;
-          needLaterRefetch.yes = true;
+          partialIdToHydrate = row.id;
           return prev;
         }
 
@@ -666,14 +687,10 @@ export default function App() {
         return next;
       });
 
-      if (needLaterRefetch.yes) {
-        /*
-         Малко закъснение: да има време onAdd да сложи записа локално + _preserve маркери,
-         преди GET който иначе често връща snapshot без новия ред при read‑lag.
-         */
-        window.setTimeout(() => setAppointmentsRefreshKey((k) => k + 1), 450);
+      if (partialIdToHydrate != null) {
+        scheduleHydrateAfterPartialRealtime({ id: partialIdToHydrate });
       }
-    };
+    }
     ch
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload) => {
         mergeUpsert(payload.new);
@@ -684,10 +701,12 @@ export default function App() {
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'appointments' }, (payload) => {
         const id = payload.old?.id;
         if (id == null) return;
-        setAppointments((prev) => prev.filter((a) => a.id !== id));
+        setAppointments((prev) => prev.filter((a) => String(a.id) !== String(id)));
       })
       .subscribe();
     return () => {
+      hydrateTimers.forEach((t) => window.clearTimeout(t));
+      hydrateTimers.clear();
       supabase.removeChannel(ch);
     };
   }, [supabase, isAuthenticated, notificationUserKey]);
@@ -1261,14 +1280,48 @@ export default function App() {
           const human = error.message || error.details || error.hint || JSON.stringify(error);
           return { ok: false, error: human };
         }
-        const mapped = rowToAppointment(data, dentists);
+        let mapped = rowToAppointment(data, dentists);
+        if (!mapped && data?.id != null && payload.start_time && payload.end_time) {
+          mapped = rowToAppointment(
+            {
+              ...data,
+              start_time: data.start_time ?? payload.start_time,
+              end_time: data.end_time ?? payload.end_time,
+            },
+            dentists
+          );
+        }
+        if (!mapped && data?.id != null) {
+          mapped = {
+            id: data.id,
+            dentistId: String(dentistId ?? '').trim(),
+            patientId: resolvedPatientId,
+            patientName: patientName.trim(),
+            date,
+            start,
+            end,
+            type: type || 'Checkup',
+            notes: notes?.trim() ? notes.trim() : '',
+            attendance: 'pending',
+            insurance,
+            location,
+            _doctorLabel: dentistLabel ?? (data?.doctor != null ? String(data.doctor).trim() : null),
+          };
+        }
         if (mapped) {
           if (notes?.trim()) mapped.notes = notes.trim();
           mapped.location = location;
           if (resolvedPatientId) mapped.patientId = resolvedPatientId;
+          const formDid = String(dentistId ?? '').trim();
+          if (formDid && !String(mapped.dentistId ?? '').trim()) mapped = { ...mapped, dentistId: formDid };
           mapped._preserveUntilFetched = true;
           mapped._preserveAtMs = Date.now();
-          setAppointments((prev) => [...prev, mapped]);
+          setAppointments((prev) => {
+            const idStr = String(mapped.id);
+            const next = [...prev.filter((a) => String(a.id) !== idStr), mapped];
+            next.sort(compareAppointmentsByDateTime);
+            return next;
+          });
           logWithActor({
             action: ACTIVITY_ACTIONS.APPOINTMENT_CREATED,
             entity_type: 'appointment',

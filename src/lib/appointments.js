@@ -137,6 +137,20 @@ function isoDateTimeToLocalParts(isoMs) {
 
 function parseLooseTimeToMs(value) {
   if (value == null || value === '') return null;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const abs = Math.abs(value);
+    return abs > 1e15 ? null : abs < 1e12 ? value * 1000 : value;
+  }
+  if (typeof value === 'string') {
+    const t = value.trim();
+    if (/^-?\d+(\.\d+)?$/.test(t)) {
+      const n = Number(t);
+      if (!Number.isFinite(n)) return null;
+      const abs = Math.abs(n);
+      if (abs > 1e15) return null;
+      return abs < 1e12 ? n * 1000 : n;
+    }
+  }
   const d = new Date(value);
   if (!Number.isNaN(d.getTime())) return d.getTime();
   return null;
