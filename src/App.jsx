@@ -35,6 +35,37 @@ function dateKey(d) {
   return `${y}-${m}-${day}`;
 }
 
+function normalizeYmd(ds) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(ds || '').trim());
+  if (!m) return String(ds || '').trim();
+  return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+}
+
+/** YYYY-MM-DD или Date → календарен ден като локален Date (~обед): без полунощ UTC от `new Date('2026-06-06')`. */
+function parseLocalDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0, 0);
+  }
+  const s = String(value).trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const da = Number(m[3]);
+    if (Number.isFinite(y) && Number.isFinite(mo) && Number.isFinite(da)) {
+      return new Date(y, mo - 1, da, 12, 0, 0, 0);
+    }
+  }
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+}
+
+function anchorCurrentDateNoon(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+}
+
 function addMinutes(time, minutes) {
   const [h, m] = time.split(':').map(Number);
   const total = h * 60 + m + minutes;
@@ -284,7 +315,7 @@ export default function App() {
         const slotStartMin = timeStrToMinutes(slot);
         const slotEndMin = slotStartMin + 15;
         const hasOverlap = appointments.some((a) => {
-          if (a.dentistId !== dentistId || a.date !== dateStr) return false;
+          if (String(a.dentistId ?? '').trim() !== String(dentistId ?? '').trim() || normalizeYmd(a.date) !== normalizeYmd(dateStr)) return false;
           const aStart = timeStrToMinutes(a.start);
           const aEnd = timeStrToMinutes(a.end);
           return !(aEnd <= slotStartMin || aStart >= slotEndMin);
@@ -334,7 +365,7 @@ export default function App() {
           const slotEndMin = slotStartMin + 15;
 
           const hasOverlap = appointments.some((a) => {
-            if (a.dentistId !== dentistId || a.date !== dateStr) return false;
+            if (String(a.dentistId ?? '').trim() !== String(dentistId ?? '').trim() || normalizeYmd(a.date) !== normalizeYmd(dateStr)) return false;
             const aStart = timeStrToMinutes(a.start);
             const aEnd = timeStrToMinutes(a.end);
             return !(aEnd <= slotStartMin || aStart >= slotEndMin);
@@ -376,7 +407,7 @@ export default function App() {
   })();
 
   const todayKeyStr = dateKey(currentDate);
-  const appointmentsToday = appointments.filter((a) => a.date === todayKeyStr).length;
+  const appointmentsToday = appointments.filter((a) => normalizeYmd(a.date) === normalizeYmd(todayKeyStr)).length;
   const adminStats = {
     appointmentsToday,
     patientsCount: patients.length,
@@ -1114,25 +1145,25 @@ export default function App() {
   );
 
   const goPrevDay = () => {
-    const d = new Date(currentDate);
+    const d = anchorCurrentDateNoon(currentDate);
     d.setDate(d.getDate() - 1);
     setCurrentDate(d);
   };
 
   const goNextDay = () => {
-    const d = new Date(currentDate);
+    const d = anchorCurrentDateNoon(currentDate);
     d.setDate(d.getDate() + 1);
     setCurrentDate(d);
   };
 
   const goPrevWeek = () => {
-    const d = new Date(currentDate);
+    const d = anchorCurrentDateNoon(currentDate);
     d.setDate(d.getDate() - 7);
     setCurrentDate(d);
   };
 
   const goNextWeek = () => {
-    const d = new Date(currentDate);
+    const d = anchorCurrentDateNoon(currentDate);
     d.setDate(d.getDate() + 7);
     setCurrentDate(d);
   };
@@ -1140,7 +1171,8 @@ export default function App() {
   const goToday = () => setCurrentDate(new Date());
 
   const goToDate = useCallback((date) => {
-    if (date) setCurrentDate(new Date(date));
+    const parsed = parseLocalDateInput(date);
+    if (parsed) setCurrentDate(parsed);
   }, []);
 
   const onAppointmentClick = useCallback((appointment) => {

@@ -50,6 +50,13 @@ function calendarDateKeyFromDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Унифицирано YYYY-MM-DD (попълва месец/ден) за филтри в графиката. */
+function normalizeCalendarDateKey(ds) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(ds || '').trim());
+  if (!m) return String(ds || '').trim();
+  return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+}
+
 function assignAppointmentLanes(apps) {
   const sorted = [...apps].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
   const laneEnds = [];
@@ -246,8 +253,8 @@ export default function ResourceCalendar({
   const getAppointmentsForWeekDay = (dayKey, dentistId) =>
     appointments.filter(
       (a) =>
-        a.date === dayKey &&
-        a.dentistId === dentistId &&
+        normalizeCalendarDateKey(a.date) === normalizeCalendarDateKey(dayKey) &&
+        String(a.dentistId ?? '').trim() === String(dentistId ?? '').trim() &&
         patientMatchesSearch(a)
     );
 
@@ -274,10 +281,12 @@ export default function ResourceCalendar({
   };
 
   const getAppointmentsForColumn = (dentistId) => {
+    const did = String(dentistId ?? '').trim();
+    const day = normalizeCalendarDateKey(dateStr);
     return appointments.filter(
       (a) =>
-        a.dentistId === dentistId &&
-        a.date === dateStr &&
+        String(a.dentistId ?? '').trim() === did &&
+        normalizeCalendarDateKey(a.date) === day &&
         patientMatchesSearch(a)
     );
   };
@@ -318,10 +327,12 @@ export default function ResourceCalendar({
   const dentistIdsInViewSet = new Set(dentistIdsInView);
   if (dentistIdsInView.length > 0) {
     for (const a of appointments) {
+      const adate = normalizeCalendarDateKey(a.date);
       const dayOk =
-        viewMode === 'week' ? weekDateKeys.includes(a.date) : a.date === dateStr;
+        viewMode === 'week' ? weekDateKeys.some((k) => normalizeCalendarDateKey(k) === adate) : adate === normalizeCalendarDateKey(dateStr);
       if (!dayOk) continue;
-      if (!dentistIdsInViewSet.has(a.dentistId)) continue;
+      const apDid = String(a.dentistId ?? '').trim();
+      if (!dentistIdsInViewSet.has(apDid)) continue;
       if (!patientMatchesSearch(a)) continue;
       const bottomPx = timeToOffset(a.start) + durationHeight(a.start, a.end);
       timelineMinHeightPx = Math.max(
@@ -559,7 +570,12 @@ export default function ResourceCalendar({
               {weekDateKeys.map((dayKey) => {
                 const vacation = singleSelectedDentistId ? isOnVacation(singleSelectedDentistId, dayKey) : false;
                 const dayApps = appointments
-                  .filter((a) => a.date === dayKey && weekDentistIds.includes(a.dentistId) && patientMatchesSearch(a))
+                  .filter(
+                    (a) =>
+                      normalizeCalendarDateKey(a.date) === normalizeCalendarDateKey(dayKey) &&
+                      weekDentistIds.includes(String(a.dentistId ?? '').trim()) &&
+                      patientMatchesSearch(a)
+                  )
                   .map((x) => ({ ...x }));
                 const laidOut = assignAppointmentLanes(dayApps);
                 return (

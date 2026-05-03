@@ -27,7 +27,7 @@ export function rowToAppointment(row) {
   const end = endParts.hhmm;
   return {
     id: row.id,
-    dentistId: row.dentist_id ?? '',
+    dentistId: String(row.dentist_id ?? '').trim(),
     patientId: row.patient_id ?? null,
     patientName: row.patient_name ?? '',
     date,
