@@ -6,29 +6,80 @@
 function normalizeDoctorMatchKey(s) {
   return String(s || '')
     .trim()
-    .toLowerCase()
+    .toLocaleLowerCase('bg-BG')
     .replace(/\u2010|\u2011|\u2212|\u002d/g, '-')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ')
     .replace(/^д-р\.?\s+/i, 'д-р ');
 }
 
-/** Мачва ред към приложенчески dentist.id от списъка (d6, ...) по dentist_id или текст doctor. */
+/** Пълният женски йероглиф Й (един знак vs i + combining). */
+function lastNameFingerprint(s) {
+  const cleaned = normalizeDoctorMatchKey(s).replace(/^д-р\s+/, '');
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  const last = parts.length ? parts[parts.length - 1] : cleaned;
+  return last;
+}
+
+/** Мачва dentist_id число като → d6, UUID дословно, после по колона doctor. */
 function resolveDentistIdFromRow(row, dentists = []) {
-  const fromCol = String(row?.dentist_id ?? row?.doctor_id ?? '').trim();
-  if (fromCol) return fromCol;
-  const nameRaw = row?.doctor ?? row?.doctor_name ?? row?.dentist_name ?? '';
+  if (!dentists.length) return String(row?.dentist_id ?? row?.doctor_id ?? '').trim();
+
+  const rawSlot = row?.dentist_id ?? row?.doctor_id;
+  let rawStr = rawSlot != null && rawSlot !== '' ? String(rawSlot).trim() : '';
+
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawStr)
+  ) {
+    if (dentists.some((d) => String(d.id) === rawStr)) return rawStr;
+    rawStr = '';
+  }
+
+  if (rawStr) {
+    if (dentists.some((d) => String(d.id) === rawStr)) return rawStr;
+
+    const afterD = rawStr.replace(/^d\s*/i, '');
+    const n = /^(\d+)$/.exec(afterD) ? Number(afterD) : NaN;
+    if (Number.isFinite(n) && n >= 1 && n <= 9999) {
+      const prefixedId = /^d\d+$/i.test(rawStr) ? rawStr : `d${n}`;
+      const byPref = dentists.find((d) => String(d.id).toLowerCase() === prefixedId.toLowerCase());
+      if (byPref) return byPref.id;
+    }
+
+    rawStr = '';
+  }
+
+  const nameRaw =
+    row?.doctor ??
+    row?.Doctor ??
+    row?.doctor_name ??
+    row?.dentist_name ??
+    row?.assigned_doctor ??
+    row?.dentist_full_name ??
+    '';
   const key = normalizeDoctorMatchKey(nameRaw);
-  if (!key || !dentists.length) return '';
+  if (!key) return '';
+
   let found = dentists.find((d) => normalizeDoctorMatchKey(d.name) === key);
+
+  const keyLast = lastNameFingerprint(nameRaw);
+  if (!found && keyLast) {
+    found = dentists.find((d) => lastNameFingerprint(d.name) === keyLast);
+  }
+  if (!found && keyLast.length >= 3) {
+    found = dentists.find((d) => {
+      const dl = lastNameFingerprint(d.name);
+      if (!dl || !keyLast) return false;
+      return dl === keyLast || dl.includes(keyLast) || keyLast.includes(dl);
+    });
+  }
   if (!found) {
     found = dentists.find((d) => {
       const dk = normalizeDoctorMatchKey(d.name);
-      if (!dk || !key) return false;
       return dk === key || dk.includes(key) || key.includes(dk);
     });
   }
+
   return found?.id ?? '';
 }
 
