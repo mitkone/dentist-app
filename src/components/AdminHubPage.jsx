@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2,
-  BarChart2, ChevronUp, ChevronDown, Settings, LayoutDashboard, Search, RefreshCw,
-  Camera, Upload
+  BarChart2, ChevronUp, ChevronDown, Settings, LayoutDashboard, Search, RefreshCw
 } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -577,21 +576,8 @@ function SettingsTab({ workingHours, onSaveWorkingHours, appointmentTypes, onAdd
   );
 }
 
-// ---- Tab: Лекари (с снимки) ----
-function DentistsTab({ dentists, supabase, onOpenAddDentist, onDeleteDentist, onUploadDentistPhoto, onDeleteDentistPhoto }) {
-  const [uploading, setUploading] = useState(null);
-  const fileRefs = useRef({});
-
-  const handlePhotoUpload = async (dentistId, file) => {
-    if (!file || !supabase) return;
-    setUploading(dentistId);
-    try {
-      await onUploadDentistPhoto?.(dentistId, file);
-    } finally {
-      setUploading(null);
-    }
-  };
-
+// ---- Tab: Лекари ----
+function DentistsTab({ dentists, onOpenAddDentist, onDeleteDentist }) {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -607,30 +593,10 @@ function DentistsTab({ dentists, supabase, onOpenAddDentist, onDeleteDentist, on
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {dentists.map((d) => (
           <div key={d.id} className="bg-white rounded-xl border border-slate-200 p-4 flex gap-4 items-center">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              {d.photoUrl ? (
-                <img src={d.photoUrl} alt={d.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-200" />
-              ) : (
-                <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white"
-                  style={{ backgroundColor: d.color || '#64748b' }}>
-                  {d.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              {/* Upload overlay */}
-              <button type="button" title="Промени снимка"
-                onClick={() => fileRefs.current[d.id]?.click()}
-                disabled={uploading === d.id}
-                className="absolute inset-0 rounded-full bg-slate-900/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                {uploading === d.id
-                  ? <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                  : <Camera className="w-5 h-5 text-white" />}
-              </button>
-              <input type="file" accept="image/*" className="hidden"
-                ref={(el) => { fileRefs.current[d.id] = el; }}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(d.id, f); e.target.value = ''; }} />
+            <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white shrink-0"
+              style={{ backgroundColor: d.color || '#64748b' }}>
+              {d.name.charAt(0).toUpperCase()}
             </div>
-
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-900 truncate">{d.name}</p>
               {d.specialty && <p className="text-xs text-slate-500 truncate">{d.specialty}</p>}
@@ -639,21 +605,12 @@ function DentistsTab({ dentists, supabase, onOpenAddDentist, onDeleteDentist, on
                 <span className="text-xs text-slate-400">{d.color}</span>
               </div>
             </div>
-
-            <div className="flex flex-col gap-1 shrink-0">
-              {d.photoUrl && (
-                <button type="button" onClick={() => onDeleteDentistPhoto?.(d.id)} title="Премахни снимка"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-              {onDeleteDentist && (
-                <button type="button" onClick={() => onDeleteDentist(d.id)} title="Премахни лекар"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50">
-                  <XCircle className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            {onDeleteDentist && (
+              <button type="button" onClick={() => onDeleteDentist(d.id)} title="Премахни лекар"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0">
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ))}
         {dentists.length === 0 && <p className="col-span-2 text-sm text-slate-400 py-8 text-center">Няма добавени стоматолози.</p>}
@@ -692,8 +649,6 @@ export default function AdminHubPage({
   onReorderAppointmentType,
   onOpenAddDentist,
   onDeleteDentist,
-  onUploadDentistPhoto,
-  onDeleteDentistPhoto,
   getAdminPin,
 }) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -751,9 +706,8 @@ export default function AdminHubPage({
           {activeTab === 'analytics' && <AnalyticsTab activityLog={activityLog} />}
           {activeTab === 'users' && <UsersTab supabase={supabase} dentists={dentists} getAdminPin={getAdminPin} />}
           {activeTab === 'dentists' && (
-            <DentistsTab dentists={dentists} supabase={supabase}
-              onOpenAddDentist={onOpenAddDentist} onDeleteDentist={onDeleteDentist}
-              onUploadDentistPhoto={onUploadDentistPhoto} onDeleteDentistPhoto={onDeleteDentistPhoto} />
+            <DentistsTab dentists={dentists}
+              onOpenAddDentist={onOpenAddDentist} onDeleteDentist={onDeleteDentist} />
           )}
           {activeTab === 'settings' && (
             <SettingsTab workingHours={workingHours} onSaveWorkingHours={onSaveWorkingHours}

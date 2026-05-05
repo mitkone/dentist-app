@@ -2466,12 +2466,6 @@ export default function App() {
         canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
         canManageFreeSlots
         canManageDayLocation
-        canUploadPhoto={
-          adminSession ||
-          (myDentistId && (typeof dentistProfileModal === 'object' ? dentistProfileModal?.id : dentistProfileModal) === myDentistId)
-        }
-        onUploadPhoto={uploadDentistPhoto}
-        onDeletePhoto={deleteDentistPhoto}
       />
       <DoctorDayLocationModal
         open={dayLocationModal.open}
@@ -2539,8 +2533,6 @@ export default function App() {
         onReorderAppointmentType={reorderAppointmentType}
         onOpenAddDentist={() => setAddDentistOpen(true)}
         onDeleteDentist={deleteDentist}
-        onUploadDentistPhoto={uploadDentistPhoto}
-        onDeleteDentistPhoto={deleteDentistPhoto}
         getAdminPin={getAdminPin}
       />
 
