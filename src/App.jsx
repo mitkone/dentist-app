@@ -232,6 +232,7 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminHubOpen, setAdminHubOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [feedbackUnreadCount, setFeedbackUnreadCount] = useState(0);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [dentistPhotos, setDentistPhotos] = useState({});
@@ -1977,9 +1978,9 @@ export default function App() {
             </div>
           </div>
 
-          {/* Patient search — visible when authenticated */}
+          {/* Patient search – desktop inline (md+) */}
           {isAuthenticated && (
-            <div className="flex items-center gap-1.5 flex-1 min-w-0 max-w-sm">
+            <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0 max-w-sm">
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 z-[1] pointer-events-none" />
                 <input
@@ -2033,6 +2034,22 @@ export default function App() {
 
           {/* Right icon buttons */}
           <div className="flex items-center gap-1 shrink-0">
+            {/* Mobile-only: search icon button */}
+            {isAuthenticated && (
+              <button type="button" onClick={() => setMobileSearchOpen((v) => !v)}
+                className="md:hidden relative p-2 rounded-lg text-slate-600 hover:bg-slate-200"
+                aria-label="Търсене" title="Търси пациент">
+                <Search className="w-5 h-5" />
+              </button>
+            )}
+            {/* Mobile-only: database icon */}
+            {isAuthenticated && (
+              <button type="button" onClick={() => setPatientDbOpen(true)}
+                className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-200"
+                aria-label="База данни" title="База данни пациенти">
+                <Database className="w-5 h-5" />
+              </button>
+            )}
             {isAuthenticated && supabase && (adminSession || myDentistId || permissions.canBookAnyDentist) && (
               <button
                 type="button"
@@ -2073,28 +2090,27 @@ export default function App() {
                   )}
                 </button>
                 {scheduleNotificationsOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-[min(96vw,22rem)] max-h-[min(92vh,32rem)] overflow-hidden bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] flex flex-col">
-                    <div className="p-2.5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+                  <div className="fixed md:absolute left-0 right-0 md:left-auto md:right-0 top-[53px] md:top-full md:mt-1 mx-2 md:mx-0 md:w-80 max-h-[50vh] overflow-hidden bg-white border border-slate-200 rounded-xl shadow-2xl z-[9999] flex flex-col">
+                    <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
                       <span className="text-sm font-semibold text-slate-800">Промени в графика</span>
-                      {scheduleNotifications.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setScheduleNotifications([]);
-                            setScheduleNotificationsSeen(true);
-                          }}
-                          className="text-xs text-emerald-600 hover:text-emerald-700"
-                        >
-                          Изчисти
+                      <div className="flex items-center gap-2">
+                        {scheduleNotifications.length > 0 && (
+                          <button type="button"
+                            onClick={() => { setScheduleNotifications([]); setScheduleNotificationsSeen(true); }}
+                            className="text-xs text-emerald-600 hover:text-emerald-700">Изчисти</button>
+                        )}
+                        <button type="button" onClick={() => setScheduleNotificationsOpen(false)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
-                      )}
+                      </div>
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-auto">
                       {scheduleNotifications.length === 0 ? (
                         <p className="p-4 text-sm text-slate-500 text-center">Няма промени по графика</p>
                       ) : (
                         scheduleNotifications.map((n) => (
-                          <div key={n.id} className="px-3 py-2 border-b border-slate-200/50 last:border-0 text-sm text-slate-800">
+                          <div key={n.id} className="px-4 py-2.5 border-b border-slate-200/50 last:border-0 text-sm text-slate-800">
                             {n.text}
                           </div>
                         ))
@@ -2168,6 +2184,67 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Mobile search overlay */}
+      {mobileSearchOpen && isAuthenticated && (
+        <div className="md:hidden bg-white border-b border-slate-200 px-3 py-2 shadow-md z-[150] relative">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Търси пациент…"
+              value={patientSearch}
+              onChange={(e) => setPatientSearch(e.target.value)}
+              autoComplete="off"
+              className="w-full pl-9 pr-10 py-2.5 text-sm bg-slate-100 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none"
+            />
+            <button type="button" onClick={() => { setMobileSearchOpen(false); setPatientSearch(''); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-700">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          {/* Results */}
+          {headerPatientHits.length > 0 && (
+            <ul className="mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+              {headerPatientHits.map((p) => (
+                <li key={p.id}>
+                  <button type="button"
+                    className="w-full text-left px-4 py-3 text-sm text-slate-800 hover:bg-emerald-50 active:bg-emerald-100 flex flex-col gap-0.5 border-b border-slate-100 last:border-0"
+                    onClick={() => { setPatientDetailId(p.id); setPatientSearch(''); setMobileSearchOpen(false); }}>
+                    <span className="font-semibold">{p.name}</span>
+                    {(p.phone || p.parentPhone) && (
+                      <span className="text-xs text-slate-500">{p.phone}{p.parentPhone ? ` · ${p.parentPhone}` : ''}</span>
+                    )}
+                    <span className="flex flex-wrap gap-1">
+                      {p.isBlacklisted && <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-900 text-white">Черен списък</span>}
+                      {p.unreliablePatient && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">Нередовен</span>}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {patientSearch.trim().length >= 1 && headerPatientHits.length === 0 && (
+            <div className="mt-1.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+              Няма съвпадения —{' '}
+              <button type="button" className="text-emerald-600 underline" onClick={() => { setPatientDbOpen(true); setMobileSearchOpen(false); }}>
+                отвори базата
+              </button>
+            </div>
+          )}
+          <div className="flex gap-2 mt-2">
+            <button type="button" onClick={() => { setAddPatientOpen(true); setMobileSearchOpen(false); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">
+              <UserPlus className="w-4 h-4" /> Добави пациент
+            </button>
+            <button type="button" onClick={() => { setPatientDbOpen(true); setMobileSearchOpen(false); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200">
+              <Database className="w-4 h-4" /> База данни
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
         <main className="flex-1 flex flex-col min-w-0 px-4 pt-3 pb-4 overflow-auto bg-slate-50 min-h-0">
