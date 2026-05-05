@@ -1145,10 +1145,6 @@ export default function App() {
   }, [fetchAppointmentTypesAndSpecialties]);
 
   useEffect(() => {
-    fetchDentistPhotos();
-  }, [fetchDentistPhotos]);
-
-  useEffect(() => {
     if (adminOpen) fetchAppointmentTypesAndSpecialties();
   }, [adminOpen, fetchAppointmentTypesAndSpecialties]);
 
@@ -1247,6 +1243,10 @@ export default function App() {
     setDentistPhotos((prev) => { const n = { ...prev }; delete n[dentistId]; return n; });
     setDentists((prev) => prev.map((d) => d.id === dentistId ? { ...d, photoUrl: null } : d));
   }, [supabase]);
+
+  useEffect(() => {
+    fetchDentistPhotos();
+  }, [fetchDentistPhotos]);
 
   const saveWorkingHours = useCallback(
     async (start, end) => {
