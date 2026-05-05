@@ -39,6 +39,74 @@ function fmtWhen(isoStr) {
   return d.toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, da] = dateStr.split('-');
+  return `${da}.${m}.${y}`;
+}
+
+function formatDetails(action, details, dentists) {
+  if (!details || typeof details !== 'object') return null;
+  const parts = [];
+
+  // Who performed the action
+  if (details.actor_name) parts.push({ label: 'от', value: details.actor_name, key: 'actor' });
+
+  // Appointment-related actions
+  if (action?.includes('appointment') || action?.includes('vacation')) {
+    if (details.patientName || details.oldPatientName) {
+      const name = details.patientName || details.oldPatientName;
+      parts.push({ label: 'пациент', value: name, key: 'patient' });
+    }
+    const dentistId = details.dentistId || details.dentist_id;
+    if (dentistId && dentists?.length) {
+      const d = dentists.find((x) => String(x.id) === String(dentistId));
+      if (d) parts.push({ label: 'при', value: d.name, key: 'dentist' });
+    }
+    if (details.date && details.start) {
+      parts.push({ label: 'час', value: `${fmtDate(details.date)} ${details.start}`, key: 'time' });
+    } else if (details.date) {
+      parts.push({ label: 'дата', value: fmtDate(details.date), key: 'date' });
+    }
+    if (details.oldDate && (details.oldDate !== details.date || details.oldStart !== details.start)) {
+      const oldVal = details.oldStart ? `${fmtDate(details.oldDate)} ${details.oldStart}` : fmtDate(details.oldDate);
+      parts.push({ label: 'преди', value: oldVal, key: 'old_time' });
+    }
+  }
+
+  // Patient actions
+  if (action?.includes('patient')) {
+    if (details.name) parts.push({ label: 'пациент', value: details.name, key: 'patient' });
+  }
+
+  // Dentist actions
+  if (action?.includes('dentist')) {
+    if (details.name) parts.push({ label: 'лекар', value: details.name, key: 'dentist_name' });
+  }
+
+  // File actions
+  if (action?.includes('file')) {
+    if (details.fileName || details.name) parts.push({ label: 'файл', value: details.fileName || details.name, key: 'file' });
+  }
+
+  return parts;
+}
+
+function DetailsBadges({ action, details, dentists }) {
+  const parts = formatDetails(action, details, dentists);
+  if (!parts || parts.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {parts.map((p) => (
+        <span key={p.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-600 border border-slate-200">
+          <span className="text-slate-400">{p.label}:</span>
+          <span className="font-medium text-slate-700 max-w-[160px] truncate">{p.value}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function StatCard({ icon: Icon, value, label, color = 'emerald' }) {
   const colors = { emerald: 'bg-emerald-50 text-emerald-600', red: 'bg-red-50 text-red-600', blue: 'bg-blue-50 text-blue-600', amber: 'bg-amber-50 text-amber-600' };
   return (
@@ -107,10 +175,15 @@ function OverviewTab({ stats, appointments, dentists, activityLog, onRefresh, lo
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Последни действия</h3>
         <div className="space-y-1.5">
           {activityLog.slice(0, 8).map((e) => (
-            <div key={e.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white border border-slate-200 text-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-              <span className="flex-1 text-slate-800">{ACTION_LABELS[e.action] || e.action}</span>
-              <span className="text-xs text-slate-400 shrink-0">{fmtWhen(e.created_at)}</span>
+            <div key={e.id} className="px-3 py-2.5 rounded-lg bg-white border border-slate-200">
+              <div className="flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="flex-1 text-sm text-slate-800 font-medium">{ACTION_LABELS[e.action] || e.action}</span>
+                <span className="text-xs text-slate-400 shrink-0">{fmtWhen(e.created_at)}</span>
+              </div>
+              <div className="pl-5">
+                <DetailsBadges action={e.action} details={e.details} dentists={dentists} />
+              </div>
             </div>
           ))}
           {activityLog.length === 0 && <p className="text-sm text-slate-400 py-4 text-center">Няма записи.</p>}
@@ -121,9 +194,10 @@ function OverviewTab({ stats, appointments, dentists, activityLog, onRefresh, lo
 }
 
 // ---- Tab: Активност ----
-function ActivityTab({ activityLog, loading, onRefresh, onClear }) {
+function ActivityTab({ activityLog, loading, onRefresh, onClear, dentists }) {
   const [filter, setFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [showRawId, setShowRawId] = useState(null);
 
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
@@ -164,24 +238,60 @@ function ActivityTab({ activityLog, loading, onRefresh, onClear }) {
 
       <div className="space-y-1.5">
         {filtered.length === 0 && <p className="text-sm text-slate-400 py-8 text-center">Няма записи.</p>}
-        {filtered.map((e) => (
-          <div key={e.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <button type="button" className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"
-              onClick={() => setExpandedId((cur) => (cur === e.id ? null : e.id))}>
-              <Activity className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="flex-1 text-sm text-slate-800 font-medium">{ACTION_LABELS[e.action] || e.action}</span>
-              <span className="text-xs text-slate-400">{fmtWhen(e.created_at)}</span>
-              {expandedId === e.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-            </button>
-            {expandedId === e.id && e.details && (
-              <div className="px-4 pb-3 pt-0">
-                <pre className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto text-slate-700">
-                  {JSON.stringify(e.details, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        ))}
+        {filtered.map((e) => {
+          const isExpanded = expandedId === e.id;
+          const isRaw = showRawId === e.id;
+          const detailParts = formatDetails(e.action, e.details, dentists);
+          return (
+            <div key={e.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <button type="button" className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                onClick={() => setExpandedId((cur) => (cur === e.id ? null : e.id))}>
+                <Activity className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-slate-800 font-semibold">{ACTION_LABELS[e.action] || e.action}</span>
+                  {/* Inline summary – always visible */}
+                  {detailParts && detailParts.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {detailParts.map((p) => (
+                        <span key={p.key} className="text-xs text-slate-500">
+                          <span className="text-slate-400">{p.label}: </span>
+                          <span className="text-slate-700 font-medium">{p.value}</span>
+                          {' '}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs text-slate-400 shrink-0 mt-0.5">{fmtWhen(e.created_at)}</span>
+                {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />}
+              </button>
+              {isExpanded && e.details && (
+                <div className="px-4 pb-3 pt-0 space-y-2">
+                  {/* Human-readable details */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
+                    {detailParts && detailParts.length > 0 ? detailParts.map((p) => (
+                      <div key={p.key} className="flex items-baseline gap-2 text-sm">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide w-16 shrink-0">{p.label}</span>
+                        <span className="text-slate-800 font-medium">{p.value}</span>
+                      </div>
+                    )) : <p className="text-xs text-slate-400 italic">Няма допълнителни данни.</p>}
+                  </div>
+                  {/* Toggle raw JSON */}
+                  <button type="button"
+                    onClick={(ev) => { ev.stopPropagation(); setShowRawId(isRaw ? null : e.id); }}
+                    className="text-[11px] text-slate-400 hover:text-slate-600 underline">
+                    {isRaw ? 'Скрий суровите данни' : 'Покажи суровите данни'}
+                  </button>
+                  {isRaw && (
+                    <pre className="text-xs bg-slate-900 text-emerald-300 rounded-lg p-3 overflow-x-auto">
+                      {JSON.stringify(e.details, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -636,7 +746,7 @@ export default function AdminHubPage({
           )}
           {activeTab === 'activity' && (
             <ActivityTab activityLog={activityLog} loading={activityLogLoading}
-              onRefresh={onRefreshActivityLog} onClear={onClearActivityLog} />
+              onRefresh={onRefreshActivityLog} onClear={onClearActivityLog} dentists={dentists} />
           )}
           {activeTab === 'analytics' && <AnalyticsTab activityLog={activityLog} />}
           {activeTab === 'users' && <UsersTab supabase={supabase} dentists={dentists} getAdminPin={getAdminPin} />}
