@@ -232,6 +232,7 @@ export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminHubOpen, setAdminHubOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackUnreadCount, setFeedbackUnreadCount] = useState(0);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [dentistPhotos, setDentistPhotos] = useState({});
   const [activityLog, setActivityLog] = useState([]);
@@ -1248,6 +1249,19 @@ export default function App() {
     fetchDentistPhotos();
   }, [fetchDentistPhotos]);
 
+  // Feedback unread count for admin badge
+  useEffect(() => {
+    if (!supabase || !adminSession) { setFeedbackUnreadCount(0); return; }
+    supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'open')
+      .then(({ count }) => setFeedbackUnreadCount(count || 0));
+    const ch = supabase.channel('feedback-admin-badge')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback' }, () => {
+        setFeedbackUnreadCount((n) => n + 1);
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [supabase, adminSession]);
+
   const saveWorkingHours = useCallback(
     async (start, end) => {
       if (!supabase) return;
@@ -1890,6 +1904,13 @@ export default function App() {
     setActivityLogLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (adminHubOpen) {
+      fetchActivityLog();
+      fetchAppointmentTypesAndSpecialties();
+    }
+  }, [adminHubOpen, fetchActivityLog, fetchAppointmentTypesAndSpecialties]);
+
   const onDeleteAppointment = useCallback((appointmentId) => {
     const app = appointments.find((a) => a.id === appointmentId);
     setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
@@ -2030,12 +2051,17 @@ export default function App() {
             {isAuthenticated && supabase && (
               <button
                 type="button"
-                onClick={() => setFeedbackOpen(true)}
+                onClick={() => { setFeedbackOpen(true); setFeedbackUnreadCount(0); }}
                 className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 aria-label="Сигнали"
                 title="Сигнали и предложения"
               >
                 <Bug className="w-5 h-5" />
+                {adminSession && feedbackUnreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-rose-500 rounded-full">
+                    {feedbackUnreadCount > 99 ? '99+' : feedbackUnreadCount}
+                  </span>
+                )}
               </button>
             )}
             {supabase && (
@@ -2326,6 +2352,12 @@ export default function App() {
         canManageVacation={permissions.canBookAnyDentist || !!permissions.myDentistId}
         canManageFreeSlots
         canManageDayLocation
+        canUploadPhoto={
+          adminSession ||
+          (myDentistId && (typeof dentistProfileModal === 'object' ? dentistProfileModal?.id : dentistProfileModal) === myDentistId)
+        }
+        onUploadPhoto={uploadDentistPhoto}
+        onDeletePhoto={deleteDentistPhoto}
       />
       <DoctorDayLocationModal
         open={dayLocationModal.open}
