@@ -582,13 +582,9 @@ export default function App() {
 
   useEffect(() => { doctorInboxMsgsRef.current = doctorInboxMessages; }, [doctorInboxMessages]);
 
-  const unreadChatCount = adminSession
-    ? 0
-    : myDentistId
-      ? countUnreadForDentist(doctorInboxMessages, myDentistId)
-      : permissions.canBookAnyDentist
-        ? countUnreadForStaff(staffDmMessages)
-        : 0;
+  const unreadChatCount = myDentistId
+    ? countUnreadForDentist(doctorInboxMessages, myDentistId)
+    : countUnreadForStaff(staffDmMessages);
   const scheduleBellUnread = scheduleNotifications.length > 0 && !scheduleNotificationsSeen;
   const inboxBellCount = scheduleBellUnread ? scheduleNotifications.length : 0;
   const showInboxBellBadge = scheduleBellUnread;
@@ -662,14 +658,51 @@ export default function App() {
     [supabase, myDentistId, permissions.canBookAnyDentist, adminSession]
   );
 
+  const deleteChatMessage = useCallback(
+    async (messageId) => {
+      if (!supabase || !messageId) return;
+      const { error } = await supabase.from('admin_doctor_messages').delete().eq('id', messageId);
+      if (error) { console.error('Failed to delete message:', error); return; }
+      setDoctorInboxMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setStaffDmMessages((prev) => prev.filter((m) => m.id !== messageId));
+    },
+    [supabase]
+  );
+
+  const editChatMessage = useCallback(
+    async (messageId, newBody) => {
+      if (!supabase || !messageId || !String(newBody || '').trim()) return;
+      const { error } = await supabase
+        .from('admin_doctor_messages')
+        .update({ body: String(newBody).trim() })
+        .eq('id', messageId);
+      if (error) { console.error('Failed to edit message:', error); return; }
+      const updater = (prev) => prev.map((m) => m.id === messageId ? { ...m, body: String(newBody).trim() } : m);
+      setDoctorInboxMessages(updater);
+      setStaffDmMessages(updater);
+    },
+    [supabase]
+  );
+
+  const deleteChatThread = useCallback(
+    async (threadId) => {
+      if (!supabase || !threadId) return;
+      const { error } = await supabase.from('admin_doctor_messages').delete().eq('thread_id', threadId);
+      if (error) { console.error('Failed to delete thread:', error); return; }
+      setDoctorInboxMessages((prev) => prev.filter((m) => m.thread_id !== threadId));
+      setStaffDmMessages((prev) => prev.filter((m) => m.thread_id !== threadId));
+    },
+    [supabase]
+  );
+
   useEffect(() => {
     if (!supabase || adminSession || !isAuthenticated || !myDentistId) return;
     fetchDoctorInbox();
   }, [supabase, adminSession, isAuthenticated, myDentistId, fetchDoctorInbox]);
 
   useEffect(() => {
-    if (!supabase || adminSession || !isAuthenticated || myDentistId) return;
-    if (!permissions.canBookAnyDentist) return;
+    if (!supabase || !isAuthenticated || myDentistId) return;
+    if (!adminSession && !permissions.canBookAnyDentist) return;
     fetchStaffDmMessages();
   }, [
     supabase,
@@ -708,8 +741,8 @@ export default function App() {
   }, [supabase, adminSession, isAuthenticated, myDentistId, notificationUserKey]);
 
   useEffect(() => {
-    if (!supabase || adminSession || !isAuthenticated || myDentistId) return;
-    if (!permissions.canBookAnyDentist) return;
+    if (!supabase || !isAuthenticated || myDentistId) return;
+    if (!adminSession && !permissions.canBookAnyDentist) return;
     const S = STAFF_DM_INBOX_DENTIST_ID;
     const ch = supabase
       .channel(`staff-dm-${notificationUserKey}`)
@@ -726,6 +759,23 @@ export default function App() {
             if (prev.some((x) => x.id === row.id)) return prev;
             return [...prev, row].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'admin_doctor_messages' },
+        (payload) => {
+          const id = payload?.old?.id;
+          if (id) setStaffDmMessages((prev) => prev.filter((m) => m.id !== id));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'admin_doctor_messages' },
+        (payload) => {
+          const row = payload?.new;
+          if (!row?.id) return;
+          setStaffDmMessages((prev) => prev.map((m) => m.id === row.id ? { ...m, ...row } : m));
         }
       )
       .subscribe();
@@ -748,7 +798,7 @@ export default function App() {
       };
       const { data, error } = await supabase.from('admin_doctor_messages').insert(rowPayload).select('*').maybeSingle();
       if (error) throw new Error(error.message || String(error));
-      if (data && !adminSession && !permissions.myDentistId && permissions.canBookAnyDentist) {
+      if (data) {
         setStaffDmMessages((prev) => {
           if (prev.some((x) => x.id === data.id)) return prev;
           return [...prev, data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -1860,7 +1910,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!adminSession && isAuthenticated && (supabase) && (myDentistId || permissions.canBookAnyDentist) && (
+            {isAuthenticated && supabase && (adminSession || myDentistId || permissions.canBookAnyDentist) && (
               <button
                 type="button"
                 onClick={() => setChatOpen(true)}
@@ -2124,9 +2174,13 @@ export default function App() {
         perspective={myDentistId ? 'dentist' : 'staff'}
         myDentistId={myDentistId}
         dentists={dentists}
+        isAdmin={!!adminSession}
         onSendReply={replyToDmThread}
         onStartConversation={myDentistId ? sendDoctorMessage : sendAdminDoctorMessage}
         onMarkThreadRead={markDmThreadRead}
+        onDeleteMessage={deleteChatMessage}
+        onEditMessage={editChatMessage}
+        onDeleteThread={deleteChatThread}
       />
       <PatientDatabaseModal
         open={patientDbOpen}
