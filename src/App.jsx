@@ -1709,25 +1709,42 @@ export default function App() {
       if (attendance !== undefined) payload.attendance = attendance;
       if (insurance !== undefined) payload.insurance = insurance;
       if (location !== undefined) payload.location = location;
-      supabase
-        .from('appointments')
-        .update(payload)
-        .eq('id', appointmentId)
-        .then(({ error }) => {
-          if (error && String(error.message || '').includes('location')) {
-            const payloadLegacy = { ...payload };
-            delete payloadLegacy.location;
-            supabase.from('appointments').update(payloadLegacy).eq('id', appointmentId);
-          } else if (error && String(error.message || '').includes('doctor')) {
-            const payloadLegacy = { ...payload };
-            delete payloadLegacy.doctor;
-            supabase.from('appointments').update(payloadLegacy).eq('id', appointmentId);
-          } else if (error) {
-            console.error('Failed to update appointment:', error);
-          } else {
+      if (patientId) payload.patient_id = patientId;
+
+      const rollback = () => {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id !== appointmentId ? a : { ...app }))
+        );
+      };
+
+      const tryUpdate = (p) =>
+        supabase.from('appointments').update(p).eq('id', appointmentId).then(({ error: e }) => {
+          if (!e) {
             logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start, oldDate: app?.date } });
+            return;
+          }
+          const msg = String(e.message || e.details || '');
+          const hasDoctor = msg.includes('doctor');
+          const hasLocation = msg.includes('location');
+          if (hasDoctor || hasLocation) {
+            const fallback = { ...p };
+            if (hasDoctor) delete fallback.doctor;
+            if (hasLocation) delete fallback.location;
+            supabase.from('appointments').update(fallback).eq('id', appointmentId).then(({ error: e2 }) => {
+              if (!e2) {
+                logWithActor({ action: ACTIVITY_ACTIONS.APPOINTMENT_UPDATED, entity_type: 'appointment', entity_id: appointmentId, details: { dentist_id: dentistId, dentistId, patientName: patientName ?? app?.patientName, date, start, oldPatientName: app?.patientName, oldStart: app?.start, oldDate: app?.date } });
+              } else {
+                console.error('Failed to update appointment (fallback):', e2);
+                rollback();
+              }
+            });
+          } else {
+            console.error('Failed to update appointment:', e);
+            rollback();
           }
         });
+
+      tryUpdate(payload);
     }
     setEditAppointment(null);
   }, [appointments, dentists]);
