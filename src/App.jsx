@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, Bell, LogIn, LogOut, MessageCircle } from 'lucide-react';
+import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -19,6 +19,8 @@ import PatientDatabaseModal from './components/PatientDatabaseModal';
 import EditAppointmentModal from './components/EditAppointmentModal';
 import AddVacationModal from './components/AddVacationModal';
 import AdminPanel from './components/AdminPanel';
+import AdminHubPage from './components/AdminHubPage';
+import FeedbackPage from './components/FeedbackPage';
 import AdminPasswordModal from './components/AdminPasswordModal';
 import AuthModal from './components/AuthModal';
 import ResetPasswordModal from './components/ResetPasswordModal';
@@ -228,7 +230,10 @@ export default function App() {
   const [vacationModal, setVacationModal] = useState({ open: false, dentistId: null });
   const [patientFiles, setPatientFiles] = useState([]);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [adminHubOpen, setAdminHubOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [dentistPhotos, setDentistPhotos] = useState({});
   const [activityLog, setActivityLog] = useState([]);
   const [activityLogLoading, setActivityLogLoading] = useState(false);
   const [workingHours, setWorkingHours] = useState(() => readWorkingHoursCache() || { start: 7, end: 19 });
@@ -332,7 +337,7 @@ export default function App() {
     setAdminSession(true, password);
     setAdminSessionState(true);
     setShowAdminPassword(false);
-    setAdminOpen(true);
+    setAdminHubOpen(true);
   }, []);
 
   const handleStaffLogout = useCallback(() => {
@@ -633,7 +638,7 @@ export default function App() {
             )
           );
         }
-      } else if (permissions.canBookAnyDentist && !adminSession) {
+      } else if (!myDentistId && (permissions.canBookAnyDentist || adminSession)) {
         const { error } = await supabase
           .from('admin_doctor_messages')
           .update({ read_at: nowIso })
@@ -1140,6 +1145,10 @@ export default function App() {
   }, [fetchAppointmentTypesAndSpecialties]);
 
   useEffect(() => {
+    fetchDentistPhotos();
+  }, [fetchDentistPhotos]);
+
+  useEffect(() => {
     if (adminOpen) fetchAppointmentTypesAndSpecialties();
   }, [adminOpen, fetchAppointmentTypesAndSpecialties]);
 
@@ -1201,6 +1210,43 @@ export default function App() {
   const updateDentist = useCallback((id, updates) => {
     setDentists((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
   }, []);
+
+  // --- Dentist photos ---
+  const fetchDentistPhotos = useCallback(async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('dentist_photos').select('dentist_id, storage_path');
+    if (!data) return;
+    const map = {};
+    for (const row of data) {
+      const { data: urlData } = supabase.storage.from('dentist-avatars').getPublicUrl(row.storage_path);
+      map[row.dentist_id] = urlData?.publicUrl || null;
+    }
+    setDentistPhotos(map);
+    setDentists((prev) => prev.map((d) => ({ ...d, photoUrl: map[d.id] || null })));
+  }, [supabase]);
+
+  const uploadDentistPhoto = useCallback(async (dentistId, file) => {
+    if (!supabase || !file) return;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${dentistId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('dentist-avatars').upload(path, file, { upsert: true });
+    if (upErr) { console.error('Upload photo error:', upErr); return; }
+    const { error: dbErr } = await supabase.from('dentist_photos').upsert({ dentist_id: dentistId, storage_path: path, updated_at: new Date().toISOString() }, { onConflict: 'dentist_id' });
+    if (dbErr) { console.error('Save photo path error:', dbErr); return; }
+    const { data: urlData } = supabase.storage.from('dentist-avatars').getPublicUrl(path);
+    const url = urlData?.publicUrl || null;
+    setDentistPhotos((prev) => ({ ...prev, [dentistId]: url }));
+    setDentists((prev) => prev.map((d) => d.id === dentistId ? { ...d, photoUrl: url } : d));
+  }, [supabase]);
+
+  const deleteDentistPhoto = useCallback(async (dentistId) => {
+    if (!supabase) return;
+    const { data } = await supabase.from('dentist_photos').select('storage_path').eq('dentist_id', dentistId).single();
+    if (data?.storage_path) await supabase.storage.from('dentist-avatars').remove([data.storage_path]);
+    await supabase.from('dentist_photos').delete().eq('dentist_id', dentistId);
+    setDentistPhotos((prev) => { const n = { ...prev }; delete n[dentistId]; return n; });
+    setDentists((prev) => prev.map((d) => d.id === dentistId ? { ...d, photoUrl: null } : d));
+  }, [supabase]);
 
   const saveWorkingHours = useCallback(
     async (start, end) => {
@@ -1981,16 +2027,28 @@ export default function App() {
                 )}
               </div>
             )}
+            {isAuthenticated && supabase && (
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(true)}
+                className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                aria-label="Сигнали"
+                title="Сигнали и предложения"
+              >
+                <Bug className="w-5 h-5" />
+              </button>
+            )}
             {supabase && (
               <>
                 {permissions.canViewAdmin && (
                   <button
                     type="button"
-                    onClick={() => setShowAdminPassword(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900 text-sm"
+                    onClick={() => adminSession ? setAdminHubOpen(true) : setShowAdminPassword(true)}
+                    className="relative p-2 rounded-lg text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                    aria-label="Админ панел"
+                    title="Админ панел"
                   >
-                    <Activity className="w-4 h-4" />
-                    Админ
+                    <LayoutDashboard className="w-5 h-5" />
                   </button>
                 )}
               </>
@@ -2306,6 +2364,47 @@ export default function App() {
         onOpenAddDentist={() => setAddDentistOpen(true)}
         onDeleteDentist={deleteDentist}
         getAdminPin={getAdminPin}
+      />
+
+      <AdminHubPage
+        open={adminHubOpen}
+        onClose={() => setAdminHubOpen(false)}
+        supabase={supabase}
+        activityLog={activityLog}
+        activityLogLoading={activityLogLoading}
+        onRefreshActivityLog={fetchActivityLog}
+        onClearActivityLog={async () => {
+          if (supabase) {
+            const { error } = await supabase.from('activity_log').delete().gte('created_at', '1970-01-01');
+            if (!error) setActivityLog([]);
+          } else {
+            setActivityLog([]);
+          }
+        }}
+        stats={adminStats}
+        appointments={appointments}
+        dentists={dentists}
+        patients={patients}
+        workingHours={workingHours}
+        onSaveWorkingHours={saveWorkingHours}
+        appointmentTypes={appointmentTypes}
+        onAddAppointmentType={addAppointmentType}
+        onDeleteAppointmentType={deleteAppointmentType}
+        onReorderAppointmentType={reorderAppointmentType}
+        onOpenAddDentist={() => setAddDentistOpen(true)}
+        onDeleteDentist={deleteDentist}
+        onUploadDentistPhoto={uploadDentistPhoto}
+        onDeleteDentistPhoto={deleteDentistPhoto}
+        getAdminPin={getAdminPin}
+      />
+
+      <FeedbackPage
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        supabase={supabase}
+        fromLabel={adminSession ? 'Админ' : (profile?.full_name || user?.email || myDentistId ? dentists.find((d) => d.id === myDentistId)?.name : null)}
+        fromDentistId={myDentistId || (adminSession ? '__admin__' : null)}
+        isAdmin={adminSession}
       />
     </div>
   );
