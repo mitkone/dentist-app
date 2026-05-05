@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug, Search, UserPlus, Database } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -488,6 +488,14 @@ export default function App() {
     patientsCount: patients.length,
     dentistsCount: dentists.length,
   };
+
+  const headerPatientHits = useMemo(() => {
+    const q = patientSearch.trim().toLowerCase();
+    if (q.length < 1) return [];
+    return patients
+      .filter((p) => [p.name, p.phone, p.parentPhone, p.email, p.notes].filter(Boolean).join(' ').toLowerCase().includes(q))
+      .slice(0, 12);
+  }, [patients, patientSearch]);
 
   function getFilePublicUrl(storagePath) {
     if (!supabase) return '';
@@ -1953,30 +1961,78 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
+      <div className="bg-white border-b border-slate-200 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">Хаджиев Дент</h1>
-              <p className="text-xs text-slate-500">Запазване на часове</p>
+            <div className="hidden sm:block">
+              <h1 className="text-base font-bold text-slate-900 leading-tight">Хаджиев Дент</h1>
+              <p className="text-[11px] text-slate-500 leading-none">Запазване на часове</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Patient search — visible when authenticated */}
+          {isAuthenticated && (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 max-w-sm">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 z-[1] pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Търси пациент…"
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
+                  autoComplete="off"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-100 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 outline-none"
+                />
+                {headerPatientHits.length > 0 && (
+                  <ul className="absolute left-0 right-0 top-full z-[200] mt-0.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl py-1">
+                    {headerPatientHits.map((p) => (
+                      <li key={p.id}>
+                        <button type="button"
+                          className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-emerald-50 flex flex-col gap-0.5"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setPatientDetailId(p.id); setPatientSearch(''); }}>
+                          <span className="font-medium">{p.name}</span>
+                          {(p.phone || p.parentPhone) && (
+                            <span className="text-xs text-slate-500">{p.phone}{p.parentPhone ? ` · ${p.parentPhone}` : ''}</span>
+                          )}
+                          <span className="flex flex-wrap gap-1">
+                            {p.isBlacklisted && <span className="text-[10px] font-semibold uppercase px-1 rounded bg-slate-900 text-white">Черен списък</span>}
+                            {p.unreliablePatient && <span className="text-[10px] font-semibold px-1 rounded bg-amber-200 text-amber-900">Нередовен</span>}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {patientSearch.trim().length >= 1 && headerPatientHits.length === 0 && (
+                  <div className="absolute left-0 right-0 top-full z-[200] mt-0.5 rounded-xl border border-slate-200 bg-white shadow-xl px-3 py-2.5 text-xs text-slate-500">
+                    Няма съвпадения — отвори базата за пълен списък.
+                  </div>
+                )}
+              </div>
+              <button type="button" onClick={() => setAddPatientOpen(true)}
+                className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-emerald-600 shrink-0" title="Добави пациент">
+                <UserPlus className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={() => setPatientDbOpen(true)}
+                className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-emerald-600 shrink-0" title="База данни пациенти">
+                <Database className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1 min-w-0" />
+
+          {/* Right icon buttons */}
+          <div className="flex items-center gap-1 shrink-0">
             {isAuthenticated && supabase && (adminSession || myDentistId || permissions.canBookAnyDentist) && (
               <button
                 type="button"
@@ -2113,27 +2169,8 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-slate-50">
-      <Sidebar
-  dentists={dentists}
-  selectedDentistIds={effectiveSelectedDentistIds}
-  onDentistToggle={onDentistToggle}
-  onDeleteDentist={permissions.canEditDentists ? deleteDentist : undefined}
-  patientSearch={patientSearch}
-  onPatientSearch={setPatientSearch}
-  patients={patients}
-  onAddDentist={permissions.canEditDentists ? () => setAddDentistOpen(true) : undefined}
-  onAddPatient={() => setAddPatientOpen(true)}
-  onOpenPatientDetail={setPatientDetailId}
-  onOpenPatientDatabase={() => setPatientDbOpen(true)}
-  onOpenVacation={openVacationForDentist}
-  showDentistsFilter={false}
-  onOpenDentistSchedule={toggleDentistSchedule}
-  activeDentistIds={visibleDentistIds}
-  onClearDentistSchedule={clearDentistScheduleFocus}
-/>
-
-        <main className="flex-1 flex flex-col min-w-0 p-4 md:p-6 overflow-auto bg-slate-50 min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+        <main className="flex-1 flex flex-col min-w-0 px-4 pt-3 pb-4 overflow-auto bg-slate-50 min-h-0">
           <CalendarHeader
             currentDate={currentDate}
             onPrevDay={calendarView === 'week' ? goPrevWeek : goPrevDay}
