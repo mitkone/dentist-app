@@ -447,6 +447,8 @@ export default function ResourceCalendar({
         dayLabel,
         hourFine,
         snappedSlot,
+        screenX: clientX,
+        screenY: clientY,
       });
     },
     [dateStr, dentists, isMobile, slots, timelineHeightPx, workingHours]
@@ -663,23 +665,16 @@ export default function ResourceCalendar({
     !isMobile && gridPointerContext && !dragState
       ? createPortal(
           <div
-            className="fixed z-[9996] pointer-events-none left-1/2 -translate-x-1/2 bottom-6 max-w-[min(96vw,28rem)] w-auto"
-            role="status"
-            aria-live="polite"
+            className="fixed z-[9996] pointer-events-none select-none"
+            style={{
+              left: (gridPointerContext.screenX ?? 0) + 16,
+              top: (gridPointerContext.screenY ?? 0) - 12,
+            }}
           >
-            <div className="rounded-2xl border border-emerald-500/35 bg-slate-900 px-5 py-3 shadow-2xl ring-1 ring-white/10 text-center select-none">
-              <div className="text-[11px] uppercase tracking-wide text-emerald-300/90 font-semibold">Под курсора</div>
-              <div className="mt-1 text-base font-semibold text-white">{gridPointerContext.dentistName}</div>
-              <div className="mt-0.5 text-sm text-emerald-100/95">
-                {gridPointerContext.dayLabel ? `${gridPointerContext.dayLabel} · ` : ''}
-                <span title="Позиция по вертикалата">{gridPointerContext.hourFine}</span>
-              </div>
-              {!slotBookHint && (
-                <div className="mt-2 text-[11px] leading-snug text-white/65 border-t border-white/10 pt-2">
-                  Запис в графика: клетка <span className="text-amber-200 font-medium">{gridPointerContext.snappedSlot}</span>
-                  {' '}(интервал {slotMinutes}&nbsp;мин)
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 bg-slate-800/90 text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-lg backdrop-blur-sm whitespace-nowrap">
+              <span className="text-emerald-300 font-semibold">{gridPointerContext.hourFine}</span>
+              <span className="text-white/40">·</span>
+              <span className="text-white/85">{gridPointerContext.dentistName}</span>
             </div>
           </div>,
           document.body

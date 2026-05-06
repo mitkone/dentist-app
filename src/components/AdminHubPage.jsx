@@ -6,6 +6,7 @@ import {
 
 const ACTION_LABELS = {
   user_login: 'Вход в системата',
+  user_logout: 'Изход от системата',
   appointment_created: 'Създаден час',
   appointment_updated: 'Редактиран час',
   appointment_deleted: 'Изтрит час',
@@ -14,10 +15,17 @@ const ACTION_LABELS = {
   vacation_deleted: 'Изтрит отпуск',
   patient_added: 'Добавен пациент',
   patient_updated: 'Обновен пациент',
+  patient_deleted: 'Изтрит пациент',
   dentist_added: 'Добавен стоматолог',
+  dentist_updated: 'Обновен стоматолог',
   dentist_deleted: 'Премахнат стоматолог',
   file_uploaded: 'Качен файл',
   file_deleted: 'Изтрит файл',
+  free_slot_added: 'Добавен свободен час',
+  free_slot_deleted: 'Изтрит свободен час',
+  settings_updated: 'Обновени настройки',
+  appointment_type_added: 'Добавен вид час',
+  appointment_type_deleted: 'Изтрит вид час',
 };
 
 const CHECKS = [

@@ -335,8 +335,8 @@ export default function App() {
     [supabase, user, profile, adminSession]
   );
 
-  const handleAdminPasswordSuccess = useCallback((password) => {
-    setAdminSession(true, password);
+  const handleAdminPasswordSuccess = useCallback((password, remember = false) => {
+    setAdminSession(true, password, remember);
     setAdminSessionState(true);
     setShowAdminPassword(false);
     setAdminHubOpen(true);
@@ -1907,7 +1907,7 @@ export default function App() {
       .from('activity_log')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(80);
+      .limit(1000);
     if (!error && data) setActivityLog(data);
     else setActivityLog([]);
     setActivityLogLoading(false);

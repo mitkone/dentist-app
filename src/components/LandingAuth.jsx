@@ -2,30 +2,41 @@ import { Lock, UserCheck } from 'lucide-react';
 
 const ADMIN_SESSION_KEY = 'hdent_admin_session';
 const ADMIN_PIN_KEY = 'hdent_admin_pin';
+const REMEMBER_ADMIN_KEY = 'hdent_remember_admin';
 
+/** Returns true if admin session is active (checks localStorage first, then sessionStorage). */
 export function getAdminSession() {
   try {
+    if (localStorage.getItem(ADMIN_SESSION_KEY) === '1') return true;
     return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
   } catch {
     return false;
   }
 }
 
-export function setAdminSession(value, adminPin = null) {
+/** Stores or clears admin session. Pass remember=true to persist across browser restarts. */
+export function setAdminSession(value, adminPin = null, remember = false) {
   try {
     if (value) {
-      sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
-      if (adminPin) sessionStorage.setItem(ADMIN_PIN_KEY, adminPin);
+      if (remember) {
+        localStorage.setItem(ADMIN_SESSION_KEY, '1');
+        if (adminPin) localStorage.setItem(ADMIN_PIN_KEY, adminPin);
+      } else {
+        sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+        if (adminPin) sessionStorage.setItem(ADMIN_PIN_KEY, adminPin);
+      }
     } else {
       sessionStorage.removeItem(ADMIN_SESSION_KEY);
       sessionStorage.removeItem(ADMIN_PIN_KEY);
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+      localStorage.removeItem(ADMIN_PIN_KEY);
     }
   } catch {}
 }
 
 export function getAdminPin() {
   try {
-    return sessionStorage.getItem(ADMIN_PIN_KEY) || null;
+    return localStorage.getItem(ADMIN_PIN_KEY) || sessionStorage.getItem(ADMIN_PIN_KEY) || null;
   } catch {
     return null;
   }

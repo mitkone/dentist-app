@@ -2,18 +2,26 @@ import { useState } from 'react';
 import { Lock } from 'lucide-react';
 
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '1918138';
+const REMEMBER_ADMIN_KEY = 'hdent_remember_admin';
 
 export default function AdminPasswordModal({ open, onClose, onSuccess }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => {
+    try { return localStorage.getItem(REMEMBER_ADMIN_KEY) === '1'; } catch { return false; }
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     if (password.trim() === ADMIN_PASSWORD) {
       const pwd = password.trim();
+      try {
+        if (rememberMe) localStorage.setItem(REMEMBER_ADMIN_KEY, '1');
+        else localStorage.removeItem(REMEMBER_ADMIN_KEY);
+      } catch { /* ignore */ }
       setPassword('');
-      onSuccess?.(pwd);
+      onSuccess?.(pwd, rememberMe);
       onClose?.();
     } else {
       setError('Грешна парола');
@@ -42,6 +50,15 @@ export default function AdminPasswordModal({ open, onClose, onSuccess }) {
             autoFocus
           />
           {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+          <label className="flex items-center gap-2 mt-3 text-sm text-slate-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-slate-300 bg-slate-100 text-emerald-500 focus:ring-emerald-500/40"
+            />
+            Запомни ме на този компютър
+          </label>
           <div className="flex gap-2 mt-4">
             <button
               type="button"
