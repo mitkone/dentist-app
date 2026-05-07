@@ -1,4 +1,30 @@
-import { CheckCircle2, Zap, Building2, Star, Info } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle2, Zap, Building2, Star, Info, Loader2 } from 'lucide-react'
+
+const STRIPE_PRICES = {
+  'Стартер': import.meta.env.VITE_STRIPE_PRICE_STARTER,
+  'Про':     import.meta.env.VITE_STRIPE_PRICE_PRO,
+}
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+
+async function redirectToCheckout(planName) {
+  const priceId = STRIPE_PRICES[planName]
+  if (!priceId || !SUPABASE_URL) {
+    alert('Stripe не е конфигуриран. Добавете VITE_STRIPE_PRICE_* и VITE_SUPABASE_URL в .env')
+    return
+  }
+  const email = prompt('Вашият имейл адрес:')
+  if (!email) return
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priceId, email, clinicName: '' }),
+  })
+  const { url, error } = await res.json()
+  if (error) { alert(`Грешка: ${error}`); return }
+  window.location.href = url
+}
 
 const plans = [
   {
@@ -69,6 +95,17 @@ const plans = [
 ]
 
 export default function Pricing({ onDemoClick }) {
+  const [loadingPlan, setLoadingPlan] = useState(null)
+
+  async function handleBuy(planName) {
+    setLoadingPlan(planName)
+    try {
+      await redirectToCheckout(planName)
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
+
   return (
     <section id="pricing" className="section-padding bg-slate-50">
       <div className="max-w-6xl mx-auto">
@@ -146,12 +183,23 @@ export default function Pricing({ onDemoClick }) {
                   ))}
                 </ul>
 
-                <button
-                  onClick={name === 'Стартер' || name === 'Про' ? onDemoClick : undefined}
-                  className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${buttonStyle}`}
-                >
-                  {cta}
-                </button>
+                {name === 'Стартер' || name === 'Про' ? (
+                  <button
+                    onClick={() => handleBuy(name)}
+                    disabled={loadingPlan === name}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 ${buttonStyle}`}
+                  >
+                    {loadingPlan === name && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {cta}
+                  </button>
+                ) : (
+                  <a
+                    href="mailto:contact@dimitargrozdev.com"
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center ${buttonStyle}`}
+                  >
+                    {cta}
+                  </a>
+                )}
               </div>
             </div>
           ))}
