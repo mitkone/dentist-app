@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug, Search, UserPlus, Database } from 'lucide-react';
+import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug, Search, UserPlus, Database, EyeOff, Eye } from 'lucide-react';
+import { useDemoMode } from './contexts/DemoModeContext';
+import { maskDentists, maskAppointments, maskPatients } from './lib/demoMode';
 import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -210,6 +212,7 @@ function writeWorkingHoursCache(value) {
 }
 
 export default function App() {
+  const { demoMode, toggleDemoMode } = useDemoMode();
   const [dentists, setDentists] = useState(initialDentists);
   const [selectedDentistIds, setSelectedDentistIds] = useState(() => initialDentists.map((d) => d.id));
   const [patients, setPatients] = useState(initialPatients);
@@ -289,6 +292,12 @@ export default function App() {
     : selectedDentistIds;
   const visibleDentistIds = effectiveSelectedDentistIds.length > 0 ? effectiveSelectedDentistIds : dentists.map((d) => d.id);
   const filteredDentists = dentists.filter((d) => visibleDentistIds.includes(d.id));
+
+  // Demo Mode — display-only masked copies (real state unchanged)
+  const displayDentists = useMemo(() => demoMode ? maskDentists(dentists) : dentists, [demoMode, dentists]);
+  const displayFilteredDentists = useMemo(() => demoMode ? maskDentists(filteredDentists) : filteredDentists, [demoMode, filteredDentists]);
+  const displayAppointments = useMemo(() => demoMode ? maskAppointments(appointments) : appointments, [demoMode, appointments]);
+  const displayPatients = useMemo(() => demoMode ? maskPatients(patients) : patients, [demoMode, patients]);
 
   const dentistViewInitialized = useRef(false);
   useEffect(() => {
@@ -2136,6 +2145,24 @@ export default function App() {
                 )}
               </button>
             )}
+            {/* Demo Mode toggle */}
+            <button
+              type="button"
+              onClick={toggleDemoMode}
+              title={demoMode ? 'Изключи Demo Mode (покажи реални имена)' : 'Включи Demo Mode (скрий реални имена за видео/демо)'}
+              className={`relative p-2 rounded-lg transition-colors ${
+                demoMode
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+              }`}
+              aria-label="Demo Mode"
+            >
+              {demoMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {demoMode && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500" />
+              )}
+            </button>
+
             {supabase && (
               <>
                 {permissions.canViewAdmin && (
@@ -2184,6 +2211,16 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Demo Mode banner */}
+      {demoMode && (
+        <div className="bg-amber-400 px-4 py-1.5 flex items-center justify-between gap-3 text-amber-900 text-xs font-semibold">
+          <span>🎬 Demo Mode е активен — всички имена са анонимизирани</span>
+          <button type="button" onClick={toggleDemoMode} className="underline hover:no-underline">
+            Изключи
+          </button>
+        </div>
+      )}
 
       {/* Mobile search overlay */}
       {mobileSearchOpen && isAuthenticated && (
@@ -2255,7 +2292,7 @@ export default function App() {
             onToday={goToday}
             onDatePick={goToDate}
             nextFree={permissions.canBookAnyDentist ? null : nextFreeSummary}
-            dentists={dentists}
+            dentists={displayDentists}
             selectedDentistIds={effectiveSelectedDentistIds}
             onDentistToggle={onDentistToggle}
             showDentistBar={dentists.length > 1}
@@ -2264,7 +2301,7 @@ export default function App() {
           />
           {permissions.canBookAnyDentist && (
             <QuickBookBar
-              dentists={filteredDentists}
+              dentists={displayFilteredDentists}
               findFirstFreeForDate={findFirstFreeForDate}
               findAllFreeSlotsForDate={findAllFreeSlotsForDate}
               onBook={(dentistId, { date, time }) => {
@@ -2290,18 +2327,18 @@ export default function App() {
               <p className="text-slate-500 py-8">Зареждане на часове...</p>
             ) : (
               <ResourceCalendar
-  dentists={filteredDentists}
-  appointments={appointments}
+  dentists={displayFilteredDentists}
+  appointments={displayAppointments}
   currentDate={currentDate}
   currentDateKey={dateKey(currentDate)}
   patientSearch={patientSearch}
-  patients={patients}
+  patients={displayPatients}
   onSlotClick={onSlotClick}
   onAppointmentMove={onAppointmentMove}
   onAppointmentClick={onAppointmentClick}
   doctorVacations={doctorVacations}
   workingHours={workingHours}
-  allDentists={dentists}
+  allDentists={displayDentists}
   selectedDentistIds={effectiveSelectedDentistIds}
   onDentistToggle={onDentistToggle}
   doctorAvailableSlots={doctorAvailableSlots}
@@ -2351,13 +2388,13 @@ export default function App() {
       />
 
       <PatientDetailModal
-        patient={patients.find((p) => p.id === patientDetailId)}
+        patient={displayPatients.find((p) => p.id === patientDetailId)}
         open={Boolean(patientDetailId)}
         onClose={() => setPatientDetailId(null)}
         onSave={(updates) => patientDetailId && updatePatient(patientDetailId, updates)}
         onDelete={deletePatient}
-        appointments={appointments}
-        dentists={dentists}
+        appointments={displayAppointments}
+        dentists={displayDentists}
         patientFiles={patientFiles}
         onUploadFile={uploadPatientFile}
         onDeleteFile={deletePatientFile}
@@ -2383,8 +2420,8 @@ export default function App() {
       <PatientDatabaseModal
         open={patientDbOpen}
         onClose={() => setPatientDbOpen(false)}
-        patients={patients}
-        appointments={appointments}
+        patients={displayPatients}
+        appointments={displayAppointments}
         appointmentTypes={appointmentTypes}
         onOpenPatient={(id) => {
           setPatientDbOpen(false);
@@ -2396,8 +2433,8 @@ export default function App() {
         open={Boolean(editAppointment)}
         onClose={() => setEditAppointment(null)}
         appointment={editAppointment}
-        dentists={dentists}
-        patients={patients}
+        dentists={displayDentists}
+        patients={displayPatients}
         onSave={onUpdateAppointment}
         onDelete={onDeleteAppointment}
         workingHours={workingHours}
