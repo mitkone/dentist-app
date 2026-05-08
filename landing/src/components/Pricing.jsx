@@ -5,25 +5,35 @@ const STRIPE_PRICES = {
   'Стартер': import.meta.env.VITE_STRIPE_PRICE_STARTER,
   'Про':     import.meta.env.VITE_STRIPE_PRICE_PRO,
 }
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 async function redirectToCheckout(planName) {
   const priceId = STRIPE_PRICES[planName]
-  if (!priceId || !SUPABASE_URL) {
-    alert('Stripe не е конфигуриран. Добавете VITE_STRIPE_PRICE_* и VITE_SUPABASE_URL в .env')
+  if (!priceId || !SUPABASE_URL || !SUPABASE_ANON) {
+    alert('Stripe не е конфигуриран. Добавете VITE_STRIPE_PRICE_*, VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env')
     return
   }
   const email = prompt('Вашият имейл адрес:')
   if (!email) return
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ priceId, email, clinicName: '' }),
-  })
-  const { url, error } = await res.json()
-  if (error) { alert(`Грешка: ${error}`); return }
-  window.location.href = url
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+      },
+      body: JSON.stringify({ priceId, email, clinicName: '' }),
+    })
+    const data = await res.json()
+    if (data.error) { alert(`Грешка: ${data.error}`); return }
+    if (!data.url)  { alert('Не получихме URL от Stripe. Проверете конфигурацията.'); return }
+    window.location.href = data.url
+  } catch (err) {
+    alert(`Мрежова грешка: ${err.message}`)
+  }
 }
 
 const plans = [
