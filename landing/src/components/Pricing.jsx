@@ -14,8 +14,12 @@ async function redirectToCheckout(planName) {
     alert('Stripe не е конфигуриран. Добавете VITE_STRIPE_PRICE_*, VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env')
     return
   }
-  const email = prompt('Вашият имейл адрес:')
-  if (!email) return
+  const clinicName = prompt('Име на клиниката / кабинета (за акаунта ви):', '')
+  if (clinicName === null) return
+  const email = prompt('Вашият имейл адрес (за фактура и покана за вход):', '')
+  if (!email?.trim()) return
+
+  const planKey = planName === 'Про' ? 'pro' : 'starter'
 
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
@@ -25,7 +29,12 @@ async function redirectToCheckout(planName) {
         'apikey': SUPABASE_ANON,
         'Authorization': `Bearer ${SUPABASE_ANON}`,
       },
-      body: JSON.stringify({ priceId, email, clinicName: '' }),
+      body: JSON.stringify({
+        priceId,
+        email: email.trim(),
+        clinicName: clinicName.trim(),
+        plan: planKey,
+      }),
     })
     const data = await res.json()
     if (data.error) { alert(`Грешка: ${data.error}`); return }
@@ -249,7 +258,8 @@ export default function Pricing({ onDemoClick }) {
 
         {/* Bottom note */}
         <p className="text-center mt-8 text-sm text-slate-400">
-          Всички планове включват 14-дневен безплатен пробен период. Не се изисква кредитна карта.
+          Платените планове „Стартер“ и „Про“ се активират след успешно плащане през Stripe. Можете да
+          прекратите абонамента от Stripe в съответствие с условията ви.
         </p>
       </div>
     </section>
