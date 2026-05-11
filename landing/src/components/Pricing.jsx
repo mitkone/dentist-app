@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, Zap, Building2, Star, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, Zap, Building2, Star, Loader2 } from 'lucide-react'
 
 const STRIPE_PRICES = {
   'Стартер': import.meta.env.VITE_STRIPE_PRICE_STARTER,
@@ -49,7 +49,6 @@ const plans = [
   {
     name: 'Стартер',
     icon: Zap,
-    setupFee: '150',
     price: '49',
     period: '/месец',
     description: 'Перфектен за малки кабинети с 1-2 лекари.',
@@ -70,7 +69,6 @@ const plans = [
   {
     name: 'Про',
     icon: Star,
-    setupFee: '150',
     price: '89',
     period: '/месец',
     description: 'За клиники с екип и нужда от пълен контрол.',
@@ -93,7 +91,6 @@ const plans = [
   {
     name: 'Клиника',
     icon: Building2,
-    setupFee: null,
     price: 'По запитване',
     period: '',
     description: 'За мрежи от клиники с персонализирани нужди.',
@@ -143,7 +140,7 @@ export default function Pricing({ onDemoClick }) {
 
         {/* Plans */}
         <div className="grid md:grid-cols-3 gap-6 items-stretch">
-          {plans.map(({ name, icon: Icon, setupFee, price, period, description, color, headerBg, buttonStyle, badge, features, cta }) => (
+          {plans.map(({ name, icon: Icon, price, period, description, color, headerBg, buttonStyle, badge, features, cta }) => (
             <div
               key={name}
               className={`relative rounded-2xl border-2 bg-white overflow-hidden flex flex-col ${color}`}
@@ -163,15 +160,7 @@ export default function Pricing({ onDemoClick }) {
                 <p className={`text-sm ${badge ? 'text-medical-100' : 'text-slate-500'}`}>{description}</p>
 
                 {/* Price display */}
-                <div className="mt-4 space-y-1.5">
-                  {setupFee && (
-                    <div className={`text-xs ${badge ? 'text-medical-200' : 'text-slate-400'}`}>
-                      Еднократна такса внедряване:{' '}
-                      <span className={`font-semibold ${badge ? 'text-white' : 'text-slate-600'}`}>
-                        {setupFee}€
-                      </span>
-                    </div>
-                  )}
+                <div className="mt-4">
                   <div className="flex items-end gap-1">
                     {period ? (
                       <>
@@ -222,15 +211,6 @@ export default function Pricing({ onDemoClick }) {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Setup fee explanation */}
-        <div className="mt-8 flex items-start gap-3 max-w-2xl mx-auto p-4 bg-blue-50 border border-blue-100 rounded-xl">
-          <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-blue-700 leading-relaxed">
-            <span className="font-semibold">Такса внедряване (150€, еднократно):</span>{' '}
-            Включва настройка на акаунта, импорт на съществуващи данни, обучение на екипа (1 час онлайн сесия) и персонализиране на работния график.
-          </p>
         </div>
 
         {/* Stripe payment flow */}

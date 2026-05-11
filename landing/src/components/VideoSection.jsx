@@ -1,4 +1,4 @@
-import { Play, Clock } from 'lucide-react'
+import { Play } from 'lucide-react'
 
 export default function VideoSection() {
   return (
@@ -9,10 +9,10 @@ export default function VideoSection() {
             Виж как работи
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            90 секунди, за да разберете всичко
+            Вижте как работи системата за секунди
           </h2>
           <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            Гледайте как DentPro спестява часове административна работа всеки ден.
+            Кратко демо, което показва как DentPro спестява часове административна работа всеки ден.
           </p>
         </div>
 
@@ -27,10 +27,9 @@ export default function VideoSection() {
             <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/25 flex items-center justify-center mb-6 group-hover:bg-medical-500/40 group-hover:border-medical-400 transition-all duration-300">
               <Play className="w-10 h-10 text-white fill-white ml-1" />
             </div>
-            <p className="text-white font-semibold text-xl mb-2">DentPro Demo</p>
-            <p className="text-slate-300 text-sm flex items-center justify-center gap-2">
-              <Clock className="w-4 h-4" />
-              90 секунди
+            <p className="text-white font-semibold text-xl mb-2">Кратко видео демо</p>
+            <p className="text-slate-300 text-sm">
+              Вижте DentPro в действие
             </p>
           </div>
 

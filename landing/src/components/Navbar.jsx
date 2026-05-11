@@ -33,8 +33,10 @@ export default function Navbar({ onDemoClick }) {
             <div className="w-8 h-8 rounded-lg bg-medical-500 flex items-center justify-center shadow-sm group-hover:bg-medical-600 transition-colors">
               <Stethoscope className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-slate-900 text-lg tracking-tight">
-              Dent<span className="text-medical-500">Pro</span>
+            <span className={`font-bold text-lg tracking-tight transition-colors duration-300 ${
+              scrolled ? 'text-slate-900' : 'text-white'
+            }`}>
+              Dent<span className="text-medical-400">Pro</span>
             </span>
           </a>
 
@@ -44,7 +46,11 @@ export default function Navbar({ onDemoClick }) {
               <a
                 key={link.href}
                 href={link.href}
-                className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  scrolled
+                    ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
+                }`}
               >
                 {link.label}
               </a>
@@ -55,7 +61,9 @@ export default function Navbar({ onDemoClick }) {
           <div className="hidden md:flex items-center gap-3">
             <button
               onClick={onDemoClick}
-              className="px-4 py-2 text-sm font-medium text-medical-600 hover:text-medical-700 transition-colors"
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                scrolled ? 'text-medical-600 hover:text-medical-700' : 'text-medical-300 hover:text-white'
+              }`}
             >
               Пробвайте безплатно
             </button>
@@ -69,7 +77,9 @@ export default function Navbar({ onDemoClick }) {
 
           {/* Mobile toggle */}
           <button
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            className={`md:hidden p-2 rounded-lg transition-colors ${
+              scrolled ? 'text-slate-600 hover:bg-slate-100' : 'text-white hover:bg-white/10'
+            }`}
             onClick={() => setMobileOpen(v => !v)}
             aria-label="Меню"
           >

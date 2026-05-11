@@ -1,9 +1,9 @@
 import { ArrowRight, Play, CheckCircle2, Clock, Users, Calendar } from 'lucide-react'
 
 const stats = [
-  { icon: Clock, label: 'Спестени часове/седмично', value: '5+' },
-  { icon: Users, label: 'Активни пациенти', value: '∞' },
-  { icon: Calendar, label: 'Минути за настройка', value: '10' },
+  { icon: Clock, label: 'Спестени часове административна работа седмично', value: '15+' },
+  { icon: Users, label: 'Увеличете капацитета на пациентите си', value: '2×' },
+  { icon: Calendar, label: 'Минути за първоначална настройка', value: '10' },
 ]
 
 const trustPoints = [
@@ -69,7 +69,7 @@ export default function Hero({ onDemoClick }) {
               <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
                 <Play className="w-3 h-3 text-white fill-white ml-0.5" />
               </div>
-              Гледайте 90-сек. видео
+              Кратко видео демо
             </a>
           </div>
 
@@ -84,10 +84,11 @@ export default function Hero({ onDemoClick }) {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">
             {stats.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">{value}</div>
+              <div key={label} className="flex flex-col items-center text-center px-4 py-4 rounded-xl bg-white/5 border border-white/10">
+                <Icon className="w-5 h-5 text-medical-400 mb-2" />
+                <div className="text-2xl font-bold text-white mb-1">{value}</div>
                 <div className="text-xs text-slate-400 leading-tight">{label}</div>
               </div>
             ))}
