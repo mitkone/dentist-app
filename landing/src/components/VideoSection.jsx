@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Play, X } from 'lucide-react'
 
-const VIDEO_URL = ''
+const VIDEO_URL = 'https://youtu.be/9xmKreRMnhg'
 
 export default function VideoSection() {
   const [isOpen, setIsOpen] = useState(false)
