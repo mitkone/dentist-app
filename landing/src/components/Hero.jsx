@@ -83,40 +83,44 @@ export default function Hero({ onDemoClick }) {
             ))}
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">
-            {stats.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex flex-col items-center text-center px-4 py-4 rounded-xl bg-white/5 border border-white/10">
-                <Icon className="w-5 h-5 text-medical-400 mb-2" />
-                <div className="text-2xl font-bold text-white mb-1">{value}</div>
-                <div className="text-xs text-slate-400 leading-tight">{label}</div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* App preview mockup */}
-        <div className="mt-20 max-w-5xl mx-auto">
-          <div className="relative rounded-2xl overflow-hidden border border-white/8 shadow-2xl shadow-black/40">
+        {/* App preview mockup — moved right after CTAs for visual impact */}
+        <div className="mt-16 max-w-5xl mx-auto">
+          <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
             {/* Window chrome */}
-            <div className="bg-slate-800 px-4 py-3 flex items-center gap-2 border-b border-white/5">
+            <div className="bg-slate-800 px-4 py-2.5 flex items-center gap-2 border-b border-white/5">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-rose-500/60" />
                 <div className="w-3 h-3 rounded-full bg-amber-400/60" />
                 <div className="w-3 h-3 rounded-full bg-emerald-400/60" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="bg-slate-700 rounded-md px-3 py-1 text-xs text-slate-400">
-                  dentpro.app/calendar
+                <div className="bg-slate-700/80 rounded-md px-4 py-1 text-xs text-slate-400 font-medium">
+                  app.dentpro.bg/calendar
                 </div>
               </div>
             </div>
 
-            {/* Mock UI */}
+            {/* Mock UI — full calendar preview */}
             <div className="bg-slate-50 p-0">
               <MockCalendarPreview />
             </div>
           </div>
+
+          {/* Glow under mockup */}
+          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-3/4 h-40 bg-medical-500/15 blur-3xl rounded-full pointer-events-none" />
+        </div>
+
+        {/* Stats — below mockup */}
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto">
+          {stats.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex flex-col items-center text-center px-4 py-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <Icon className="w-5 h-5 text-medical-400 mb-2" />
+              <div className="text-2xl font-bold text-white mb-1">{value}</div>
+              <div className="text-xs text-slate-400 leading-tight">{label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -124,58 +128,64 @@ export default function Hero({ onDemoClick }) {
 }
 
 function MockCalendarPreview() {
-  const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']
-  const doctors = ['Д-р Иванова', 'Д-р Петров', 'Д-р Стоянова']
-  const doctorColors = [
+  const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']
+  const doctors = [
+    { name: 'Д-р Иванова', color: '#14b8a6' },
+    { name: 'Д-р Петров', color: '#3b82f6' },
+    { name: 'Д-р Стоянова', color: '#a855f7' },
+  ]
+  const colorMap = [
     'bg-emerald-100 border-emerald-300 text-emerald-800',
     'bg-blue-100 border-blue-300 text-blue-800',
     'bg-violet-100 border-violet-300 text-violet-800',
   ]
-
   const appointments = [
     { doctor: 0, hour: 0, duration: 1, patient: 'Мария Тодорова', type: 'Преглед' },
-    { doctor: 0, hour: 2, duration: 2, patient: 'Иван Димитров', type: 'Лечение' },
-    { doctor: 1, hour: 1, duration: 1, patient: 'Анна Петкова', type: 'Почистване' },
-    { doctor: 1, hour: 3, duration: 1, patient: 'Георги Николов', type: 'Преглед' },
-    { doctor: 2, hour: 0, duration: 2, patient: 'Елена Стоева', type: 'Протеза' },
-    { doctor: 2, hour: 4, duration: 1, patient: 'Стефан Вълев', type: 'Лечение' },
+    { doctor: 0, hour: 1.5, duration: 1.5, patient: 'Иван Димитров', type: 'Ендодонтия' },
+    { doctor: 0, hour: 4, duration: 1, patient: 'Петър Колев', type: 'Контролен' },
+    { doctor: 0, hour: 6, duration: 1.5, patient: 'Надя Стефанова', type: 'Обтурация' },
+    { doctor: 1, hour: 0.5, duration: 1, patient: 'Анна Петкова', type: 'Почистване' },
+    { doctor: 1, hour: 2, duration: 2, patient: 'Георги Николов', type: 'Хирургия' },
+    { doctor: 1, hour: 5, duration: 1, patient: 'Деян Маринов', type: 'Преглед' },
+    { doctor: 2, hour: 0, duration: 2, patient: 'Елена Стоева', type: 'Протезиране' },
+    { doctor: 2, hour: 3, duration: 1, patient: 'Стефан Вълев', type: 'Екстракция' },
+    { doctor: 2, hour: 5.5, duration: 1.5, patient: 'Калина Борисова', type: 'Ортодонтия' },
   ]
+  const ROW = 28
 
   return (
-    <div className="flex h-64 overflow-hidden select-none">
-      {/* Time column */}
+    <div className="flex overflow-hidden select-none" style={{ height: hours.length * ROW + 36 }}>
       <div className="w-14 shrink-0 bg-white border-r border-slate-200">
-        <div className="h-8 border-b border-slate-200 bg-slate-50" />
+        <div className="h-9 border-b border-slate-200 bg-slate-50" />
         {hours.map(h => (
-          <div key={h} className="h-[32px] border-b border-slate-100 flex items-center justify-end pr-2">
-            <span className="text-xs text-slate-400">{h}</span>
+          <div key={h} className="border-b border-slate-100 flex items-center justify-end pr-2" style={{ height: ROW }}>
+            <span className="text-[10px] text-slate-400 font-medium">{h}</span>
           </div>
         ))}
       </div>
-
-      {/* Doctor columns */}
       {doctors.map((doc, dIdx) => (
-        <div key={doc} className="flex-1 border-r border-slate-200 last:border-r-0 relative">
-          <div className="h-8 border-b border-slate-200 bg-slate-50 flex items-center justify-center px-1">
-            <span className="text-xs font-medium text-slate-600 truncate">{doc}</span>
+        <div key={doc.name} className="flex-1 border-r border-slate-200 last:border-r-0 relative">
+          <div className="h-9 border-b border-slate-200 bg-slate-50 flex items-center justify-center gap-1.5 px-1">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: doc.color }} />
+            <span className="text-[11px] font-semibold text-slate-700 truncate">{doc.name}</span>
           </div>
           <div className="relative">
             {hours.map((_, hIdx) => (
-              <div key={hIdx} className="h-[32px] border-b border-slate-100" />
+              <div key={hIdx} className="border-b border-slate-100" style={{ height: ROW }} />
             ))}
             {appointments
               .filter(a => a.doctor === dIdx)
               .map((appt, i) => (
                 <div
                   key={i}
-                  className={`absolute left-0.5 right-0.5 rounded-md border px-1 py-0.5 overflow-hidden ${doctorColors[dIdx]}`}
+                  className={`absolute left-0.5 right-0.5 rounded border px-1.5 py-0.5 overflow-hidden ${colorMap[dIdx]}`}
                   style={{
-                    top: `${appt.hour * 32}px`,
-                    height: `${appt.duration * 32 - 2}px`,
+                    top: appt.hour * ROW,
+                    height: appt.duration * ROW - 2,
                   }}
                 >
                   <div className="text-[10px] font-semibold leading-tight truncate">{appt.patient}</div>
-                  <div className="text-[9px] opacity-70 truncate">{appt.type}</div>
+                  {appt.duration >= 1 && <div className="text-[9px] opacity-70 truncate">{appt.type}</div>}
                 </div>
               ))}
           </div>
