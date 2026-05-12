@@ -37,20 +37,19 @@ export default function Hero({ onDemoClick }) {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-            Повече{' '}
-            <span className="relative">
-              <span className="text-gradient bg-gradient-to-r from-medical-400 to-emerald-300 bg-clip-text text-transparent">
-                време за пациентите,
-              </span>
+            Дигиталното{' '}
+            <span className="text-gradient bg-gradient-to-r from-medical-400 to-emerald-300 bg-clip-text text-transparent">
+              бъдеще
             </span>
+            {' '}на вашата клиника
             <br />
-            по-малко хаос с графика
+            започва тук.
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto mb-10">
-            DentPro организира часовете, пациентите и екипа ти в един прост интерфейс.
-            Без Excel таблици, без тефтери, без объркани рецепционистки.
+            Графици, пациенти и екип — всичко в един минималистичен интерфейс,
+            създаден специално за зъболекари.
           </p>
 
           {/* CTAs */}
@@ -85,18 +84,18 @@ export default function Hero({ onDemoClick }) {
 
         </div>
 
-        {/* App preview mockup — moved right after CTAs for visual impact */}
-        <div className="mt-16 max-w-5xl mx-auto">
-          <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
+        {/* App preview mockup — premium browser window */}
+        <div className="mt-12 max-w-[1000px] mx-auto relative">
+          <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_25px_80px_-15px_rgba(0,0,0,0.7)] ring-1 ring-white/5">
             {/* Window chrome */}
             <div className="bg-slate-800 px-4 py-2.5 flex items-center gap-2 border-b border-white/5">
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-rose-500/60" />
-                <div className="w-3 h-3 rounded-full bg-amber-400/60" />
-                <div className="w-3 h-3 rounded-full bg-emerald-400/60" />
+                <div className="w-3 h-3 rounded-full bg-rose-500/70" />
+                <div className="w-3 h-3 rounded-full bg-amber-400/70" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400/70" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="bg-slate-700/80 rounded-md px-4 py-1 text-xs text-slate-400 font-medium">
+                <div className="bg-slate-700/80 rounded-md px-4 py-1 text-xs text-slate-400 font-medium tracking-wide">
                   app.dentpro.bg/calendar
                 </div>
               </div>
@@ -109,7 +108,7 @@ export default function Hero({ onDemoClick }) {
           </div>
 
           {/* Glow under mockup */}
-          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-3/4 h-40 bg-medical-500/15 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-medical-500/20 blur-3xl rounded-full pointer-events-none" />
         </div>
 
         {/* Stats — below mockup */}
