@@ -19,7 +19,12 @@ import {
   AlertCircle,
   Info,
   Lock,
+  ArrowRight,
 } from 'lucide-react'
+
+const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
+  ? `${import.meta.env.VITE_APP_URL}/register`
+  : 'https://dentpro.dimitargrozdev.com/register'
 
 /* ─── Mock Data ─────────────────────────────────────────── */
 
@@ -545,24 +550,26 @@ export default function InteractiveDemo({ onClose }) {
           )}
         </div>
 
-        {/* Bottom CTA */}
-        <div className="shrink-0 px-4 py-3 bg-gradient-to-r from-medical-600 to-medical-500 flex items-center justify-between gap-3">
-          <p className="text-sm text-white font-medium hidden sm:block">
-            Харесва ли ви? Вземете пълен достъп.
-          </p>
-          <div className="flex items-center gap-2 ml-auto">
+        {/* Demo banner */}
+        <div className="shrink-0 px-4 py-3 bg-gradient-to-r from-medical-600 to-emerald-500 flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white font-medium leading-snug">
+              <span className="hidden sm:inline">Вие сте в Демо режим. </span>
+              За реални пациенти — регистрирайте се за 21 дни безплатен период.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-white/70 hover:text-white transition-colors"
+              className="px-3 py-2 text-xs font-medium text-white/70 hover:text-white transition-colors"
             >
               Затвори
             </button>
             <a
-              href="#pricing"
-              onClick={onClose}
-              className="px-4 py-2 bg-white text-medical-600 font-semibold text-xs rounded-lg hover:bg-medical-50 transition-colors shadow-sm"
+              href={APP_REGISTER_URL}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white text-medical-600 font-semibold text-xs rounded-lg hover:bg-medical-50 transition-colors shadow-sm"
             >
-              Вземете достъп →
+              Регистрация <ArrowRight className="w-3 h-3" />
             </a>
           </div>
         </div>

@@ -63,14 +63,14 @@ export default function Navbar({ onDemoClick }) {
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <a
-              href="#pricing"
+            <button
+              onClick={onDemoClick}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                scrolled ? 'text-medical-600 hover:text-medical-700' : 'text-medical-300 hover:text-white'
+                scrolled ? 'text-slate-600 hover:text-slate-900' : 'text-slate-300 hover:text-white'
               }`}
             >
-              Ценови планове
-            </a>
+              Пробвай демо
+            </button>
             <a
               href={APP_REGISTER_URL}
               className="px-4 py-2 text-sm font-semibold bg-medical-500 hover:bg-medical-600 text-white rounded-lg transition-colors shadow-sm"
@@ -108,13 +108,12 @@ export default function Navbar({ onDemoClick }) {
             ))}
           </nav>
           <div className="mt-3 flex flex-col gap-2">
-            <a
-              href="#pricing"
-              onClick={() => setMobileOpen(false)}
-              className="w-full py-2.5 text-sm font-medium text-medical-600 border border-medical-200 rounded-lg hover:bg-medical-50 transition-colors text-center"
+            <button
+              onClick={() => { onDemoClick(); setMobileOpen(false) }}
+              className="w-full py-2.5 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              Ценови планове
-            </a>
+              Пробвай демо
+            </button>
             <a
               href={APP_REGISTER_URL}
               onClick={() => setMobileOpen(false)}

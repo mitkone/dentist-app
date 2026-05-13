@@ -1,4 +1,4 @@
-import { ArrowRight, Play, CheckCircle2, Clock, Users, Calendar } from 'lucide-react'
+import { ArrowRight, Play, CheckCircle2, Clock, Users, Calendar, Monitor } from 'lucide-react'
 
 const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
   ? `${import.meta.env.VITE_APP_URL}/register`
@@ -57,7 +57,7 @@ export default function Hero({ onDemoClick }) {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
             <a
               href={APP_REGISTER_URL}
               className="group w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-medical-500 hover:bg-medical-400 text-white font-semibold rounded-xl shadow-lg shadow-medical-500/25 hover:shadow-medical-400/30 transition-all duration-200 text-base"
@@ -65,14 +65,23 @@ export default function Hero({ onDemoClick }) {
               Започни 21-дневен безплатен период
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </a>
-            <a
-              href="#video"
+            <button
+              onClick={onDemoClick}
               className="group w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 bg-white/8 hover:bg-white/12 border border-white/15 hover:border-white/25 text-white font-medium rounded-xl transition-all duration-200 text-base"
             >
               <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center">
-                <Play className="w-3 h-3 text-white fill-white ml-0.5" />
+                <Monitor className="w-3.5 h-3.5 text-white" />
               </div>
-              Кратко видео демо
+              Пробвай демото на живо
+            </button>
+          </div>
+          <div className="flex items-center justify-center mb-12">
+            <a
+              href="#video"
+              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Или гледайте видео демо
             </a>
           </div>
 

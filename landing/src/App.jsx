@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar.jsx'
 import Hero from './components/Hero.jsx'
+import LivePreview from './components/LivePreview.jsx'
 import ValueProposition from './components/ValueProposition.jsx'
 import Features from './components/Features.jsx'
 import InteractiveDemo from './components/InteractiveDemo.jsx'
@@ -21,17 +22,22 @@ export default function App() {
     return () => { document.body.style.overflow = '' }
   }, [demoOpen])
 
+  const openDemo = () => setDemoOpen(true)
+
   return (
     <div className="min-h-screen bg-white">
-      <Navbar onDemoClick={() => setDemoOpen(true)} />
+      <Navbar onDemoClick={openDemo} />
       <main>
-        <Hero onDemoClick={() => setDemoOpen(true)} />
+        <Hero onDemoClick={openDemo} />
+        <div id="demo">
+          <LivePreview onDemoClick={openDemo} />
+        </div>
         <ValueProposition />
         <Features />
-        <div id="demo">
+        <div id="video">
           <VideoSection />
         </div>
-        <Pricing onDemoClick={() => setDemoOpen(true)} />
+        <Pricing />
         <FAQ />
       </main>
       <Footer />

@@ -118,7 +118,7 @@ const plans = [
   },
 ]
 
-export default function Pricing({ onDemoClick }) {
+export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState(null)
 
   async function handleBuy(planName) {
