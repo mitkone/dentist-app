@@ -1,6 +1,6 @@
 {
-  "installCommand": "cd landing && npm install",
-  "buildCommand": "cd landing && npm run build",
-  "outputDirectory": "landing/dist",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "framework": "vite"
 }
