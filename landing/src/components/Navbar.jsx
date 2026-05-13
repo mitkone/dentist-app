@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Menu, X, Stethoscope } from 'lucide-react'
 
+const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
+  ? `${import.meta.env.VITE_APP_URL}/register`
+  : 'https://dentpro.dimitargrozdev.com/register'
+
 const navLinks = [
   { label: 'Функции', href: '#features' },
   { label: 'Демо', href: '#demo' },
@@ -59,19 +63,19 @@ export default function Navbar({ onDemoClick }) {
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={onDemoClick}
+            <a
+              href="#pricing"
               className={`px-4 py-2 text-sm font-medium transition-colors ${
                 scrolled ? 'text-medical-600 hover:text-medical-700' : 'text-medical-300 hover:text-white'
               }`}
             >
-              Пробвайте безплатно
-            </button>
+              Ценови планове
+            </a>
             <a
-              href="#pricing"
+              href={APP_REGISTER_URL}
               className="px-4 py-2 text-sm font-semibold bg-medical-500 hover:bg-medical-600 text-white rounded-lg transition-colors shadow-sm"
             >
-              Вземете достъп
+              Безплатен период
             </a>
           </div>
 
@@ -104,18 +108,19 @@ export default function Navbar({ onDemoClick }) {
             ))}
           </nav>
           <div className="mt-3 flex flex-col gap-2">
-            <button
-              onClick={() => { onDemoClick(); setMobileOpen(false) }}
-              className="w-full py-2.5 text-sm font-medium text-medical-600 border border-medical-200 rounded-lg hover:bg-medical-50 transition-colors"
-            >
-              Пробвайте безплатно
-            </button>
             <a
               href="#pricing"
               onClick={() => setMobileOpen(false)}
+              className="w-full py-2.5 text-sm font-medium text-medical-600 border border-medical-200 rounded-lg hover:bg-medical-50 transition-colors text-center"
+            >
+              Ценови планове
+            </a>
+            <a
+              href={APP_REGISTER_URL}
+              onClick={() => setMobileOpen(false)}
               className="w-full py-2.5 text-sm font-semibold bg-medical-500 hover:bg-medical-600 text-white rounded-lg transition-colors text-center"
             >
-              Вземете достъп
+              Безплатен период
             </a>
           </div>
         </div>

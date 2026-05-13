@@ -9,6 +9,7 @@ import {
   Search,
   Bell,
   UserCheck,
+  Receipt,
 } from 'lucide-react'
 
 const mainFeatures = [
@@ -16,7 +17,7 @@ const mainFeatures = [
     icon: Calendar,
     title: 'Визуален График',
     description:
-      'Дневен и седмичен изглед с drag-and-drop. Вижте всички лекари на един екран. Преместете час с едно движение.',
+      'Дневен и седмичен изглед с интуитивен интерфейс. Вижте всички лекари на един екран. Запишете час с едно кликване.',
     color: 'text-medical-500',
     bg: 'bg-medical-50',
     border: 'border-medical-100',
@@ -58,10 +59,10 @@ const mainFeatures = [
     border: 'border-rose-100',
   },
   {
-    icon: Bell,
-    title: 'Известия за Промени',
+    icon: Receipt,
+    title: 'Автоматични Разписки по Имейл',
     description:
-      'Автоматично уведомление при промяна на час или отмяна. Никой от екипа не остава неинформиран.',
+      'След всяко плащане пациентът получава разписка автоматично. Без ръчно принтиране, без загубени документи.',
     color: 'text-emerald-500',
     bg: 'bg-emerald-50',
     border: 'border-emerald-100',

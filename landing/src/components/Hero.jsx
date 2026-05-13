@@ -1,5 +1,9 @@
 import { ArrowRight, Play, CheckCircle2, Clock, Users, Calendar } from 'lucide-react'
 
+const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
+  ? `${import.meta.env.VITE_APP_URL}/register`
+  : 'https://dentpro.dimitargrozdev.com/register'
+
 const stats = [
   { icon: Clock, label: 'Спестени часове административна работа седмично', value: '15+' },
   { icon: Users, label: 'Увеличете капацитета на пациентите си', value: '2×' },
@@ -7,7 +11,7 @@ const stats = [
 ]
 
 const trustPoints = [
-  'Без регистрация за демото',
+  'Без карта за пробния период',
   'Готово за работа за 10 минути',
   'Работи на телефон и компютър',
 ]
@@ -54,13 +58,13 @@ export default function Hero({ onDemoClick }) {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <button
-              onClick={onDemoClick}
+            <a
+              href={APP_REGISTER_URL}
               className="group w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-medical-500 hover:bg-medical-400 text-white font-semibold rounded-xl shadow-lg shadow-medical-500/25 hover:shadow-medical-400/30 transition-all duration-200 text-base"
             >
-              Разгледайте Демото
+              Започни 21-дневен безплатен период
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </a>
             <a
               href="#video"
               className="group w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-4 bg-white/8 hover:bg-white/12 border border-white/15 hover:border-white/25 text-white font-medium rounded-xl transition-all duration-200 text-base"

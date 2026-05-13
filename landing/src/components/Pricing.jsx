@@ -45,12 +45,17 @@ async function redirectToCheckout(planName) {
   }
 }
 
+const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
+  ? `${import.meta.env.VITE_APP_URL}/register`
+  : 'https://dentpro.dimitargrozdev.com/register'
+
 const plans = [
   {
     name: 'Стартер',
     icon: Zap,
     price: '49',
     period: '/месец',
+    trialNote: '0€ за първите 21 дни',
     description: 'Перфектен за малки кабинети с 1-2 лекари.',
     color: 'border-slate-200',
     headerBg: 'bg-slate-50',
@@ -64,13 +69,15 @@ const plans = [
       'Вътрешен чат',
       'Email поддръжка',
     ],
-    cta: 'Започнете сега',
+    cta: 'Започни 21-дневен безплатен период',
+    isTrial: true,
   },
   {
     name: 'Про',
     icon: Star,
     price: '89',
     period: '/месец',
+    trialNote: '0€ за първите 21 дни',
     description: 'За клиники с екип и нужда от пълен контрол.',
     color: 'border-medical-400 shadow-xl shadow-medical-100',
     headerBg: 'bg-gradient-to-br from-medical-600 to-medical-700',
@@ -82,11 +89,12 @@ const plans = [
       'Всичко от Стартер',
       'Управление на отпуски',
       'Роли и права (3 нива)',
-      'Известия за промени',
+      'Автоматични разписки по имейл',
       'Лог на активността',
       'Приоритетна поддръжка',
     ],
-    cta: 'Изберете Про',
+    cta: 'Започни 21-дневен безплатен период',
+    isTrial: true,
   },
   {
     name: 'Клиника',
@@ -134,13 +142,13 @@ export default function Pricing({ onDemoClick }) {
             Прост и прозрачен избор
           </h2>
           <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            Без скрити такси. Без дългосрочни ангажименти. Отменете по всяко време.
+            21 дни безплатно, без карта. Без скрити такси. Без ангажименти. Отменете по всяко време.
           </p>
         </div>
 
         {/* Plans */}
         <div className="grid md:grid-cols-3 gap-6 items-stretch">
-          {plans.map(({ name, icon: Icon, price, period, description, color, headerBg, buttonStyle, badge, features, cta }) => (
+          {plans.map(({ name, icon: Icon, price, period, trialNote, description, color, headerBg, buttonStyle, badge, features, cta, isTrial }) => (
             <div
               key={name}
               className={`relative rounded-2xl border-2 bg-white overflow-hidden flex flex-col ${color}`}
@@ -177,6 +185,11 @@ export default function Pricing({ onDemoClick }) {
                       </span>
                     )}
                   </div>
+                  {trialNote && (
+                    <p className={`mt-1 text-xs font-medium ${badge ? 'text-emerald-200' : 'text-emerald-600'}`}>
+                      {trialNote}, след това {price}€/месец
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -191,7 +204,21 @@ export default function Pricing({ onDemoClick }) {
                   ))}
                 </ul>
 
-                {name === 'Стартер' || name === 'Про' ? (
+                {isTrial ? (
+                  <a
+                    href={APP_REGISTER_URL}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${buttonStyle}`}
+                  >
+                    {cta}
+                  </a>
+                ) : name === 'Клиника' ? (
+                  <a
+                    href="mailto:contact@dimitargrozdev.com"
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center ${buttonStyle}`}
+                  >
+                    {cta}
+                  </a>
+                ) : (
                   <button
                     onClick={() => handleBuy(name)}
                     disabled={loadingPlan === name}
@@ -200,31 +227,24 @@ export default function Pricing({ onDemoClick }) {
                     {loadingPlan === name && <Loader2 className="w-4 h-4 animate-spin" />}
                     {cta}
                   </button>
-                ) : (
-                  <a
-                    href="mailto:contact@dimitargrozdev.com"
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center ${buttonStyle}`}
-                  >
-                    {cta}
-                  </a>
                 )}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Stripe payment flow */}
+        {/* How it works */}
         <div className="mt-8 p-6 bg-white border border-slate-200 rounded-2xl max-w-2xl mx-auto">
           <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-medical-100 flex items-center justify-center text-medical-600 text-xs font-bold">₿</span>
-            Как работи плащането
+            <span className="w-5 h-5 rounded-full bg-medical-100 flex items-center justify-center text-medical-600 text-xs font-bold">?</span>
+            Как работи безплатният период
           </h3>
           <ol className="space-y-3">
             {[
-              { step: '1', text: 'Изберете план и кликнете "Започнете сега"' },
-              { step: '2', text: 'Пренасочване към Stripe — плащане с карта (Visa/Mastercard)' },
-              { step: '3', text: 'Автоматичен имейл с линк за активация на профила (до 5 минути)' },
-              { step: '4', text: 'Влизате в системата и конфигурирате кабинета си' },
+              { step: '1', text: 'Регистрирайте се \u2014 без карта, без ангажимент' },
+              { step: '2', text: 'Използвайте всички функции безплатно за 21 дни' },
+              { step: '3', text: 'След 21 дни \u2014 изберете план и въведете данни за карта през Stripe' },
+              { step: '4', text: 'Данните ви остават запазени \u2014 продължавате от там, където сте спрели' },
             ].map(({ step, text }) => (
               <li key={step} className="flex items-start gap-3 text-sm text-slate-600">
                 <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5">
@@ -238,8 +258,8 @@ export default function Pricing({ onDemoClick }) {
 
         {/* Bottom note */}
         <p className="text-center mt-8 text-sm text-slate-400">
-          Платените планове „Стартер“ и „Про“ се активират след успешно плащане през Stripe. Можете да
-          прекратите абонамента от Stripe в съответствие с условията ви.
+          Не се изисква карта за пробния период. След 21 дни абонаментът се активира през Stripe.
+          Можете да прекратите по всяко време.
         </p>
       </div>
     </section>
