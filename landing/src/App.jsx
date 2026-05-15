@@ -5,7 +5,6 @@ import LivePreview from './components/LivePreview.jsx'
 import ValueProposition from './components/ValueProposition.jsx'
 import Features from './components/Features.jsx'
 import InteractiveDemo from './components/InteractiveDemo.jsx'
-import VideoSection from './components/VideoSection.jsx'
 import Pricing from './components/Pricing.jsx'
 import FAQ from './components/FAQ.jsx'
 import Footer from './components/Footer.jsx'
@@ -34,9 +33,6 @@ export default function App() {
         </div>
         <ValueProposition />
         <Features />
-        <div id="video">
-          <VideoSection />
-        </div>
         <Pricing />
         <FAQ />
       </main>

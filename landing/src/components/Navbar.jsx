@@ -7,6 +7,7 @@ const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
 
 const navLinks = [
   { label: 'Функции', href: '#features' },
+  { label: 'Видео', href: '#video' },
   { label: 'Демо', href: '#demo' },
   { label: 'Ценообразуване', href: '#pricing' },
   { label: 'Въпроси', href: '#faq' },
