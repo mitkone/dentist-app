@@ -555,7 +555,7 @@ export default function InteractiveDemo({ onClose }) {
           <div className="flex-1 min-w-0">
             <p className="text-sm text-white font-medium leading-snug">
               <span className="hidden sm:inline">Вие сте в Демо режим. </span>
-              За реални пациенти — регистрирайте се за 21 дни безплатен период.
+              За реални пациенти — вземете безплатен бета достъп (ограничено до 100 клиники).
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -569,7 +569,7 @@ export default function InteractiveDemo({ onClose }) {
               href={APP_REGISTER_URL}
               className="flex items-center gap-1.5 px-4 py-2 bg-white text-medical-600 font-semibold text-xs rounded-lg hover:bg-medical-50 transition-colors shadow-sm"
             >
-              Регистрация <ArrowRight className="w-3 h-3" />
+              Безплатен достъп <ArrowRight className="w-3 h-3" />
             </a>
           </div>
         </div>

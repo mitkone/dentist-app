@@ -66,10 +66,10 @@ export default function LivePreview({ onDemoClick }) {
               Пробвай демото на живо
             </button>
             <a
-              href={APP_REGISTER_URL}
+              href="#register"
               className="flex items-center gap-2 px-6 py-3 bg-medical-500 hover:bg-medical-400 text-white font-semibold rounded-xl text-sm transition-colors shadow-md"
             >
-              Започни 21-дневен безплатен период
+              Вземи безплатен достъп
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>

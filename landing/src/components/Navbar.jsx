@@ -9,7 +9,7 @@ const navLinks = [
   { label: 'Функции', href: '#features' },
   { label: 'Видео', href: '#video' },
   { label: 'Демо', href: '#demo' },
-  { label: 'Ценообразуване', href: '#pricing' },
+  { label: 'Безплатен Достъп', href: '#access' },
   { label: 'Въпроси', href: '#faq' },
 ]
 
@@ -73,10 +73,10 @@ export default function Navbar({ onDemoClick }) {
               Пробвай демо
             </button>
             <a
-              href={APP_REGISTER_URL}
+              href="#register"
               className="px-4 py-2 text-sm font-semibold bg-medical-500 hover:bg-medical-600 text-white rounded-lg transition-colors shadow-sm"
             >
-              Безплатен период
+              Вземи безплатен достъп
             </a>
           </div>
 
@@ -116,11 +116,11 @@ export default function Navbar({ onDemoClick }) {
               Пробвай демо
             </button>
             <a
-              href={APP_REGISTER_URL}
+              href="#register"
               onClick={() => setMobileOpen(false)}
               className="w-full py-2.5 text-sm font-semibold bg-medical-500 hover:bg-medical-600 text-white rounded-lg transition-colors text-center"
             >
-              Безплатен период
+              Вземи безплатен достъп
             </a>
           </div>
         </div>

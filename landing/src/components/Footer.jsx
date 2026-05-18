@@ -1,13 +1,35 @@
-import { Stethoscope, ExternalLink } from 'lucide-react'
+import { Stethoscope, ExternalLink, ArrowRight } from 'lucide-react'
+
+const APP_REGISTER_URL = import.meta.env.VITE_APP_URL
+  ? `${import.meta.env.VITE_APP_URL}/register`
+  : 'https://dentpro.dimitargrozdev.com/register'
 
 export default function Footer() {
   const year = new Date().getFullYear()
 
   return (
     <footer className="bg-slate-950 text-slate-400">
+      {/* Final CTA */}
+      <div className="border-b border-slate-800">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 leading-snug">
+            Готови ли сте да изхвърлите хартиения бележник?
+          </h2>
+          <a
+            href="#register"
+            className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-medical-500 hover:bg-medical-400 text-white font-semibold rounded-xl text-sm transition-colors shadow-lg shadow-medical-500/20"
+          >
+            Регистрирай се безплатно
+            <ArrowRight className="w-4 h-4" />
+          </a>
+          <p className="mt-4 text-xs text-slate-500">
+            Ограничено до първите 100 клиники · вече 15 лекари в бета програмата
+          </p>
+        </div>
+      </div>
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
-          {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-8 h-8 rounded-lg bg-medical-600 flex items-center justify-center">
@@ -19,7 +41,7 @@ export default function Footer() {
             </div>
             <p className="text-sm text-slate-500 leading-relaxed max-w-xs">
               Модерен софтуер за управление на зъболекарски кабинет.
-              Направен от зъболекар, за зъболекари.
+              Направен с обратната връзка на практикуващи зъболекари.
             </p>
             <div className="mt-4">
               <a
@@ -34,7 +56,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Product */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-4">
               Продукт
@@ -43,7 +64,7 @@ export default function Footer() {
               {[
                 { label: 'Функции', href: '#features' },
                 { label: 'Демо', href: '#demo' },
-                { label: 'Ценообразуване', href: '#pricing' },
+                { label: 'Безплатен Достъп', href: '#access' },
                 { label: 'Въпроси', href: '#faq' },
               ].map(({ label, href }) => (
                 <li key={href}>
@@ -55,7 +76,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-4">
               Контакт

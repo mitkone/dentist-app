@@ -72,9 +72,9 @@ export default function HeroRegisterForm() {
 
   return (
     <div id="register" className="rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-md p-5 sm:p-6 shadow-xl shadow-black/20 scroll-mt-24">
-      <h2 className="text-white font-semibold text-base mb-1">Започнете безплатно</h2>
+      <h2 className="text-white font-semibold text-base mb-1">Безплатен бета достъп</h2>
       <p className="text-slate-400 text-xs mb-4">
-        21 дни без карта · собствена клиника
+        Пълен достъп · обратна връзка · без ангажимент
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -156,12 +156,15 @@ export default function HeroRegisterForm() {
             </>
           ) : (
             <>
-              Създай своя безплатен профил
+              Вземи безплатен достъп сега
               <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
 
+        <p className="text-center text-[11px] text-amber-200/90 leading-snug pt-1 px-1">
+          Ограничено до първите 100 клиники. Вече 15 лекари работят с нас.
+        </p>
         <p className="text-center text-[11px] text-slate-500 leading-snug pt-0.5">
           Без инсталация. Достъпно веднага.
         </p>
