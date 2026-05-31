@@ -1112,14 +1112,30 @@ export default function App() {
     async function fetchPatients() {
       if (!supabase) return;
       setPatientsLoading(true);
-      const { data, error } = await supabase.from('patients').select('*').order('name');
-      if (!error && data && data.length >= 0) {
-        setPatients(data.map((row) => mapPatientFromRow(row)));
+      const pageSize = 1000;
+      let from = 0;
+      const rows = [];
+      let hadError = false;
+      while (true) {
+        const { data, error } = await supabase
+          .from('patients')
+          .select('*')
+          .order('name')
+          .range(from, from + pageSize - 1);
+        if (error) {
+          hadError = true;
+          break;
+        }
+        if (!data?.length) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
       }
+      if (!hadError) setPatients(rows.map((row) => mapPatientFromRow(row)));
       setPatientsLoading(false);
     }
     fetchPatients();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, supabase]);
 
   useEffect(() => {
     if (!supabase || !isAuthenticated) return;
