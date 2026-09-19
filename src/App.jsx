@@ -255,12 +255,16 @@ function writeDentistsCache(list) {
 }
 
 async function saveDentistsList(supabase, list) {
-  if (!supabase) return;
+  if (!supabase) return { ok: false, error: 'Supabase не е конфигуриран' };
   const { error } = await supabase.from('clinic_settings').upsert(
     { key: DENTISTS_SETTINGS_KEY, value: JSON.stringify(dentistsForStorage(list)) },
     { onConflict: 'key' }
   );
-  if (error) console.error('Save dentists list error:', error);
+  if (error) {
+    console.error('Save dentists list error:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export default function App() {
@@ -1203,13 +1207,12 @@ export default function App() {
     }
     if (!supabase) return;
     (async () => {
-      const { data } = await supabase.from('clinic_settings').select('key, value');
-      if (!data?.length) {
-        await saveDentistsList(supabase, initialDentists);
-        writeDentistsCache(initialDentists);
+      const { data, error } = await supabase.from('clinic_settings').select('key, value');
+      if (error) {
+        console.error('Load clinic_settings error:', error);
         return;
       }
-      const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
+      const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
       const start = parseInt(map.working_hours_start, 10);
       const end = parseInt(map.working_hours_end, 10);
       if (!Number.isNaN(start) && !Number.isNaN(end)) {
@@ -1225,9 +1228,14 @@ export default function App() {
           return next.length ? next : savedDentists.map((d) => d.id);
         });
         writeDentistsCache(savedDentists);
-      } else {
-        await saveDentistsList(supabase, initialDentists);
-        writeDentistsCache(initialDentists);
+        return;
+      }
+      // Първо зареждане: запиши текущия списък (от cache или начален), без да възстановяваме премахнати лекари
+      const seed = cached?.length ? cached : initialDentists;
+      const result = await saveDentistsList(supabase, seed);
+      if (result.ok) {
+        setDentists(seed);
+        writeDentistsCache(seed);
       }
     })();
   }, [supabase, isAuthenticated]);
@@ -1296,37 +1304,36 @@ export default function App() {
 
   const persistDentists = useCallback(async (list) => {
     writeDentistsCache(list);
-    await saveDentistsList(supabase, list);
+    return saveDentistsList(supabase, list);
   }, [supabase]);
 
-  const addDentist = useCallback(({ name, specialty, color }) => {
+  const addDentist = useCallback(async ({ name, specialty, color }) => {
     const id = `d-${Date.now()}`;
-    setDentists((prev) => {
-      const next = [...prev, { id, name, specialty, color }];
-      persistDentists(next);
-      return next;
-    });
+    const next = [...dentistsRef.current, { id, name, specialty, color }];
+    setDentists(next);
     setSelectedDentistIds((prev) => [...prev, id]);
+    const result = await persistDentists(next);
+    if (!result.ok) alert(`Грешка при запис на лекарите: ${result.error}`);
     logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_ADDED, entity_type: 'dentist', entity_id: id, details: { name } });
   }, [logWithActor, persistDentists]);
 
-  const deleteDentist = useCallback((id) => {
+  const deleteDentist = useCallback(async (id) => {
     if (!window.confirm('Премахване на този стоматолог от списъка?')) return;
-    setDentists((prev) => {
-      const next = prev.filter((d) => d.id !== id);
-      persistDentists(next);
-      return next;
-    });
+    const next = dentistsRef.current.filter((d) => d.id !== id);
+    setDentists(next);
     setSelectedDentistIds((prev) => prev.filter((x) => x !== id));
+    const result = await persistDentists(next);
+    if (!result.ok) {
+      alert(`Грешка при запис на лекарите: ${result.error}\nПромяната може да се загуби след презареждане.`);
+    }
     logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_DELETED, entity_type: 'dentist', entity_id: id });
   }, [logWithActor, persistDentists]);
 
-  const updateDentist = useCallback((id, updates) => {
-    setDentists((prev) => {
-      const next = prev.map((d) => (d.id === id ? { ...d, ...updates } : d));
-      persistDentists(next);
-      return next;
-    });
+  const updateDentist = useCallback(async (id, updates) => {
+    const next = dentistsRef.current.map((d) => (d.id === id ? { ...d, ...updates } : d));
+    setDentists(next);
+    const result = await persistDentists(next);
+    if (!result.ok) alert(`Грешка при запис на лекарите: ${result.error}`);
   }, [persistDentists]);
 
   // --- Dentist photos ---
