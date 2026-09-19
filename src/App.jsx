@@ -209,6 +209,60 @@ function writeWorkingHoursCache(value) {
   }
 }
 
+const DENTISTS_SETTINGS_KEY = 'dentists_list';
+const DENTISTS_CACHE_KEY = 'clinic_dentists_v1';
+
+function normalizeDentistRow(d) {
+  if (!d?.id || !d?.name) return null;
+  return {
+    id: String(d.id),
+    name: String(d.name),
+    specialty: d.specialty || 'General Dentistry',
+    color: d.color || '#64748b',
+  };
+}
+
+function parseDentistsList(raw) {
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return null;
+    return arr.map(normalizeDentistRow).filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+function dentistsForStorage(list) {
+  return (list || []).map(({ id, name, specialty, color }) => ({
+    id,
+    name,
+    specialty: specialty || 'General Dentistry',
+    color: color || '#64748b',
+  }));
+}
+
+function readDentistsCache() {
+  return parseDentistsList(localStorage.getItem(DENTISTS_CACHE_KEY));
+}
+
+function writeDentistsCache(list) {
+  try {
+    localStorage.setItem(DENTISTS_CACHE_KEY, JSON.stringify(dentistsForStorage(list)));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+async function saveDentistsList(supabase, list) {
+  if (!supabase) return;
+  const { error } = await supabase.from('clinic_settings').upsert(
+    { key: DENTISTS_SETTINGS_KEY, value: JSON.stringify(dentistsForStorage(list)) },
+    { onConflict: 'key' }
+  );
+  if (error) console.error('Save dentists list error:', error);
+}
+
 export default function App() {
   const [dentists, setDentists] = useState(initialDentists);
   const [selectedDentistIds, setSelectedDentistIds] = useState(() => initialDentists.map((d) => d.id));
@@ -1138,18 +1192,42 @@ export default function App() {
   }, [isAuthenticated, supabase]);
 
   useEffect(() => {
-    if (!supabase || !isAuthenticated) return;
+    if (!isAuthenticated) return;
+    const cached = readDentistsCache();
+    if (cached?.length) {
+      setDentists(cached);
+      setSelectedDentistIds((prev) => {
+        const next = prev.filter((id) => cached.some((d) => d.id === id));
+        return next.length ? next : cached.map((d) => d.id);
+      });
+    }
+    if (!supabase) return;
     (async () => {
       const { data } = await supabase.from('clinic_settings').select('key, value');
-      if (data?.length) {
-        const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
-        const start = parseInt(map.working_hours_start, 10);
-        const end = parseInt(map.working_hours_end, 10);
-        if (!Number.isNaN(start) && !Number.isNaN(end)) {
-          const next = { start, end };
-          setWorkingHours(next);
-          writeWorkingHoursCache(next);
-        }
+      if (!data?.length) {
+        await saveDentistsList(supabase, initialDentists);
+        writeDentistsCache(initialDentists);
+        return;
+      }
+      const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
+      const start = parseInt(map.working_hours_start, 10);
+      const end = parseInt(map.working_hours_end, 10);
+      if (!Number.isNaN(start) && !Number.isNaN(end)) {
+        const next = { start, end };
+        setWorkingHours(next);
+        writeWorkingHoursCache(next);
+      }
+      const savedDentists = parseDentistsList(map[DENTISTS_SETTINGS_KEY]);
+      if (savedDentists?.length) {
+        setDentists(savedDentists);
+        setSelectedDentistIds((prev) => {
+          const next = prev.filter((id) => savedDentists.some((d) => d.id === id));
+          return next.length ? next : savedDentists.map((d) => d.id);
+        });
+        writeDentistsCache(savedDentists);
+      } else {
+        await saveDentistsList(supabase, initialDentists);
+        writeDentistsCache(initialDentists);
       }
     })();
   }, [supabase, isAuthenticated]);
@@ -1216,23 +1294,40 @@ export default function App() {
     })().catch(() => {});
   }, [supabase, slotsRefreshKey, isAuthenticated]);
 
+  const persistDentists = useCallback(async (list) => {
+    writeDentistsCache(list);
+    await saveDentistsList(supabase, list);
+  }, [supabase]);
+
   const addDentist = useCallback(({ name, specialty, color }) => {
     const id = `d-${Date.now()}`;
-    setDentists((prev) => [...prev, { id, name, specialty, color }]);
+    setDentists((prev) => {
+      const next = [...prev, { id, name, specialty, color }];
+      persistDentists(next);
+      return next;
+    });
     setSelectedDentistIds((prev) => [...prev, id]);
     logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_ADDED, entity_type: 'dentist', entity_id: id, details: { name } });
-  }, [logWithActor]);
+  }, [logWithActor, persistDentists]);
 
   const deleteDentist = useCallback((id) => {
     if (!window.confirm('Премахване на този стоматолог от списъка?')) return;
-    setDentists((prev) => prev.filter((d) => d.id !== id));
+    setDentists((prev) => {
+      const next = prev.filter((d) => d.id !== id);
+      persistDentists(next);
+      return next;
+    });
     setSelectedDentistIds((prev) => prev.filter((x) => x !== id));
     logWithActor({ action: ACTIVITY_ACTIONS.DENTIST_DELETED, entity_type: 'dentist', entity_id: id });
-  }, [logWithActor]);
+  }, [logWithActor, persistDentists]);
 
   const updateDentist = useCallback((id, updates) => {
-    setDentists((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
-  }, []);
+    setDentists((prev) => {
+      const next = prev.map((d) => (d.id === id ? { ...d, ...updates } : d));
+      persistDentists(next);
+      return next;
+    });
+  }, [persistDentists]);
 
   // --- Dentist photos ---
   const fetchDentistPhotos = useCallback(async () => {
