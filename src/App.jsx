@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug, Search, UserPlus, Database } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
-import { dentists as initialDentists, initialPatients, getSlots, REMOVED_DENTIST_IDS } from './data/mockData';
+import { dentists as initialDentists, initialPatients, getSlots, REMOVED_DENTIST_IDS, isRevokedPerson } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { rowToAppointment, toSupabaseTime, effectiveDentistId } from './lib/appointments';
 import { getThreadRecipient } from './lib/doctorMessaging';

@@ -48,6 +48,21 @@ export const dentists = [
 /** Лекари, които вече не работят — не се показват и не могат да влизат с този dentist_id. */
 export const REMOVED_DENTIST_IDS = ['d12', 'd14'];
 
+function includesAll(haystack, parts) {
+  return parts.every((p) => haystack.includes(p));
+}
+
+/** Профили/имена, на които е спрян достъпът. */
+export function isRevokedPerson({ fullName, email, dentistId } = {}) {
+  if (dentistId && REMOVED_DENTIST_IDS.includes(String(dentistId))) return true;
+  const blob = `${fullName || ''} ${email || ''}`.toLowerCase();
+  if (!blob.trim()) return false;
+  if (blob.includes('андреева') || blob.includes('andreeva')) return true;
+  const first = blob.includes('илияна') || blob.includes('iliyana') || blob.includes('iliana');
+  const last = blob.includes('николова') || blob.includes('nikolova');
+  return first && last;
+}
+
 /** Синтетична опция в падащите менюта за свободен текст (записва се в status). */
 export const OTHER_APPOINTMENT_TYPE_KEY = '__other__';
 export const OTHER_APPOINTMENT_LABEL = 'Друго (по избор)';
