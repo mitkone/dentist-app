@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Activity, Bell, LogIn, LogOut, MessageCircle, LayoutDashboard, Bug, Search, UserPlus, Database } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
-import { dentists as initialDentists, initialPatients, getSlots } from './data/mockData';
+import { dentists as initialDentists, initialPatients, getSlots, REMOVED_DENTIST_IDS } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { rowToAppointment, toSupabaseTime, effectiveDentistId } from './lib/appointments';
 import { getThreadRecipient } from './lib/doctorMessaging';
@@ -222,12 +222,23 @@ function normalizeDentistRow(d) {
   };
 }
 
+function withoutRemovedDentists(list) {
+  const removed = new Set((REMOVED_DENTIST_IDS || []).map(String));
+  return (list || []).filter((d) => {
+    if (!d) return false;
+    if (removed.has(String(d.id))) return false;
+    const name = String(d.name || '').toLowerCase();
+    if (name.includes('андреева') || name.includes('andreeva')) return false;
+    return true;
+  });
+}
+
 function parseDentistsList(raw) {
   if (!raw) return null;
   try {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return null;
-    return arr.map(normalizeDentistRow).filter(Boolean);
+    return withoutRemovedDentists(arr.map(normalizeDentistRow).filter(Boolean));
   } catch {
     return null;
   }
@@ -243,7 +254,7 @@ function dentistsForStorage(list) {
 }
 
 function readDentistsCache() {
-  return parseDentistsList(localStorage.getItem(DENTISTS_CACHE_KEY));
+  return withoutRemovedDentists(parseDentistsList(localStorage.getItem(DENTISTS_CACHE_KEY)) || []);
 }
 
 function writeDentistsCache(list) {
@@ -1228,10 +1239,14 @@ export default function App() {
           return next.length ? next : savedDentists.map((d) => d.id);
         });
         writeDentistsCache(savedDentists);
+        const rawList = map[DENTISTS_SETTINGS_KEY] || '';
+        if (rawList.includes('"d12"') || /андреева|andreeva/i.test(rawList)) {
+          await saveDentistsList(supabase, savedDentists);
+        }
         return;
       }
       // Първо зареждане: запиши текущия списък (от cache или начален), без да възстановяваме премахнати лекари
-      const seed = cached?.length ? cached : initialDentists;
+      const seed = cached?.length ? cached : withoutRemovedDentists(initialDentists);
       const result = await saveDentistsList(supabase, seed);
       if (result.ok) {
         setDentists(seed);

@@ -41,10 +41,12 @@ export const dentists = [
   { id: 'd9', name: 'Д-р Халваджиева', specialty: 'General Dentistry', color: '#8b5cf6' },
   { id: 'd10', name: 'Д-р Г. Хаджиев', specialty: 'General Dentistry', color: '#f97316' },
   { id: 'd11', name: 'Д-р Веселинова', specialty: 'General Dentistry', color: '#14b8a6' },
-  { id: 'd12', name: 'Д-р Андреева', specialty: 'General Dentistry', color: '#3b82f6' },
   { id: 'd13', name: 'Д-р Панайотова', specialty: 'General Dentistry', color: '#06b6d4' },
   { id: 'd15', name: 'Д-р Ковачев', specialty: 'General Dentistry', color: '#db2777' },
 ];
+
+/** Лекари, които вече не работят — не се показват и не могат да влизат с този dentist_id. */
+export const REMOVED_DENTIST_IDS = ['d12', 'd14'];
 
 /** Синтетична опция в падащите менюта за свободен текст (записва се в status). */
 export const OTHER_APPOINTMENT_TYPE_KEY = '__other__';

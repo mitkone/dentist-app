@@ -1,8 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { logActivity, ACTIVITY_ACTIONS } from '../lib/activityLog';
+import { REMOVED_DENTIST_IDS } from '../data/mockData';
 
 const AuthContext = createContext(null);
+
+function isAccessRevoked(profile) {
+  if (!profile) return false;
+  if (REMOVED_DENTIST_IDS.includes(String(profile.dentist_id || ''))) return true;
+  const name = String(profile.full_name || '').toLowerCase();
+  return name.includes('андреева') || name.includes('andreeva');
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -34,6 +42,12 @@ export function AuthProvider({ children }) {
     if (!supabase) return;
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      if (isAccessRevoked(data)) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        return;
+      }
       setProfile(data ?? null);
     } catch {
       setProfile(null);
@@ -45,7 +59,11 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     if (data?.user) {
-      const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', data.user.id).maybeSingle();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
+      if (isAccessRevoked(profile)) {
+        await supabase.auth.signOut();
+        throw new Error('Достъпът до системата е спрян.');
+      }
       logActivity(supabase, {
         action: ACTIVITY_ACTIONS.USER_LOGIN,
         entity_type: 'profile',
