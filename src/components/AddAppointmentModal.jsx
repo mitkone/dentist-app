@@ -5,6 +5,7 @@ import { withOtherOption, resolveTypeForSave } from '../lib/appointmentTypeUi';
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
 import { countPatientNoShows } from '../lib/patientNoShows';
+import { findOverlappingAppointments, describeOverlapConflicts } from '../lib/appointmentOverlap';
 
 const DEFAULT_APPOINTMENT_TYPES = [
   { value: 'Checkup', labelKey: 'Checkup' },
@@ -44,6 +45,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   const [customTypeText, setCustomTypeText] = useState('');
   const [location, setLocation] = useState(APPOINTMENT_LOCATION_OPTIONS[0]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [confirmOverlap, setConfirmOverlap] = useState(false);
   const suggestionRef = useRef(null);
   const q = (patientInput || '').trim().toLowerCase();
   const suggestions =
@@ -80,6 +82,7 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
       setNotes('');
       setCustomTypeText('');
       setLocation(APPOINTMENT_LOCATION_OPTIONS[0]);
+      setConfirmOverlap(false);
       setEndTime(addMinutesToTime(slot, 30));
       const first = typeOptions[0]?.key;
       setTypeKey(first || '');
@@ -88,6 +91,27 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   useEffect(() => {
     if (matchedPatient) setPatientPhone(matchedPatient.phone ?? '');
   }, [matchedPatient?.id]);
+
+  const overlapHint = useMemo(() => {
+    if (!open || !dentist || !slot) return null;
+    const end = endTime || addMinutesToTime(slot, 30);
+    const hits = findOverlappingAppointments(appointments, {
+      dentistId: dentist,
+      date: bookingDate,
+      start: slot,
+      end,
+      dentists,
+    });
+    return describeOverlapConflicts(hits, {
+      patientId: matchedPatient?.id,
+      patientName: patientInput.trim() || matchedPatient?.name,
+    });
+  }, [open, dentist, slot, endTime, bookingDate, appointments, dentists, matchedPatient?.id, matchedPatient?.name, patientInput]);
+
+  useEffect(() => {
+    setConfirmOverlap(false);
+  }, [endTime, slot, dentist, bookingDate, patientInput]);
+
   if (!open) return null;
 
   const selectedDentist = dentists.find((d) => d.id === dentist);
@@ -101,6 +125,11 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
+    if (overlapHint && !confirmOverlap) {
+      setConfirmOverlap(true);
+      setSubmitError(overlapHint.message);
+      return;
+    }
     const form = e.target;
     const type = resolveTypeForSave(typeKey, customTypeText, typeOptions);
     const insurance = form.insurance?.value || 'private';
@@ -129,10 +158,12 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
           notes: notes.trim(),
           location,
           appointmentDate: bookingDate || undefined,
+          allowOverlap: confirmOverlap,
         })
       );
       if (result && result.ok === false) {
         setSubmitError(typeof result.error === 'string' ? result.error : 'Часът не бе записан. Проверете връзката или правата в Supabase.');
+        if (result.conflict) setConfirmOverlap(true);
         return;
       }
     } catch (err) {
@@ -339,7 +370,14 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             </div>
           </div>
 
-          {submitError && (
+          {(overlapHint || (confirmOverlap && submitError)) && (
+            <div className="text-sm rounded-lg px-3 py-2 border text-amber-950 bg-amber-50 border-amber-300">
+              <p className="font-semibold">Внимание: застъпване на часове</p>
+              <p className="mt-1 leading-snug">{overlapHint?.message || submitError}</p>
+              <p className="mt-1 text-xs opacity-80">В седмичен график вече записаните пациенти често не се виждат ясно.</p>
+            </div>
+          )}
+          {submitError && !overlapHint && !confirmOverlap && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
           )}
 
@@ -353,9 +391,11 @@ export default function AddAppointmentModal({ open, onClose, dentist, slot, dent
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
+              className={`flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg ${
+                confirmOverlap ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'
+              }`}
             >
-              Добави час
+              {confirmOverlap ? 'Запиши въпреки това' : 'Добави час'}
             </button>
           </div>
         </form>

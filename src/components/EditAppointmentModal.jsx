@@ -5,6 +5,7 @@ import { withOtherOption, resolveTypeForSave, parseTypeFromAppointment } from '.
 import PatientChronologyBlock from './PatientChronologyBlock';
 import TimePicker24 from './TimePicker24';
 import { countPatientNoShows } from '../lib/patientNoShows';
+import { findOverlappingAppointments, describeOverlapConflicts } from '../lib/appointmentOverlap';
 
 const APPOINTMENT_TYPES = [
   { value: 'Checkup', labelKey: 'Checkup' },
@@ -61,6 +62,8 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
   const [attendance, setAttendance] = useState('pending');
   const [insurance, setInsurance] = useState('private');
   const [location, setLocation] = useState(APPOINTMENT_LOCATION_OPTIONS[0]);
+  const [submitError, setSubmitError] = useState('');
+  const [confirmOverlap, setConfirmOverlap] = useState(false);
 
   const slots = getSlots(workingHours);
   const typeOptions = useMemo(
@@ -96,28 +99,65 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
       setAttendance(appointment.attendance || 'pending');
       setInsurance(appointment.insurance || 'private');
       setLocation(appointment.location || APPOINTMENT_LOCATION_OPTIONS[0]);
+      setSubmitError('');
+      setConfirmOverlap(false);
     }
   }, [appointment, patients, typeOptions]);
 
-  if (!open || !appointment) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const overlapHint = useMemo(() => {
+    if (!open || !appointment) return null;
     const endTime = end || addMinutes(start, durationMinutes);
-    const name = patientInput.trim();
-    onSave(appointment.id, {
-      date: date || appointment.date,
+    const hits = findOverlappingAppointments(appointments, {
       dentistId,
+      date: date || appointment.date,
       start,
       end: endTime,
-      patientName: (name || matchedPatient?.name) ?? appointment.patientName,
-      patientId: matchedPatient?.id || undefined,
-      type: resolveTypeForSave(typeKey, customTypeText, typeOptions),
-      notes: notes.trim() || '',
-      attendance,
-      insurance,
-      location,
+      excludeId: appointment.id,
+      dentists,
     });
+    return describeOverlapConflicts(hits, {
+      patientId: matchedPatient?.id || appointment.patientId,
+      patientName: patientInput.trim() || matchedPatient?.name || appointment.patientName,
+    });
+  }, [open, appointment, appointments, dentists, dentistId, date, start, end, durationMinutes, matchedPatient?.id, matchedPatient?.name, patientInput]);
+
+  useEffect(() => {
+    setConfirmOverlap(false);
+  }, [dentistId, date, start, end, durationMinutes, patientInput]);
+
+  if (!open || !appointment) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+    if (overlapHint && !confirmOverlap) {
+      setConfirmOverlap(true);
+      setSubmitError(overlapHint.message);
+      return;
+    }
+    const endTime = end || addMinutes(start, durationMinutes);
+    const name = patientInput.trim();
+    const result = await Promise.resolve(
+      onSave(appointment.id, {
+        date: date || appointment.date,
+        dentistId,
+        start,
+        end: endTime,
+        patientName: (name || matchedPatient?.name) ?? appointment.patientName,
+        patientId: matchedPatient?.id || undefined,
+        type: resolveTypeForSave(typeKey, customTypeText, typeOptions),
+        notes: notes.trim() || '',
+        attendance,
+        insurance,
+        location,
+        allowOverlap: confirmOverlap,
+      })
+    );
+    if (result && result.ok === false) {
+      setSubmitError(typeof result.error === 'string' ? result.error : 'Часът не бе записан.');
+      if (result.conflict) setConfirmOverlap(true);
+      return;
+    }
     onClose();
   };
 
@@ -366,6 +406,16 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
               </div>
             </div>
 
+          {(overlapHint || (confirmOverlap && submitError)) && (
+            <div className="text-sm rounded-lg px-3 py-2 border text-amber-950 bg-amber-50 border-amber-300">
+              <p className="font-semibold">Внимание: застъпване на часове</p>
+              <p className="mt-1 leading-snug">{overlapHint?.message || submitError}</p>
+            </div>
+          )}
+          {submitError && !overlapHint && !confirmOverlap && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
+          )}
+
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -384,9 +434,11 @@ export default function EditAppointmentModal({ open, onClose, appointment, denti
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500"
+              className={`flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg ${
+                confirmOverlap ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'
+              }`}
             >
-              Запази
+              {confirmOverlap ? 'Запиши въпреки това' : 'Запази'}
             </button>
           </div>
         </form>

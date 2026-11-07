@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { dentists as initialDentists, initialPatients, getSlots, REMOVED_DENTIST_IDS, isRevokedPerson } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { rowToAppointment, toSupabaseTime, effectiveDentistId } from './lib/appointments';
+import { detectAppointmentOverlap, findOverlappingAppointments, describeOverlapConflicts } from './lib/appointmentOverlap';
 import { getThreadRecipient } from './lib/doctorMessaging';
 import { insertAppointmentWithFallbacks } from './lib/insertAppointment';
 import { logActivity, ACTIVITY_ACTIONS } from './lib/activityLog';
@@ -1731,11 +1732,30 @@ export default function App() {
         return;
       }
     }
+    const durationMin = getDurationMinutes(a.start, a.end);
+    const previewEnd = addMinutes(start, durationMin);
+    const moveOverlaps = findOverlappingAppointments(appointments, {
+      dentistId,
+      date: a.date,
+      start,
+      end: previewEnd,
+      excludeId: appointmentId,
+      dentists,
+    });
+    if (moveOverlaps.length) {
+      const desc = describeOverlapConflicts(moveOverlaps, {
+        patientId: a.patientId,
+        patientName: a.patientName,
+      });
+      const ok = window.confirm(
+        `${desc?.message || 'Този час се застъпва с вече записан пациент.'}\n\nДа преместя ли часа въпреки това?`
+      );
+      if (!ok) return;
+    }
     setAppointments((prev) => {
       const apr = prev.find((x) => x.id === appointmentId);
       if (!apr) return prev;
-      const durationMin = getDurationMinutes(apr.start, apr.end);
-      const newEnd = addMinutes(start, durationMin);
+      const newEnd = addMinutes(start, getDurationMinutes(apr.start, apr.end));
       const date = apr.date;
       const updated = { ...apr, dentistId, start, end: newEnd };
 
@@ -1756,7 +1776,7 @@ export default function App() {
 
       return prev.map((x) => (x.id === appointmentId ? updated : x));
     });
-  }, [permissions, appointments]);
+  }, [permissions, appointments, dentists]);
 
   const onAddAppointment = useCallback(
     async ({
@@ -1772,6 +1792,7 @@ export default function App() {
       notes = '',
       location = 'Дружба',
       appointmentDate,
+      allowOverlap = false,
     }) => {
       const date = appointmentDate || dateKey(currentDate);
       const end = endParam || addMinutes(start, durationMinutes ?? 30);
@@ -1804,20 +1825,22 @@ export default function App() {
 
       const resolvedPatientId = patientId ?? resolvedPatient?.id ?? null;
 
-      const newStartMin = timeStrToMinutes(start);
-      const newEndMin = timeStrToMinutes(end);
-      const overlapsExisting = appointments.some((a) => {
-        if (effectiveDentistId(a, dentists) !== String(dentistId ?? '').trim()) return false;
-        if (normalizeYmd(a.date) !== normalizeYmd(date)) return false;
-        const aS = timeStrToMinutes(a.start);
-        const aE = timeStrToMinutes(a.end);
-        return !(newEndMin <= aS || newStartMin >= aE);
+      const { overlaps, description } = await detectAppointmentOverlap({
+        supabase,
+        localAppointments: appointments,
+        dentists,
+        dentistId,
+        date,
+        start,
+        end,
+        patientId: resolvedPatientId,
+        patientName,
       });
-      if (overlapsExisting) {
+      if (overlaps.length && !allowOverlap) {
         return {
           ok: false,
-          error:
-            'Този час се припокрива с вече записан при същия лекар. Изберете друг интервал или обновете страницата.',
+          conflict: true,
+          error: description?.message || 'Този час се застъпва с вече записан пациент.',
         };
       }
 
@@ -1918,7 +1941,7 @@ export default function App() {
         return { ok: false, error: err?.message || String(err) };
       }
     },
-    [currentDate, patients, dentists, appointments]
+    [currentDate, patients, dentists, appointments, supabase]
   );
 
   const goPrevDay = () => {
@@ -1956,10 +1979,29 @@ export default function App() {
     setEditAppointment(appointment);
   }, []);
 
-  const onUpdateAppointment = useCallback((appointmentId, { date: newDate, dentistId, start, end, patientName, patientId, type, notes, attendance, insurance, location }) => {
+  const onUpdateAppointment = useCallback(async (appointmentId, { date: newDate, dentistId, start, end, patientName, patientId, type, notes, attendance, insurance, location, allowOverlap = false }) => {
     const app = appointments.find((a) => a.id === appointmentId);
     const date = newDate || app?.date;
-    if (!date) return;
+    if (!date) return { ok: false, error: 'Липсва дата.' };
+    const { overlaps, description } = await detectAppointmentOverlap({
+      supabase,
+      localAppointments: appointments,
+      dentists,
+      dentistId,
+      date,
+      start,
+      end,
+      excludeId: appointmentId,
+      patientId: patientId ?? app?.patientId,
+      patientName: patientName ?? app?.patientName,
+    });
+    if (overlaps.length && !allowOverlap) {
+      return {
+        ok: false,
+        conflict: true,
+        error: description?.message || 'Този час се застъпва с вече записан пациент.',
+      };
+    }
     setAppointments((prev) =>
       prev.map((a) =>
         a.id !== appointmentId
@@ -2032,7 +2074,8 @@ export default function App() {
       tryUpdate(payload);
     }
     setEditAppointment(null);
-  }, [appointments, dentists]);
+    return { ok: true };
+  }, [appointments, dentists, supabase]);
 
   const fetchActivityLog = useCallback(async () => {
     if (!supabase) return;
