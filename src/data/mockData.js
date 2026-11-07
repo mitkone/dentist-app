@@ -48,13 +48,21 @@ export const dentists = [
 /** Лекари, които вече не работят — не се показват и не могат да влизат с този dentist_id. */
 export const REMOVED_DENTIST_IDS = ['d12', 'd14'];
 
+/** Имейли на хора, които вече не работят в клиниката. */
+export const REVOKED_EMAILS = ['bbystefixo@gmail.com'];
+
 function includesAll(haystack, parts) {
   return parts.every((p) => haystack.includes(p));
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
 /** Профили/имена, на които е спрян достъпът. */
 export function isRevokedPerson({ fullName, email, dentistId } = {}) {
   if (dentistId && REMOVED_DENTIST_IDS.includes(String(dentistId))) return true;
+  if (REVOKED_EMAILS.includes(normalizeEmail(email))) return true;
   const blob = `${fullName || ''} ${email || ''}`.toLowerCase();
   if (!blob.trim()) return false;
   if (blob.includes('андреева') || blob.includes('andreeva')) return true;

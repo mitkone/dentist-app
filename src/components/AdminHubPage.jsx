@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { isRevokedPerson } from '../data/mockData';
 import {
   X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2,
   BarChart2, ChevronUp, ChevronDown, Settings, LayoutDashboard, Search, RefreshCw
@@ -403,7 +404,10 @@ function UsersTab({ supabase, dentists, getAdminPin }) {
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
     supabase.from('profiles').select('id, email, full_name, role, dentist_id, permissions').order('created_at', { ascending: false })
-      .then(({ data }) => { setProfiles(data || []); setLoading(false); });
+      .then(({ data }) => {
+        setProfiles((data || []).filter((p) => !isRevokedPerson({ fullName: p.full_name, email: p.email, dentistId: p.dentist_id })));
+        setLoading(false);
+      });
   }, [supabase]);
 
   const updateRole = async (profileId, role, dentistId = null) => {

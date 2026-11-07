@@ -1,15 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { logActivity, ACTIVITY_ACTIONS } from '../lib/activityLog';
-import { REMOVED_DENTIST_IDS } from '../data/mockData';
+import { isRevokedPerson } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
-function isAccessRevoked(profile) {
-  if (!profile) return false;
-  if (REMOVED_DENTIST_IDS.includes(String(profile.dentist_id || ''))) return true;
-  const name = String(profile.full_name || '').toLowerCase();
-  return name.includes('андреева') || name.includes('andreeva');
+function isAccessRevoked(profile, email) {
+  return isRevokedPerson({
+    fullName: profile?.full_name,
+    email: profile?.email || email,
+    dentistId: profile?.dentist_id,
+  });
 }
 
 export function AuthProvider({ children }) {
@@ -25,24 +26,24 @@ export function AuthProvider({ children }) {
     }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user.id, session.user.email);
       else setProfile(null);
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user.id, session.user.email);
       else setProfile(null);
       if (event === 'PASSWORD_RECOVERY') setNeedsPasswordReset(true);
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchProfile(userId) {
+  async function fetchProfile(userId, email) {
     if (!supabase) return;
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      if (isAccessRevoked(data)) {
+      if (isAccessRevoked(data, email)) {
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
@@ -60,7 +61,7 @@ export function AuthProvider({ children }) {
     if (error) throw error;
     if (data?.user) {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
-      if (isAccessRevoked(profile)) {
+      if (isAccessRevoked(profile, data.user.email)) {
         await supabase.auth.signOut();
         throw new Error('Достъпът до системата е спрян.');
       }
@@ -75,6 +76,9 @@ export function AuthProvider({ children }) {
 
   async function signUp({ email, password, fullName, role, dentistId, phone }) {
     if (!supabase) throw new Error('Supabase не е конфигуриран');
+    if (isRevokedPerson({ email, fullName, dentistId })) {
+      throw new Error('Достъпът до системата е спрян.');
+    }
     const { data: { user: u }, error } = await supabase.auth.signUp({
       email,
       password,

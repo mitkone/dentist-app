@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { isRevokedPerson } from '../data/mockData';
 import { X, Activity, Users, Calendar, Stethoscope, CheckCircle, XCircle, Clock, Plus, Trash2, UserCog, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -103,7 +104,7 @@ export default function AdminPanel({
   useEffect(() => {
     if (!open || !supabase) return;
     supabase.from('profiles').select('id, email, full_name, role, dentist_id, permissions').order('created_at', { ascending: false })
-      .then(({ data }) => setProfiles(data || []));
+      .then(({ data }) => setProfiles((data || []).filter((p) => !isRevokedPerson({ fullName: p.full_name, email: p.email, dentistId: p.dentist_id }))));
   }, [open, supabase]);
 
   const updateProfilePermissions = async (profileId, permissions) => {
